@@ -5,6 +5,7 @@ ASM_FILES = $(wildcard ./assembler/*.cpp ./assembler/srcs/*.cpp ./assembler/srcs
 SHARED = $(wildcard ./shared/*/*.c)
 
 dbg_flags = -g -fno-omit-frame-pointer -fsanitize=address
+make_output = mkdir bin
 
 ifeq ($(OS),Windows_NT)
 	exec_path_r = .\bin\windows\release
@@ -17,6 +18,9 @@ ifeq ($(OS),Windows_NT)
 	shortcut_asm = cmd /c mklink .\tkyc.exe $(target_asm)
 	shortcut_check = .\emu.exe
 	shortcut_check_asm = .\tkyc.exe
+
+	outputcheck = .\bin
+	output_target_os = .\bin\windows
 else
 	exec_path_r = ./bin/linux/release
 	exec_path_d = ./bin/linux/debug
@@ -28,10 +32,18 @@ else
 	shortcut_asm = ln -s $(target_asm) ./tkyc
 	shortcut_check = ./emu
 	shortcut_check_asm = ./tkyc
+	outputcheck = ./bin
+	output_target_os = ./bin/linux
 endif
 
 
 build_all:
+ifeq ("$(wildcard $(outputcheck))","")
+	$(make_output)
+	mkdir $(output_target_os)
+	mkdir $(output_target_os)/release
+	mkdir $(output_target_os)/debug
+endif
 	$(CC) $(SRCS) $(SHARED) -o $(target)
 	$(CCCOMP) $(ASM_FILES) $(SHARED) -o $(target_asm)
 ifeq ("$(wildcard $(shortcut_check))","")
@@ -42,12 +54,24 @@ ifeq ("$(wildcard $(shortcut_check_asm))","")
 endif
 
 build_emu:
+ifeq ("$(wildcard $(outputcheck))","")
+	$(make_output)
+	mkdir $(output_target_os)
+	mkdir $(output_target_os)/release
+	mkdir $(output_target_os)/debug
+endif
 	$(CC) $(SRCS) $(SHARED) -o $(target)
 ifeq ("$(wildcard $(shortcut_check))","")
 	$(shortcut)
 endif
 
 build_comp:
+ifeq ("$(wildcard $(outputcheck))","")
+	$(make_output)
+	mkdir $(output_target_os)
+	mkdir $(output_target_os)/release
+	mkdir $(output_target_os)/debug
+endif
 	$(CCCOMP) $(ASM_FILES) $(SHARED) -o $(target_asm)
 ifeq ("$(wildcard $(shortcut_check_asm))","")
 	$(shortcut_asm)
