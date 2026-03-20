@@ -264,7 +264,16 @@ void Parser::evaluateDestinationOperand(vector<Token> operand, ProgIns& result, 
         result.hasImmediate = true;
         result.immediateSize = 4;
         result.encoding_info->imm_val = (uint32_t) std::stoi(operand[0].tokenstr);
-        length--; // operand types byte also won't be present
+        // in case of jmp and call instructions, the operand types byte won't be present
+        if ( 
+            (result.encoding_info->opcode >= INS_CALL && result.encoding_info->opcode <= INS_JB) || 
+            result.encoding_info->opcode >= INS_JC && result.encoding_info->opcode <= INS_CALNO) 
+            {
+                length--;
+            }
+        else{
+            result.encoding_info->opertype.dest_type = NUMBER;
+        }
     }
     else if (operand[0].maintype == MainType::REG) {
         length += 1; // register select byte //

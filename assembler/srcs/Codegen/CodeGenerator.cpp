@@ -14,7 +14,7 @@ std::ofstream CodeGenerator::makeBinaryFile(std::string outputFilePath, ParseRes
     for(int i = 0; i < instructions.size(); i++) {
 
         bin_form* bin = instructionToByteCode(instructions[i], parseResult->symmap);
-        printf("%s -> ", instructions[i]->toString().c_str());
+        printf("%s => ", instructions[i]->toString().c_str());
         for(int j = 0; j < bin->size; j++) {
             printf("0x%02x ", bin->bindata[j]);
         }
@@ -64,8 +64,8 @@ std::ofstream CodeGenerator::makeBinaryFile(std::string outputFilePath, ParseRes
 
     outputfile.seekp(0, std::ios::end);
 
-    outputfile.write(reinterpret_cast<const char*>(filemeta.signature), siglen);
-    outputfile.write(reinterpret_cast<const char*>(filemeta.date), datelen);
+    outputfile.write(filemeta.signature, siglen);
+    outputfile.write(filemeta.date, datelen);
     outputfile.write(reinterpret_cast<const char*>(&filemeta.ver), sizeof(uint16_t));
     outputfile.write(reinterpret_cast<const char*>(&filemeta.arch), sizeof(uint8_t));
     outputfile.write(reinterpret_cast<const char*>(&filemeta.entrypoint), sizeof(uint32_t));
