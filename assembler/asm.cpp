@@ -12,9 +12,15 @@
 
 int main(int argc, char** argv) {
 	if (argv[1] == NULL) {
-		std::cout << "Please provide the path to the file." << std::endl;
+		std::cout << "Please provide the path to the source file." << std::endl;
 		return 0;
 	}
+	std::string outputFileName;
+	if (argv[2] == NULL) {
+		outputFileName = "./out.tky";
+	}
+	else outputFileName = argv[2];
+
 	std::ifstream sourcefile(argv[1]);
 
 	if (!sourcefile.is_open()) {
@@ -34,22 +40,13 @@ int main(int argc, char** argv) {
 
 		ParseResult* result = p.parseTokens(s);
 
-		//for(int i = 0; i < s.size(); i++) std::cout << s[i].toStringDebug() << std::endl << std::endl;
-		/*for(int i = 0; i < result->program_instructions.size(); i++) {
-			std::cout << result->program_instructions[i]->toStringDebug() << std::endl;
-		}
-		std::cout << "\n";
-		for(int i = 0; i < result->program_data.size(); i++) {
-			std::cout << result->program_data[i]->toStringDebug() << std::endl;
-		}
-			*/
 		std::cout << "[Symbol map entries]" << std::endl;
 		for(auto const& pair : result->symmap) printf("%s -> %08X\n", pair.first.c_str(), pair.second);
 		std::cout << "[					 ]" << std::endl;
 
 		CodeGenerator* codegen = new CodeGenerator();
 
-		std::ofstream output = codegen->makeBinaryFile("./out.tky", result);
+		std::ofstream output = codegen->makeBinaryFile(outputFileName, result);
 		output.close();
 
 		delete t;
