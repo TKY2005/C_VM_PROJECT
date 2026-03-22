@@ -6,9 +6,12 @@
 #define BIT16_MAX_SIZE 0xffff
 #define BIT8_MAX_SIZE 0xff
 
+#define MEM_READ_FAILURE -1
+#define MEM_WRITE_FAILURE -2
+
 #include<stdint.h>
 
-typedef struct {
+typedef struct memory {
 	int size;
 	uint8_t* mem;
 } memory;

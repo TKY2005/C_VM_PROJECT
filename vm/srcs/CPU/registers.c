@@ -3,8 +3,8 @@
 #include<ctype.h>
 #include<stdlib.h>
 
-#include "../../headers/CPU/registers.h"
-#include "../../../shared/utils/ds.h"
+#include<headers/CPU/registers.h>
+#include<utils/ds.h>
 
 void writeGPRb(union registerfile* regfile, int regcode, uint8_t val) {
 	regfile->b[regcode] = val;
@@ -32,7 +32,8 @@ int get_reg_code(const char* reg) {
 	for(int i = 0; reg[i] && i < sizeof(regname); i++) regname[i] = (char) tolower(reg[i]);
 
 	if (strcmp("pc", regname) == 0) return REG_PC_IDX * 4;
-	else if (strcmp("ip", regname) == 0) return REG_IP_IDX * 4;
+	else if (strcmp("di", regname) == 0) return REG_DI_IDX * 4;
+	else if (strcmp("si", regname) == 0) return REG_SI_IDX * 4;
 	else if (strcmp("sp", regname) == 0) return REG_SP_IDX * 4;
 	else if (strcmp("bp", regname) == 0) return REG_BP_IDX * 4;
 	else if (strcmp("cs", regname) == 0) return REG_CS_IDX * 4;
@@ -67,7 +68,8 @@ char* display_registers(union registerfile* regfile) {
 	}
 	strbuilder_append(&regs, "\n");
 	strbuilder_appendf(&regs, "PC: 0x%08X\n", regfile->dw[REG_PC_IDX]);
-	strbuilder_appendf(&regs, "IP: 0x%08X\n", regfile->dw[REG_IP_IDX]);
+	strbuilder_appendf(&regs, "SI: 0x%08X\n", regfile->dw[REG_SI_IDX]);
+	strbuilder_appendf(&regs, "DI: 0x%08X\n", regfile->dw[REG_DI_IDX]);
 	strbuilder_appendf(&regs, "SP: 0x%08X\n", regfile->dw[REG_SP_IDX]);
 	strbuilder_appendf(&regs, "BP: 0x%08X\n", regfile->dw[REG_BP_IDX]);
 	strbuilder_appendf(&regs, "CS: 0x%08X\n", regfile->dw[REG_CS_IDX]);

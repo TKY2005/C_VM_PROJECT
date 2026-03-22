@@ -3,13 +3,22 @@
 
 #include<stdint.h>
 
-#include "../headers/Memory/memory.h"
-#include "./CPU.h"
+#include<ISA_encoding_info.h>
 
-void (*instruction)(CPU*, memory*);
+typedef struct CPU CPU;
+typedef struct memory memory;
 
-void set(CPU* cpu, memory* mem);
-void add(CPU* cpu, memory* mem);
-void sub(CPU* cpu, memory* mem);
+typedef void (*instruction)(CPU*, struct memory*);
+
+instruction* create_ins_table();
+void free_ins_table(instruction* table);
+
+#define X(mnemonic, opcode, funcname) void funcname(CPU* cpu, memory* mem);
+
+INSTRUCTION_LIST(X)
+
+#undef X
+
+instruction* setup_instruction_set();
 
 #endif

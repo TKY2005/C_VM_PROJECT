@@ -1,8 +1,11 @@
 CC = gcc
 CCCOMP = g++
-SRCS = $(wildcard ./*.c ./vm/srcs/*/*.c)
-ASM_FILES = $(wildcard ./assembler/*.cpp ./assembler/srcs/*.cpp ./assembler/srcs/*/*.cpp)
-SHARED = $(wildcard ./shared/*/*.c)
+ROOT_EMU = ./vm
+ROOT_ASM = ./assembler
+ROOT_SHARED = ./shared
+SHARED_FILES = $(wildcard ./shared/*/*.c)
+SRCS = $(wildcard ./*.c ./vm/srcs/*/*.c) $(SHARED_FILES) -I $(ROOT_EMU) -I $(ROOT_SHARED)
+ASM_FILES = $(wildcard ./assembler/*.cpp ./assembler/srcs/*.cpp ./assembler/srcs/*/*.cpp) $(SHARED_FILES) -I $(ROOT_ASM) -I $(ROOT_SHARED)
 
 dbg_flags = -g -fno-omit-frame-pointer -fsanitize=address
 make_output = mkdir bin
@@ -34,6 +37,7 @@ else
 	shortcut_check_asm = ./tkyc
 	outputcheck = ./bin
 	output_target_os = ./bin/linux
+	release = /release
 endif
 
 
@@ -41,11 +45,11 @@ build_all:
 ifeq ("$(wildcard $(outputcheck))","")
 	$(make_output)
 	mkdir $(output_target_os)
-	mkdir $(output_target_os)/release
-	mkdir $(output_target_os)/debug
+	mkdir $(exec_path_r)
+	mkdir $(exec_path_d)
 endif
-	$(CC) $(SRCS) $(SHARED) -o $(target)
-	$(CCCOMP) $(ASM_FILES) $(SHARED) -o $(target_asm)
+	$(CC) $(SRCS) -o $(target)
+	$(CCCOMP) $(ASM_FILES) -o $(target_asm)
 ifeq ("$(wildcard $(shortcut_check))","")
 	$(shortcut)
 endif
@@ -57,10 +61,10 @@ build_emu:
 ifeq ("$(wildcard $(outputcheck))","")
 	$(make_output)
 	mkdir $(output_target_os)
-	mkdir $(output_target_os)/release
-	mkdir $(output_target_os)/debug
+	mkdir $(exec_path_r)
+	mkdir $(exec_path_d)
 endif
-	$(CC) $(SRCS) $(SHARED) -o $(target)
+	$(CC) $(SRCS) -o $(target)
 ifeq ("$(wildcard $(shortcut_check))","")
 	$(shortcut)
 endif
@@ -69,20 +73,20 @@ build_comp:
 ifeq ("$(wildcard $(outputcheck))","")
 	$(make_output)
 	mkdir $(output_target_os)
-	mkdir $(output_target_os)/release
-	mkdir $(output_target_os)/debug
+	mkdir $(exec_path_r)
+	mkdir $(exec_path_d)
 endif
-	$(CCCOMP) $(ASM_FILES) $(SHARED) -o $(target_asm)
+	$(CCCOMP) $(ASM_FILES) -o $(target_asm)
 ifeq ("$(wildcard $(shortcut_check_asm))","")
 	$(shortcut_asm)
 endif
 
 build_comp_dbg:
-	$(CCCOMP) $(dbg_flags) $(ASM_FILES) $(SHARED) -o $(target_asm_dbg)
+	$(CCCOMP) $(dbg_flags) $(ASM_FILES) -o $(target_asm_dbg)
 
 build_emu_dbg:
-	$(CC) $(dbg_flags) $(SRCS) $(SHARED) -o $(target_dbg)
+	$(CC) $(dbg_flags) $(SRCS) -o $(target_dbg)
 
 build_dbg:
-	$(CC) $(dbg_flags) $(SRCS) $(SHARED) -o $(target_dbg)
-	$(CCCOMP) $(dbg_flags) $(ASM_FILES) $(SHARED) -o $(target_asm_dbg)
+	$(CC) $(dbg_flags) $(SRCS) -o $(target_dbg)
+	$(CCCOMP) $(dbg_flags) $(ASM_FILES) -o $(target_asm_dbg)

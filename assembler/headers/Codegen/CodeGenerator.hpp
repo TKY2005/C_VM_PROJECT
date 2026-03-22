@@ -13,14 +13,6 @@ typedef struct {
     uint8_t* bindata;
 } bin_form;
 
-typedef struct {
-    const char* signature;
-    const char* date;
-    uint16_t ver;
-    uint8_t arch;
-    uint32_t entrypoint;
-} file_metadata;
-
 class CodeGenerator {
 
     public:
@@ -36,11 +28,11 @@ class CodeGenerator {
     CodeGenerator() = default;
 
     private: 
-    std::string signature = "Made by T.K.Y";
-    int siglen = signature.length();
-    std::string date = "3/19/2026";
-    int datelen = date.length();
-    uint16_t version = 0xC100;
+    std::string signature = "Made by T.K.Y\0";
+    int siglen = signature.length() + 1;
+    std::string date = "3/22/2026\0";
+    int datelen = date.length() + 1;
+    const uint32_t version = 0xC1000001;
 };
 
 #endif

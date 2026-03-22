@@ -8,7 +8,7 @@
 #include "../../headers/LexicalAnalyzer/Lexer.hpp"
 
 std::ofstream CodeGenerator::makeBinaryFile(std::string outputFilePath, ParseResult* parseResult) {
-    std::ofstream outputfile(outputFilePath, std::ios::out);
+    std::ofstream outputfile(outputFilePath, std::ios::out | std::ios::binary);
 
     std::vector<ProgIns*> instructions = parseResult->program_instructions;
     for(int i = 0; i < instructions.size(); i++) {
@@ -66,9 +66,9 @@ std::ofstream CodeGenerator::makeBinaryFile(std::string outputFilePath, ParseRes
 
     outputfile.write(filemeta.signature, siglen);
     outputfile.write(filemeta.date, datelen);
-    outputfile.write(reinterpret_cast<const char*>(&filemeta.ver), sizeof(uint16_t));
-    outputfile.write(reinterpret_cast<const char*>(&filemeta.arch), sizeof(uint8_t));
-    outputfile.write(reinterpret_cast<const char*>(&filemeta.entrypoint), sizeof(uint32_t));
+    outputfile.write(reinterpret_cast<const char*>(&filemeta.ver), sizeof(filemeta.ver));
+    outputfile.write(reinterpret_cast<const char*>(&filemeta.arch), sizeof(filemeta.arch));
+    outputfile.write(reinterpret_cast<const char*>(&filemeta.entrypoint), sizeof(filemeta.entrypoint));
 
     return outputfile;
 }

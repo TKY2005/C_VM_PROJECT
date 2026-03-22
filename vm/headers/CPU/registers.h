@@ -5,12 +5,14 @@
 #include<stdio.h>
 
 #define REG_PC_IDX 3
-#define REG_IP_IDX 4
-#define REG_SP_IDX 5
-#define REG_BP_IDX 6
-#define REG_CS_IDX 7
-#define REG_SS_IDX 8
-#define REG_DS_IDX 9
+#define REG_SI_IDX 4
+#define REG_DI_IDX 5
+#define REG_SP_IDX 6
+#define REG_BP_IDX 7
+#define REG_CS_IDX 8
+#define REG_SS_IDX 9
+#define REG_DS_IDX 10
+
 
 static char* reglist[] = {"a", "b", "c", "d", "e", "f", "pc", "si", "di", "sp", "bp", "cs", "ss", "ds"};
 

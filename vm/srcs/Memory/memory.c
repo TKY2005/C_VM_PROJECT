@@ -3,9 +3,9 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "../../headers/Memory/memory.h"
-#include "../../../shared/utils/ds.h"
-#include "../../../shared/utils/helpers.h"
+#include<headers/Memory/memory.h>
+#include<utils/ds.h>
+#include<utils/helpers.h>
 
 memory mem_init(int sizeB) {
   memory m = {0};
@@ -26,16 +26,18 @@ int is_valid_addr(uint32_t addr) {
 }
 
 int mem_size(const memory *m) { return m->size; }
+
 int mem_write_byte(memory *m, uint32_t addr, uint8_t val) {
   if (!is_valid_addr(addr))
-    return -1;
+    return MEM_WRITE_FAILURE;
   else
     m->mem[addr] = val;
   return val;
 }
+
 int mem_write_word(memory *m, uint32_t addr, uint16_t val) {
   if (!is_valid_addr(addr) || !is_valid_addr(addr + 1))
-    return -1;
+    return MEM_WRITE_FAILURE;
   else {
     uint8_t low = 0, high = 0;
     low = val & 0xff;
@@ -48,7 +50,7 @@ int mem_write_word(memory *m, uint32_t addr, uint16_t val) {
 unsigned int mem_write_dword(memory *m, uint32_t addr, uint32_t val) {
   for (int i = 0; i < 4; i++)
     if (!is_valid_addr(addr + i))
-      return -1;
+      return MEM_WRITE_FAILURE;
 
   uint8_t high, lhigh, hlow, low;
 
@@ -68,7 +70,7 @@ int mem_write_bytes(memory *m, uint32_t addr, int count, uint8_t *vals) {
 
   for (int i = 0; i < count; i++) {
     if (!is_valid_addr(addr + i))
-      return -1;
+      return MEM_WRITE_FAILURE;
     m->mem[addr + i] = vals[i];
   }
   return 0;
@@ -79,7 +81,7 @@ int mem_read_byte(memory *m, uint32_t addr, uint8_t* result) {
 	  *result = m->mem[addr];
 	  return 0;
   }
-  else return -1;
+  else return MEM_READ_FAILURE;
 }
 int mem_read_word(memory *m, uint32_t addr, uint16_t* result) {
   if (is_valid_addr(addr) && is_valid_addr(addr + 1)) {
@@ -88,12 +90,12 @@ int mem_read_word(memory *m, uint32_t addr, uint16_t* result) {
     *result = (high << 8) | low;
     return 0;
   }
-  else return -1;
+  else return MEM_READ_FAILURE;
 }
 int mem_read_dword(memory *m, uint32_t addr, uint32_t* result) {
   for (int i = 0; i < 4; i++)
     if (!is_valid_addr(addr + i))
-      return -1;
+      return MEM_READ_FAILURE;
 
   uint16_t high = (m->mem[addr + 0] << 8) | m->mem[addr + 1];
   uint16_t low = (m->mem[addr + 2] << 8) | m->mem[addr + 3];
@@ -106,7 +108,7 @@ int mem_read_bytes(memory *m, uint32_t addr, int count, uint8_t* result) {
   for (int i = 0; i < count; i++) {
     if (!is_valid_addr(addr + i)){
 	    free(vals);
-      	    return -1;
+      	    return MEM_READ_FAILURE;
     }
     vals[i] = m->mem[addr + i];
   }
