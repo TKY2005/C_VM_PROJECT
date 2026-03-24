@@ -2,12 +2,12 @@
 #define CPU_H
 
 #include<stdint.h>
-
-#include<headers/Memory/memory.h>
-#include<headers/CPU/registers.h>
-#include<headers/CPU/instruction_set.h>
-#include<ISA_encoding_info.h>
 #include<stdarg.h>
+
+#include<Memory/memory.h>
+#include<CPU/registers.h>
+#include<CPU/instruction_set.h>
+#include<ISA_encoding_info.h>
 
 #define CPU_EXEC_SUCCESS 0
 
@@ -37,11 +37,39 @@ void CPU_exec_ins(CPU* cpu, memory* mem, uint8_t opcode);
 void CPU_destroy(CPU* cpu);
 
 uint32_t CPU_step(CPU* cpu);
+void CPU_step_e(void** arg);
+
+int CPU_read_operand_bytes(CPU* cpu, memory* mem, ins_encoding* ins);
 int CPU_read_opertype(CPU* cpu, memory* mem, ins_encoding* ins);
 int CPU_read_regselect(CPU* cpu, memory* mem, ins_encoding* ins);
+int CPU_read_dispinfo(CPU* cpu, memory* mem, ins_encoding* ins);
+
+int CPU_read_displacement_value(CPU* cpu, memory* mem, ins_encoding* ins);
+
+int CPU_read_imm8(CPU* cpu, memory* mem, ins_encoding* ins);
+int CPU_read_imm16(CPU* cpu, memory* mem, ins_encoding* ins);
+int CPU_read_imm32(CPU* cpu, memory* mem, ins_encoding* ins);
 
 uint32_t CPU_decode_dest(CPU* cpu, memory* mem, ins_encoding* ins);
 uint32_t CPU_decode_src(CPU* cpu, memory* mem, ins_encoding* ins);
+
+int CPU_get_reg_idx(int idx);
+int CPU_get_base_idx(int base);
+
+int CPU_dest_is_reg(uint8_t dest);
+int CPU_src_is_reg(uint8_t src);
+int CPU_dest_is_mem(uint8_t dest);
+int CPU_src_is_mem(uint8_t src);
+int CPU_dest_is_num(uint8_t dest);
+int CPU_src_is_num(uint8_t src);
+
+int CPU_destsize_32(uint8_t dest);
+int CPU_destsize_16(uint8_t dest);
+int CPU_destsize_8(uint8_t dest);
+
+int CPU_srcsize_32(uint8_t src);
+int CPU_srcsize_16(uint8_t src);
+int CPU_srcsize_8(uint8_t src);
 
 void CPU_fail(CPU* cpu, const char* msg, ...);
 

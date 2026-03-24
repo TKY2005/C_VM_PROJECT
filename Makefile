@@ -1,11 +1,11 @@
 CC = gcc
 CCCOMP = g++
-ROOT_EMU = ./vm
-ROOT_ASM = ./assembler
-ROOT_SHARED = ./shared
+INCLUDE_EMU = ./vm/headers
+INCLUDE_ASM = ./assembler/headers
+INCLUDE_SHARED = ./shared
 SHARED_FILES = $(wildcard ./shared/*/*.c)
-SRCS = $(wildcard ./*.c ./vm/srcs/*/*.c) $(SHARED_FILES) -I $(ROOT_EMU) -I $(ROOT_SHARED)
-ASM_FILES = $(wildcard ./assembler/*.cpp ./assembler/srcs/*.cpp ./assembler/srcs/*/*.cpp) $(SHARED_FILES) -I $(ROOT_ASM) -I $(ROOT_SHARED)
+SRCS = $(wildcard ./*.c ./vm/srcs/*/*.c) $(SHARED_FILES) -I $(INCLUDE_EMU) -I $(INCLUDE_SHARED)
+ASM_FILES = $(wildcard ./assembler/*.cpp ./assembler/srcs/*.cpp ./assembler/srcs/*/*.cpp) $(SHARED_FILES) -I $(INCLUDE_ASM) -I $(INCLUDE_SHARED)
 
 dbg_flags = -g -fno-omit-frame-pointer -fsanitize=address
 make_output = mkdir bin

@@ -1,8 +1,8 @@
 #ifndef VM_H
 #define VM_H
 
-#include<headers/CPU/CPU.h>
-#include<headers/Memory/memory.h>
+#include<CPU/CPU.h>
+#include<Memory/memory.h>
 
 #include<stdint.h>
 

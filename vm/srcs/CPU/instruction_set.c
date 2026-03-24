@@ -1,9 +1,9 @@
 #include<stdint.h>
 #include<stdlib.h>
 
-#include<headers/Memory/memory.h>
-#include<headers/CPU/instruction_set.h>
-#include<headers/CPU/CPU.h>
+#include<Memory/memory.h>
+#include<CPU/instruction_set.h>
+#include<CPU/CPU.h>
 #include<ISA_encoding_info.h>
 
 
@@ -29,7 +29,6 @@ instruction* setup_instruction_set() {
 #undef X
 
 void _ext(CPU* cpu, memory* mem) {
-    printf("ext.\n");
     cpu->state->CPU_RUNNING = 0;
 }
 void _nop(CPU* cpu, memory* mem) {
@@ -39,25 +38,19 @@ void _set(CPU* cpu, memory* mem) {
     printf("set.\n");
 }
 void _out(CPU* cpu, memory* mem) {
-    ins_encoding ins = {0};
+    ins_encoding encoding = {0};
+    ins_encoding* ins = &encoding;
 
-    int opers = CPU_read_opertype(cpu, mem, &ins);
+    int read = CPU_read_operand_bytes(cpu, mem, ins);
 
-    if (opers == MEM_READ_FAILURE) {
-        CPU_fail(cpu, "Read operation @ 0x%08X has failed. CPU shutting down.\n", cpu->registers->PC);
+    if (read == MEM_READ_FAILURE) {
+        CPU_fail(cpu, "Invalid read operation @ 0x%08X. CPU shutting down.\n", cpu->registers->PC);
     }
     else {
-
-        if (ins.opertype.dest_type >= REG8 && ins.opertype.dest_type <= REG32) {
-            int regs = CPU_read_regselect(cpu, mem, &ins);
-            if (regs == MEM_READ_FAILURE) {
-                CPU_fail(cpu, "Read operation @ 0x%08X has failed. CPU shutting down.\n", cpu->registers->PC);
-            }
-        }
-        uint32_t dest = CPU_decode_dest(cpu, mem, &ins);
-
-        printf("%d", dest);
+        uint32_t val = CPU_decode_dest(cpu, mem, ins);
+        printf("%u", val);
     }
+
 }
 void _add(CPU* cpu, memory* mem) { }
 void _sub(CPU* cpu, memory* mem) { }
@@ -104,7 +97,22 @@ void _loop(CPU* cpu, memory* mem) { }
 void _ret(CPU* cpu, memory* mem) { }
 void _end(CPU* cpu, memory* mem) { }
 void _int_(CPU* cpu, memory* mem) { }
-void _outc(CPU* cpu, memory* mem) { }
+
+void _outc(CPU* cpu, memory* mem) {
+    ins_encoding encoding = {0};
+    ins_encoding* ins = &encoding;
+
+    int read = CPU_read_operand_bytes(cpu, mem, ins);
+
+    if (read == MEM_READ_FAILURE) {
+        CPU_fail(cpu, "Invalid read operation @ 0x%08X. CPU shutting down.\n", cpu->registers->PC);
+    }
+    else {
+        uint32_t val = CPU_decode_dest(cpu, mem, ins);
+        printf("%c", val);
+    }
+}
+
 void _shl(CPU* cpu, memory* mem) { }
 void _shr(CPU* cpu, memory* mem) { }
 void _outsw(CPU* cpu, memory* mem) { }

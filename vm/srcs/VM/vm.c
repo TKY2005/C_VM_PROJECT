@@ -1,11 +1,11 @@
 #include<stdlib.h>
 #include<stdint.h>
 
-#include<headers/VM/vm.h>
-#include<headers/CPU/CPU.h>
-#include<headers/CPU/registers.h>
-#include<headers/Memory/memory.h>
-#include<headers/CPU/instruction_set.h>
+#include<VM/vm.h>
+#include<CPU/CPU.h>
+#include<CPU/registers.h>
+#include<Memory/memory.h>
+#include<CPU/instruction_set.h>
 #include<ISA_encoding_info.h>
 
 CPU* vm_cpu;

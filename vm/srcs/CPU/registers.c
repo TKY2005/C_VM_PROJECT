@@ -3,30 +3,30 @@
 #include<ctype.h>
 #include<stdlib.h>
 
-#include<headers/CPU/registers.h>
+#include<CPU/registers.h>
 #include<utils/ds.h>
 
-void writeGPRb(union registerfile* regfile, int regcode, uint8_t val) {
+void write_reg_b(union registerfile* regfile, int regcode, uint8_t val) {
 	regfile->b[regcode] = val;
 }
-void writeGPRx(union registerfile* regfile, int regcode, uint16_t val) {
+void write_reg_w(union registerfile* regfile, int regcode, uint16_t val) {
 	regfile->w[regcode] = val;
 }
-void writeSPR(union registerfile* regfile, int regcode, uint32_t val) {
+void write_reg_dw(union registerfile* regfile, int regcode, uint32_t val) {
 	regfile->dw[regcode] = val;
 }
 
-uint8_t readGPRb(union registerfile* regfile, int regcode) {
+uint8_t read_reg_b(union registerfile* regfile, int regcode) {
 	return regfile->b[regcode];
 }
-uint16_t readGPRx(union registerfile* regfile, int regcode) {
+uint16_t read_reg_w(union registerfile* regfile, int regcode) {
 	return regfile->w[regcode];
 }
-uint32_t readSPR(union registerfile* regfile, int regcode) {
+uint32_t read_reg_dw(union registerfile* regfile, int regcode) {
 	return regfile->dw[regcode];
 }
 
-int get_reg_code(const char* reg) {
+int get_reg_index(const char* reg) {
 	
 	char regname[10] = {0};
 	for(int i = 0; reg[i] && i < sizeof(regname); i++) regname[i] = (char) tolower(reg[i]);
@@ -41,18 +41,25 @@ int get_reg_code(const char* reg) {
 	else if (strcmp("ds", regname) == 0) return REG_DS_IDX * 4;
 
 	else {
-		char alias = regname[0];
-		char mode = regname[1];
-
-		if (alias >= 'a' && alias <= 'f'){
-
-			if (mode == 'l') return (alias - 'a') + (alias - 'a');
-			else if (mode == 'h') return (alias - 'a') + (alias - 'a') + 1;
-			else if (mode == 'x') return (alias - 'a') * 2;
+		if (strlen(regname) == 3) {
+			char alias = regname[1];
+			if (alias >= 'a' && alias <= 'f') return (alias - 'a') * 4;
 			else return -1;
 		}
-		else return -1;
+		else {
+			char alias = regname[0];
+			char mode = regname[1];
+
+			if (alias >= 'a' && alias <= 'f'){
+
+				if (mode == 'l') return (alias - 'a') * 4;
+				else if (mode == 'h') return ((alias - 'a') * 4) + 1;
+				else if (mode == 'x') return (alias - 'a') * 4;
+				else return -1;
+			}
+		}
 	}
+	return -1;
 }
 
 char* display_registers(union registerfile* regfile) {
@@ -63,7 +70,7 @@ char* display_registers(union registerfile* regfile) {
 	int row_count = 3;
 	for(int i = 0; i < 6; i++) {
 		if ( i % row_count == 0) strbuilder_append(&regs, "\n");
-		strbuilder_appendf(&regs, "%cX: 0x%04X  ", reg_char, regfile->w[i]);
+		strbuilder_appendf(&regs, "E%cX: 0x%08X  ", reg_char, regfile->dw[i]);
 		reg_char++;
 	}
 	strbuilder_append(&regs, "\n");

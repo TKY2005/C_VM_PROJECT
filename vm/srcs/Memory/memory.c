@@ -3,9 +3,10 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include<headers/Memory/memory.h>
+#include<Memory/memory.h>
 #include<utils/ds.h>
 #include<utils/helpers.h>
+#include<vm/vm_events.h>
 
 memory mem_init(int sizeB) {
   memory m = {0};
@@ -116,7 +117,36 @@ int mem_read_bytes(memory *m, uint32_t addr, int count, uint8_t* result) {
   return 0;
 }
 
-char *mem_display(memory *m, uint32_t start, int count, int chunk_size) {
+int mem_read_byte_e(memory* m, uint32_t addr, uint8_t* result, vm_func_event e, void** args) {
+  int read = mem_read_byte(m, addr, result);
+  if (!e) return read;
+  e(args);
+  return read;
+}
+int mem_read_word_e(memory* m, uint32_t addr, uint16_t* result, vm_func_event e, void** args) {
+  int read = mem_read_word(m, addr, result);
+  if (!e) return read;
+  e(args);
+  e(args);
+  return read;
+}
+int mem_read_dword_e(memory* m, uint32_t addr, uint32_t* result, vm_func_event e, void** args) {
+  int read = mem_read_dword(m, addr, result);
+  if (!e) return read;
+  e(args);
+  e(args);
+  e(args);
+  e(args);
+  return read;
+}
+int mem_read_bytes_e(memory* m, uint32_t addr, int count, uint8_t* result, vm_func_event e, void** args) {
+  int read = mem_read_bytes(m, addr, count, result);
+  if (!e) return read;
+  for(int i = 0; i < count; i++) e(args);
+  return read;
+}
+
+char* mem_display(memory* m, uint32_t start, int count, int chunk_size) {
 
   if (count == -1 || count == NULL)
     count = m->size;
@@ -155,8 +185,7 @@ char *mem_display(memory *m, uint32_t start, int count, int chunk_size) {
     }
     strbuilder_appendf(&mem_str, "0x%02X  ", m->mem[i]);
 
-    strbuilder_append_chr(
-        &charset, (is_printable(m->mem[i]) == 0 ? (char)m->mem[i] : '.'));
+    strbuilder_append_chr(&charset, (is_printable(m->mem[i]) == 0 ? (char)m->mem[i] : '.'));
 
     if ((i + 1) % chunk_size == 0) {
       strbuilder_append_chr(&charset, '\0');
@@ -170,7 +199,7 @@ char *mem_display(memory *m, uint32_t start, int count, int chunk_size) {
   return strbuilder_getstr(&mem_str);
 }
 
-void mem_destroy(memory *m) {
+void mem_destroy(memory* m) {
   free(m->mem);
   m->size = -1;
 }

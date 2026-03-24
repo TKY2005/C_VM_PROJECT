@@ -243,6 +243,14 @@ std::string Tokenizer::preProcessCode(const std::string& input) {
                    std::find_if(line.begin(), line.end(),
                                 [](unsigned char c){ return !std::isspace(c); }));
 
+        // Remove trailing whitespace
+        line.erase(
+            std::find_if(line.rbegin(), line.rend(),
+                        [](unsigned char c){ return !std::isspace(c); }).base(),
+            line.end()
+        );
+                        
+
         // Remove inline comments
         size_t commentPos = line.find(';');
         if (commentPos != std::string::npos) {

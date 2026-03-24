@@ -11,5 +11,5 @@ void printd(char* log, ...) {
     
     va_end(args);
 
-    printf("%s\n", buff);
+    printf("%s", buff);
 }
