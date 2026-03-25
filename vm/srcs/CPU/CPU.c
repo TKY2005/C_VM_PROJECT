@@ -49,7 +49,7 @@ void CPU_exec_ins(CPU* cpu, memory* mem, uint8_t opcode) {
 
     if (ins == NULL) {
         char buff[2048] = {0};
-        sprintf(buff, "The CPU requested opcode: 0x%02X but it isn't defined.\n", opcode);
+        sprintf(buff, "The CPU requested instructioon with opcode: 0x%02X but it isn't defined.\n", opcode);
         CPU_fail(cpu, buff);
     }
     else {
