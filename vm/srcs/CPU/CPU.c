@@ -146,42 +146,20 @@ uint32_t CPU_decode_dest(CPU* cpu, memory* mem, ins_encoding* ins) {
 
         switch(ins->opertype.dest_type) {
             case REG8:
-            val = read_reg_b(cpu->registers, reg_idx);
+            val = reg_read_b(cpu->registers, reg_idx);
             break;
             case REG16:
-            val = read_reg_w(cpu->registers, reg_idx / 2);
+            val = reg_read_w(cpu->registers, reg_idx / 2);
             break;
             case REG32:
-            val = read_reg_dw(cpu->registers, reg_idx / 4);
+            val = reg_read_dw(cpu->registers, reg_idx / 4);
             break;
         }
     }
 
     else if ( CPU_dest_is_mem(ins->opertype.dest_type) ) {
 
-        uint32_t index = 0, base = 0;
-        int scale = 1;
-        switch(ins->opertype.mem_mode) {
-            case X1SCALE:
-            scale = 1;
-            break;
-            case X2SCALE:
-            scale = 2;
-            break;
-            case X4SCALE:
-            scale = 4;
-            break;
-        }
-
-        if (ins->dispinfo.reg_enable) {
-            if (ins->dispinfo.index != INDEX_UNSELECTED)
-                index = read_reg_dw(cpu->registers, CPU_get_reg_idx(ins->dispinfo.index) / 4);
-
-            if (ins->dispinfo.base != BASE_UNSELECTED)
-                base = read_reg_dw(cpu->registers, CPU_get_base_idx(ins->dispinfo.base) / 4);
-        }
-        uint32_t addr = base + (index * scale) + ins->disp_val;
-
+        uint32_t addr = CPU_calc_addr(cpu, ins);
         switch (ins->opertype.dest_type) {
             case MEM8:
                 mem_read_byte(mem, addr, (uint8_t*) &val);
@@ -211,42 +189,20 @@ uint32_t CPU_decode_src(CPU* cpu, memory* mem, ins_encoding* ins) {
 
         switch(ins->opertype.src_type) {
             case REG8:
-            val = read_reg_b(cpu->registers, reg_idx);
+            val = reg_read_b(cpu->registers, reg_idx);
             break;
             case REG16:
-            val = read_reg_w(cpu->registers, reg_idx / 2);
+            val = reg_read_w(cpu->registers, reg_idx / 2);
             break;
             case REG32:
-            val = read_reg_dw(cpu->registers, reg_idx / 4);
+            val = reg_read_dw(cpu->registers, reg_idx / 4);
             break;
         }
     }
 
     else if ( CPU_src_is_mem(ins->opertype.src_type) ) {
 
-        uint32_t index = 0, base = 0;
-        int scale = 0;
-        switch(ins->opertype.mem_mode) {
-            case X1SCALE:
-            scale = 1;
-            break;
-            case X2SCALE:
-            scale = 2;
-            break;
-            case X4SCALE:
-            scale = 4;
-            break;
-        }
-
-        if (ins->dispinfo.reg_enable) {
-            if (ins->dispinfo.index != INDEX_UNSELECTED)
-                index = read_reg_dw(cpu->registers, CPU_get_reg_idx(ins->dispinfo.index) / 4);
-
-            if (ins->dispinfo.base != BASE_UNSELECTED)
-                base = read_reg_dw(cpu->registers ,CPU_get_base_idx(ins->dispinfo.base) / 4);
-        }
-        uint32_t addr = base + (index * scale) + ins->disp_val;
-
+        uint32_t addr = CPU_calc_addr(cpu, ins);
         switch (ins->opertype.src_type) {
             case MEM8:
                 mem_read_byte(mem, addr, (uint8_t*) &val);
@@ -267,6 +223,71 @@ uint32_t CPU_decode_src(CPU* cpu, memory* mem, ins_encoding* ins) {
 
     else CPU_fail(cpu, "Couldn't decode source operand: %02X\n", ins->operand_types);
     return val;
+}
+
+int CPU_write_dest(CPU* cpu, memory* mem, ins_encoding* ins, uint32_t val) {
+
+    if (CPU_dest_is_reg(ins->opertype.dest_type)){
+
+        int idx = CPU_get_reg_idx(ins->regselect.dest);
+
+        switch(ins->opertype.dest_type) {
+            case REG8:
+            reg_write_b(cpu->registers, idx, (uint8_t) val);
+            break;
+            case REG16:
+            reg_write_w(cpu->registers, idx / 2, (uint16_t) val);
+            break;
+            case REG32:
+            reg_write_dw(cpu->registers, idx / 4, val);
+            break;
+        }
+    }
+    else if (CPU_dest_is_mem(ins->opertype.dest_type)) {
+
+        uint32_t addr = CPU_calc_addr(cpu, ins);
+
+        switch(ins->opertype.dest_type) {
+            case MEM8:
+            mem_write_byte(mem, addr, (uint8_t) val);
+            break;
+            case MEM16:
+            mem_write_word(mem, addr, (uint16_t) val);
+            break;
+            case MEM32:
+            mem_write_dword(mem, addr, val);
+            break;
+        }
+    }
+    else {
+        CPU_fail(cpu, "Invalid destination type.");
+    }
+}
+
+uint32_t CPU_calc_addr(CPU* cpu, ins_encoding* ins) {
+    uint32_t index = 0, base = 0;
+    int scale = 0;
+    switch(ins->opertype.mem_mode) {
+        case X1SCALE:
+        scale = 1;
+        break;
+        case X2SCALE:
+        scale = 2;
+        break;
+        case X4SCALE:
+        scale = 4;
+        break;
+    }
+
+    if (ins->dispinfo.reg_enable) {
+        if (ins->dispinfo.index != INDEX_UNSELECTED)
+            index = reg_read_dw(cpu->registers, CPU_get_reg_idx(ins->dispinfo.index) / 4);
+
+        if (ins->dispinfo.base != BASE_UNSELECTED)
+            base = reg_read_dw(cpu->registers ,CPU_get_base_idx(ins->dispinfo.base) / 4);
+    }
+    uint32_t addr = base + (index * scale) + ins->disp_val;
+    return addr;
 }
 
 int CPU_get_reg_idx(int idx) {

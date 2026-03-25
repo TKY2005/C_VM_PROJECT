@@ -31,12 +31,26 @@ instruction* setup_instruction_set() {
 void _ext(CPU* cpu, memory* mem) {
     cpu->state->CPU_RUNNING = 0;
 }
+
 void _nop(CPU* cpu, memory* mem) {
     printf("nop.\n");
 }
+
 void _set(CPU* cpu, memory* mem) {
-    printf("set.\n");
+    
+    ins_encoding encoding = {0};
+    ins_encoding* ins = &encoding;
+
+    int read = CPU_read_operand_bytes(cpu, mem, ins);
+    if (read == MEM_READ_FAILURE) {
+        CPU_fail(cpu, "Invalid read operation @ 0x%08X.", cpu->registers->PC);
+    }
+    else {
+        uint32_t val = CPU_decode_src(cpu, mem, ins);
+        CPU_write_dest(cpu, mem, ins, val);
+    }
 }
+
 void _out(CPU* cpu, memory* mem) {
     ins_encoding encoding = {0};
     ins_encoding* ins = &encoding;
@@ -44,7 +58,7 @@ void _out(CPU* cpu, memory* mem) {
     int read = CPU_read_operand_bytes(cpu, mem, ins);
 
     if (read == MEM_READ_FAILURE) {
-        CPU_fail(cpu, "Invalid read operation @ 0x%08X. CPU shutting down.\n", cpu->registers->PC);
+        CPU_fail(cpu, "Invalid read operation @ 0x%08X", cpu->registers->PC);
     }
     else {
         uint32_t val = CPU_decode_dest(cpu, mem, ins);
@@ -52,6 +66,7 @@ void _out(CPU* cpu, memory* mem) {
     }
 
 }
+
 void _add(CPU* cpu, memory* mem) { }
 void _sub(CPU* cpu, memory* mem) { }
 void _mul(CPU* cpu, memory* mem) { }

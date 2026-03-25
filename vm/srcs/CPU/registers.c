@@ -6,27 +6,27 @@
 #include<CPU/registers.h>
 #include<utils/ds.h>
 
-void write_reg_b(union registerfile* regfile, int regcode, uint8_t val) {
+void reg_write_b(union registerfile* regfile, int regcode, uint8_t val) {
 	regfile->b[regcode] = val;
 }
-void write_reg_w(union registerfile* regfile, int regcode, uint16_t val) {
+void reg_write_w(union registerfile* regfile, int regcode, uint16_t val) {
 	regfile->w[regcode] = val;
 }
-void write_reg_dw(union registerfile* regfile, int regcode, uint32_t val) {
+void reg_write_dw(union registerfile* regfile, int regcode, uint32_t val) {
 	regfile->dw[regcode] = val;
 }
 
-uint8_t read_reg_b(union registerfile* regfile, int regcode) {
+uint8_t reg_read_b(union registerfile* regfile, int regcode) {
 	return regfile->b[regcode];
 }
-uint16_t read_reg_w(union registerfile* regfile, int regcode) {
+uint16_t reg_read_w(union registerfile* regfile, int regcode) {
 	return regfile->w[regcode];
 }
-uint32_t read_reg_dw(union registerfile* regfile, int regcode) {
+uint32_t reg_read_dw(union registerfile* regfile, int regcode) {
 	return regfile->dw[regcode];
 }
 
-int get_reg_index(const char* reg) {
+int reg_get_index(const char* reg) {
 	
 	char regname[10] = {0};
 	for(int i = 0; reg[i] && i < sizeof(regname); i++) regname[i] = (char) tolower(reg[i]);

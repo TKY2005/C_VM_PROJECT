@@ -170,6 +170,10 @@ class Parser {
     void evaluateSourceOperand(std::vector<Token> operand, ProgIns& result, int& length);
     void evaluateMemoryExpression(std::vector<Token> expr, ProgIns& result, int& length);
 
+    bool isDestReg(uint8_t dest) {
+        return (dest >= REG8 && dest <= REG32);
+    }
+
     private:
     uint32_t program_offset = 0;
 };

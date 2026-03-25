@@ -325,7 +325,7 @@ void Parser::evaluateSourceOperand(vector<Token> operand, ProgIns& result, int& 
     }
 
     else if (operand[0].maintype == MainType::REG) {
-        if (result.encoding_info->opertype.dest_type == UNKNOWN)
+        if (!isDestReg(result.encoding_info->opertype.dest_type))
             length += 1; // we should add the register select byte only if we haven't encountered it yet //
         
         switch(operand[0].subtype) {

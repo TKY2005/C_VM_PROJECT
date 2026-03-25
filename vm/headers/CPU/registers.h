@@ -68,16 +68,16 @@ union registerfile {
 	};
 };
 
-// These functions take the index of the corresponding word size, not the byte index
-void write_reg_b(union registerfile* regfile, int regcode, uint8_t val);
-void write_reg_w(union registerfile* regfile, int regcode, uint16_t val);
-void write_reg_dw(union registerfile* regfile, int regcode, uint32_t val);
+// These functions take the index of the corresponding word index, not the byte index
+void reg_write_b(union registerfile* regfile, int regcode, uint8_t val);
+void reg_write_w(union registerfile* regfile, int regcode, uint16_t val);
+void reg_write_dw(union registerfile* regfile, int regcode, uint32_t val);
 
-uint8_t read_reg_b(union registerfile* regfile, int regcode);
-uint16_t read_reg_w(union registerfile* regfile, int regcode);
-uint32_t read_reg_dw(union registerfile* regfile, int regcode);
+uint8_t reg_read_b(union registerfile* regfile, int regcode);
+uint16_t reg_read_w(union registerfile* regfile, int regcode);
+uint32_t reg_read_dw(union registerfile* regfile, int regcode);
 
-int get_reg_index(const char* reg); // returns the byte index of the given register, -1 if not found.
+int reg_get_index(const char* reg); // returns the byte index of the given register, -1 if not found.
 
 char* display_registers(union registerfile* regfile);
 

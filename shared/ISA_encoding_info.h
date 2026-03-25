@@ -134,7 +134,7 @@ typedef struct {
         uint8_t displacement_info;
     };
 
-    uint32_t disp_val;
+    int32_t disp_val;
     uint32_t imm_val;
     
 } ins_encoding;

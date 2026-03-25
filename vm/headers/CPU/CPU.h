@@ -53,6 +53,10 @@ int CPU_read_imm32(CPU* cpu, memory* mem, ins_encoding* ins);
 uint32_t CPU_decode_dest(CPU* cpu, memory* mem, ins_encoding* ins);
 uint32_t CPU_decode_src(CPU* cpu, memory* mem, ins_encoding* ins);
 
+int CPU_write_dest(CPU* cpu, memory* mem, ins_encoding* ins, uint32_t val);
+
+uint32_t CPU_calc_addr(CPU* cpu, ins_encoding* ins);
+
 int CPU_get_reg_idx(int idx);
 int CPU_get_base_idx(int base);
 
