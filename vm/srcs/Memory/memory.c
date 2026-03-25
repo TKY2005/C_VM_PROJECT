@@ -6,7 +6,7 @@
 #include<Memory/memory.h>
 #include<utils/ds.h>
 #include<utils/helpers.h>
-#include<vm/vm_events.h>
+#include<VM/vm_events.h>
 
 memory mem_init(int sizeB) {
   memory m = {0};
@@ -16,7 +16,7 @@ memory mem_init(int sizeB) {
     return m;
   }
   m.size = sizeB;
-  m.mem = (uint8_t *)calloc(sizeB, sizeof(uint8_t));
+  m.mem = (uint8_t*) calloc(sizeB, sizeof(uint8_t));
   return m;
 }
 int is_valid_addr(uint32_t addr) {

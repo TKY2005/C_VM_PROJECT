@@ -3,7 +3,7 @@
 
 #include<stdint.h>
 
-#include<vm/vm_events.h>
+#include<VM/vm_events.h>
 
 #define DEFAULT_CHUNK_SIZE 16
 #define BIT32_MAX_SIZE 0xffffffff

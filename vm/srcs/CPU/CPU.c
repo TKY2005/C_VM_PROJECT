@@ -30,7 +30,7 @@ void CPU_destroy(CPU* cpu) {
 int CPU_run(CPU* cpu, memory* mem) {
     
     while (cpu->state->CPU_RUNNING) {
-        uint8_t opcode;
+        uint8_t opcode = 0;
         int read = mem_read_byte(mem, cpu->registers->PC, &opcode);
 
         if (read == MEM_READ_FAILURE) {
@@ -48,7 +48,9 @@ void CPU_exec_ins(CPU* cpu, memory* mem, uint8_t opcode) {
     instruction ins = cpu->instruction_set[opcode];
 
     if (ins == NULL) {
-        CPU_fail(cpu, "The CPU requested opcode: 0x%02X but it isn't defined.\n", opcode);
+        char buff[2048] = {0};
+        sprintf(buff, "The CPU requested opcode: 0x%02X but it isn't defined.\n", opcode);
+        CPU_fail(cpu, buff);
     }
     else {
         ins(cpu, mem);
