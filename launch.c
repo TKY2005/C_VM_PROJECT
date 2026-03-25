@@ -7,13 +7,14 @@
 #include<stdio.h>
 
 int main() {
-
+    
     vm_init(1024);
 
     vm_load_binary_file(&vm_memory, "./test.tky");
 
     vm_cpu->registers->A = 0xfcbb4050;
     vm_cpu->registers->DI = 0x30;
+    vm_cpu->registers->SP = 0x400;
     // f0 11 ff 90
     mem_write_dword(&vm_memory, 0x50, 0xf011ff90);
     vm_runp(vm_cpu, &vm_memory, 0x0);

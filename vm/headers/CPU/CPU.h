@@ -45,6 +45,7 @@ int CPU_read_regselect(CPU* cpu, memory* mem, ins_encoding* ins);
 int CPU_read_dispinfo(CPU* cpu, memory* mem, ins_encoding* ins);
 
 int CPU_read_displacement_value(CPU* cpu, memory* mem, ins_encoding* ins);
+int CPU_read_sym(CPU* cpu, memory* mem, ins_encoding* ins);
 
 int CPU_read_imm8(CPU* cpu, memory* mem, ins_encoding* ins);
 int CPU_read_imm16(CPU* cpu, memory* mem, ins_encoding* ins);
@@ -53,7 +54,13 @@ int CPU_read_imm32(CPU* cpu, memory* mem, ins_encoding* ins);
 uint32_t CPU_decode_dest(CPU* cpu, memory* mem, ins_encoding* ins);
 uint32_t CPU_decode_src(CPU* cpu, memory* mem, ins_encoding* ins);
 
+int CPU_deref_sym(CPU* cpu, memory* mem, ins_encoding* ins, uint32_t* result);
+
 int CPU_write_dest(CPU* cpu, memory* mem, ins_encoding* ins, uint32_t val);
+int CPU_stack_push(CPU* cpu, memory* mem, uint32_t val);
+int CPU_stack_pop(CPU* cpu, memory* mem, uint32_t* result);
+void CPU_jump_addr(CPU* cpu, uint32_t jmpaddr);
+void CPU_call_addr(CPU* cpu, uint32_t calladdr);
 
 uint32_t CPU_calc_addr(CPU* cpu, ins_encoding* ins);
 

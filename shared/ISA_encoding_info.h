@@ -136,6 +136,11 @@ typedef struct {
 
     int32_t disp_val;
     uint32_t imm_val;
+    // used by the CPU. not the assembler.
+    uint32_t sym;
+    int single_oper : 1;
+    int symflg : 1;
+    int resolve_sym : 1;
     
 } ins_encoding;
 

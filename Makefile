@@ -4,7 +4,8 @@ INCLUDE_EMU = ./vm/headers
 INCLUDE_ASM = ./assembler/headers
 INCLUDE_SHARED = ./shared
 SHARED_FILES = $(wildcard ./shared/*/*.c)
-SRCS = $(wildcard ./*.c ./vm/srcs/*/*.c) $(SHARED_FILES) -I $(INCLUDE_EMU) -I $(INCLUDE_SHARED)
+LIBS = -lm
+SRCS = $(wildcard ./*.c ./vm/srcs/*/*.c) $(SHARED_FILES) -I $(INCLUDE_EMU) -I $(INCLUDE_SHARED) $(LIBS)
 ASM_FILES = $(wildcard ./assembler/*.cpp ./assembler/srcs/*.cpp ./assembler/srcs/*/*.cpp) $(SHARED_FILES) -I $(INCLUDE_ASM) -I $(INCLUDE_SHARED)
 
 dbg_flags = -g -fno-omit-frame-pointer -fsanitize=address

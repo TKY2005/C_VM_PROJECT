@@ -13,10 +13,13 @@ CPU* mkCPU(union registerfile* regfile, instruction* ins_set) {
     CPU* cpu = malloc(sizeof(CPU));
 
     cpu->arch = 32;
-    cpu->registers = calloc(1, sizeof(union registerfile));
+    if(regfile == NULL) cpu->registers = calloc(1, sizeof(union registerfile));
+    else cpu->registers = regfile;
+
     cpu->state = calloc(1, sizeof(CPU_STATE));
 
     cpu->instruction_set = ins_set;
+
     return cpu;
 }
 
@@ -92,7 +95,7 @@ int CPU_read_operand_bytes(CPU* cpu, memory* mem, ins_encoding* ins) {
                 if (ins->dispinfo.disp_enable) {
                     CPU_step(cpu);
                     CPU_read_displacement_value(cpu, mem, ins);
-                    cpu->registers->PC--;
+                    cpu->registers->PC--; // we have to sub 1 because PC gets automatically incremented after each instruction
                 }
             }
         }
@@ -102,6 +105,14 @@ int CPU_read_operand_bytes(CPU* cpu, memory* mem, ins_encoding* ins) {
             else if (CPU_destsize_16(dest)) CPU_read_imm16(cpu, mem, ins);
             else if (CPU_destsize_8(dest)) CPU_read_imm8(cpu, mem, ins);
             else CPU_read_imm32(cpu, mem, ins);
+            cpu->registers->PC--;
+        }
+
+        // our last assumption is there is an symbol and read the next 4 bytes
+        if ((dest == UNKNOWN && ins->single_oper) || (src == UNKNOWN && dest != UNKNOWN && !ins->single_oper)) { 
+            ins->symflg = 1;
+            CPU_step(cpu);
+            CPU_read_sym(cpu, mem, ins);
             cpu->registers->PC--;
         }
     }
@@ -133,9 +144,39 @@ int CPU_read_imm32(CPU* cpu, memory* mem, ins_encoding* ins) {
     return mem_read_dword_e(mem, cpu->registers->PC, &ins->imm_val, CPU_step_e, (void*) &cpu);
 }
 
+int CPU_deref_sym(CPU* cpu, memory* mem, ins_encoding* ins, uint32_t* result) {
+    if (CPU_destsize_8(ins->opertype.dest_type)) return mem_read_byte(mem, ins->sym, (uint8_t*) result);
+    if (CPU_destsize_16(ins->opertype.dest_type)) return mem_read_word(mem, ins->sym, (uint16_t*) result);
+    if (CPU_destsize_32(ins->opertype.dest_type)) return mem_read_dword(mem, ins->sym, result);
+    else return mem_read_dword(mem, ins->sym, result);
+}
+
+int CPU_stack_push(CPU* cpu, memory* mem, uint32_t val) {
+    cpu->registers->SP -= 4;
+    int wr = mem_write_dword(mem, cpu->registers->SP, val);
+    return wr;
+}
+int CPU_stack_pop(CPU* cpu, memory* mem, uint32_t* result) {
+    int rd = mem_read_dword(mem, cpu->registers->SP, result);
+    cpu->registers->SP += 4;
+    return rd;
+}
+void CPU_jump_addr(CPU* cpu, uint32_t jmpaddr) {
+    cpu->registers->PC = jmpaddr;
+    cpu->registers->PC--; // because the CPU auto increments PC after each instruction cycle.
+}
+void CPU_call_addr(CPU* cpu, uint32_t calladdr) {
+    // left as a stub until i make the decision about where the return address should go.
+}
+
 int CPU_read_displacement_value(CPU* cpu, memory* mem, ins_encoding* ins) {
     return mem_read_dword_e(mem, cpu->registers->PC, &ins->disp_val, CPU_step_e, (void*) &cpu);
 }
+
+int CPU_read_sym(CPU* cpu, memory* mem, ins_encoding* ins) {
+    return mem_read_dword_e(mem, cpu->registers->PC, &ins->sym, CPU_step_e, (void*) &cpu);
+}
+
 
 uint32_t CPU_decode_dest(CPU* cpu, memory* mem, ins_encoding* ins) {
 
@@ -176,6 +217,9 @@ uint32_t CPU_decode_dest(CPU* cpu, memory* mem, ins_encoding* ins) {
 
     else if ( CPU_dest_is_num(ins->opertype.dest_type) ) {
         val = ins->imm_val;
+    }
+    else if (ins->symflg) {
+        val = ins->sym;
     }
     else CPU_fail(cpu, "Couldn't decode destination operand: %02X\n", ins->operand_types);
     return val;
@@ -219,6 +263,14 @@ uint32_t CPU_decode_src(CPU* cpu, memory* mem, ins_encoding* ins) {
 
     else if ( CPU_src_is_num(ins->opertype.src_type) ) {
         val = ins->imm_val;
+    }
+
+    else if (ins->symflg) {
+        val = ins->sym;
+
+        if (ins->resolve_sym) {
+            CPU_deref_sym(cpu, mem, ins, &val);
+        }
     }
 
     else CPU_fail(cpu, "Couldn't decode source operand: %02X\n", ins->operand_types);
