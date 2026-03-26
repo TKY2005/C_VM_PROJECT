@@ -10,34 +10,6 @@
 std::ofstream CodeGenerator::makeBinaryFile(std::string outputFilePath, ParseResult* parseResult) {
     std::ofstream outputfile(outputFilePath, std::ios::out | std::ios::binary);
 
-    std::vector<ProgIns*> instructions = parseResult->program_instructions;
-    for(int i = 0; i < instructions.size(); i++) {
-
-        bin_form* bin = instructionToByteCode(instructions[i], parseResult->symmap);
-        printf("%s => ", instructions[i]->toString().c_str());
-        for(int j = 0; j < bin->size; j++) {
-            printf("0x%02x ", bin->bindata[j]);
-        }
-        printf("\n");
-        outputfile.seekp(instructions[i]->addr, std::ios::beg);
-        outputfile.write(reinterpret_cast<const char*>(bin->bindata), bin->size);
-        free(bin->bindata);
-        free(bin);
-    }
-
-    std::vector<ProgData*> data = parseResult->program_data;
-    
-    if (data.size() != 0) {
-        for(int i = 0; i < data.size(); i++) {
-
-            bin_form* bin = dataToBin(data[i]);
-            outputfile.seekp(data[i]->addr, std::ios::beg);
-            outputfile.write(reinterpret_cast<const char*>(bin->bindata), bin->size);
-            free(bin->bindata);
-            free(bin);
-        }
-    }
-    
     // write metadata;
     
     file_metadata filemeta = {0};
@@ -70,6 +42,34 @@ std::ofstream CodeGenerator::makeBinaryFile(std::string outputFilePath, ParseRes
     outputfile.write(reinterpret_cast<const char*>(&filemeta.arch), sizeof(filemeta.arch));
     outputfile.write(reinterpret_cast<const char*>(&filemeta.entrypoint), sizeof(filemeta.entrypoint));
 
+    std::vector<ProgIns*> instructions = parseResult->program_instructions;
+    for(int i = 0; i < instructions.size(); i++) {
+
+        bin_form* bin = instructionToByteCode(instructions[i], parseResult->symmap);
+        printf("%s => ", instructions[i]->toString().c_str());
+        for(int j = 0; j < bin->size; j++) {
+            printf("0x%02x ", bin->bindata[j]);
+        }
+        printf("\n");
+        outputfile.seekp(instructions[i]->addr + metaDataOffset, std::ios::beg);
+        outputfile.write(reinterpret_cast<const char*>(bin->bindata), bin->size);
+        free(bin->bindata);
+        free(bin);
+    }
+
+    std::vector<ProgData*> data = parseResult->program_data;
+    
+    if (data.size() != 0) {
+        for(int i = 0; i < data.size(); i++) {
+
+            bin_form* bin = dataToBin(data[i]);
+            outputfile.seekp(data[i]->addr + metaDataOffset, std::ios::beg);
+            outputfile.write(reinterpret_cast<const char*>(bin->bindata), bin->size);
+            free(bin->bindata);
+            free(bin);
+        }
+    }
+    
     return outputfile;
 }
 

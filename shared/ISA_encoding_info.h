@@ -141,6 +141,7 @@ typedef struct {
     int single_oper : 1;
     int symflg : 1;
     int resolve_sym : 1;
+    int flg_mod : 1;
     
 } ins_encoding;
 

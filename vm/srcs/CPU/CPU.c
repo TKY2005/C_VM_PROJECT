@@ -196,6 +196,15 @@ void CPU_update_flags32(CPU* cpu, uint32_t dest, uint32_t src, uint32_t val) {
     if ( (dest ^ val) & ( (src ^ val) & 0x80000000 ) != 0 ) reg_set_flags(cpu->registers, FLG_O);
 }
 
+void CPU_update_flags(CPU* cpu, ins_encoding* ins, uint32_t dest, uint32_t src, uint32_t val) {
+
+    if (ins->flg_mod) {
+        if (CPU_destsize_8(ins->opertype.dest_type)) CPU_update_flags8(cpu, dest, src, val);
+        else if (CPU_destsize_16(ins->opertype.dest_type)) CPU_update_flags16(cpu, dest, src, val);
+        else if (CPU_destsize_32(ins->opertype.dest_type)) CPU_update_flags32(cpu, dest, src, val);
+    }
+}
+
 int CPU_read_displacement_value(CPU* cpu, memory* mem, ins_encoding* ins) {
     return mem_read_dword_e(mem, cpu->registers->PC, &ins->disp_val, CPU_step_e, (void*) &cpu);
 }

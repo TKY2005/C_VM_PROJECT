@@ -75,6 +75,7 @@ void _add(CPU* cpu, memory* mem) {
     ins_encoding encoding = {0};
     ins_encoding* ins = &encoding;
     ins->resolve_sym = 1;
+    ins->flg_mod = 1;
 
     int read = CPU_read_operand_bytes(cpu, mem, ins);
     if (read == MEM_READ_FAILURE) {
@@ -85,15 +86,14 @@ void _add(CPU* cpu, memory* mem) {
         uint32_t src = CPU_decode_src(cpu, mem, ins);
         uint32_t val = dest + src;
         CPU_write_dest(cpu, mem, ins, val);
-
-        if (CPU_destsize_8(ins->opertype.dest_type)) CPU_update_flags8(cpu, dest, src, val);
-        else if (CPU_destsize_16(ins->opertype.dest_type)) CPU_update_flags16(cpu, dest, src, val);
-        else if (CPU_destsize_32(ins->opertype.dest_type)) CPU_update_flags32(cpu, dest, src, val);
+        CPU_update_flags(cpu, ins, dest, src, val);
     }
 }
 void _sub(CPU* cpu, memory* mem) {
     ins_encoding encoding = {0};
     ins_encoding* ins = &encoding;
+    ins->resolve_sym = 1;
+    ins->flg_mod = 1;
 
     int read = CPU_read_operand_bytes(cpu, mem, ins);
     if (read == MEM_READ_FAILURE) {
@@ -104,11 +104,14 @@ void _sub(CPU* cpu, memory* mem) {
         uint32_t src = CPU_decode_src(cpu, mem, ins);
         uint32_t val = dest - src;
         CPU_write_dest(cpu, mem, ins, val);
+        CPU_update_flags(cpu, ins, dest, src, val);
     }
 }
 void _mul(CPU* cpu, memory* mem) {
     ins_encoding encoding = {0};
     ins_encoding* ins = &encoding;
+    ins->resolve_sym = 1;
+    ins->flg_mod = 1;
 
     int read = CPU_read_operand_bytes(cpu, mem, ins);
     if (read == MEM_READ_FAILURE) {
@@ -119,11 +122,14 @@ void _mul(CPU* cpu, memory* mem) {
         uint32_t src = CPU_decode_src(cpu, mem, ins);
         uint32_t val = dest * src;
         CPU_write_dest(cpu, mem, ins, val);
+        CPU_update_flags(cpu, ins, dest, src, val);
     }
 }
 void _div(CPU* cpu, memory* mem) {
     ins_encoding encoding = {0};
     ins_encoding* ins = &encoding;
+    ins->resolve_sym = 1;
+    ins->flg_mod = 1;
 
     int read = CPU_read_operand_bytes(cpu, mem, ins);
     if (read == MEM_READ_FAILURE) {
@@ -134,6 +140,7 @@ void _div(CPU* cpu, memory* mem) {
         uint32_t src = CPU_decode_src(cpu, mem, ins);
         uint32_t val = dest / src;
         CPU_write_dest(cpu, mem, ins, val);
+        CPU_update_flags(cpu, ins, dest, src, val);
     }
 }
 void _pow(CPU* cpu, memory* mem) {
@@ -190,6 +197,7 @@ void _inc(CPU* cpu, memory* mem) {
     ins_encoding encoding = {0};
     ins_encoding* ins = &encoding;
     ins->single_oper = 1;
+    ins->flg_mod = 1;
 
     int read = CPU_read_operand_bytes(cpu, mem, ins);
     if (read == MEM_READ_FAILURE) {
@@ -199,12 +207,14 @@ void _inc(CPU* cpu, memory* mem) {
         uint32_t val = CPU_decode_dest(cpu, mem, ins);
         val++;
         CPU_write_dest(cpu, mem, ins, val);
+        CPU_update_flags(cpu, ins, val - 1, 1, val);
     }
 }
 void _dec(CPU* cpu, memory* mem) {
     ins_encoding encoding = {0};
     ins_encoding* ins = &encoding;
     ins->single_oper = 1;
+    ins->flg_mod = 1;
 
     int read = CPU_read_operand_bytes(cpu, mem, ins);
     if (read == MEM_READ_FAILURE) {
@@ -214,6 +224,7 @@ void _dec(CPU* cpu, memory* mem) {
         uint32_t val = CPU_decode_dest(cpu, mem, ins);
         val--;
         CPU_write_dest(cpu, mem, ins, val);
+        CPU_update_flags(cpu, ins, val + 1, 1, val);
     }
 }
 
@@ -320,6 +331,7 @@ void _cmp(CPU* cpu, memory* mem) {
     ins_encoding encoding = {0};
     ins_encoding* ins = &encoding;
     ins->resolve_sym = 1;
+    ins->flg_mod = 1;
 
     int read = CPU_read_operand_bytes(cpu, mem, ins);
     if (read == MEM_READ_FAILURE) {
@@ -329,12 +341,18 @@ void _cmp(CPU* cpu, memory* mem) {
         uint32_t dest = CPU_decode_dest(cpu, mem, ins);
         uint32_t src = CPU_decode_src(cpu, mem, ins);
         uint32_t val = dest - src;
-        CPU_update_flags32(cpu, dest, src, val);
+        CPU_update_flags(cpu, ins, dest, src, val);
     }
 }
 void _loop(CPU* cpu, memory* mem) {
     
-    if (cpu->registers->C > 0) _jmp(cpu, mem);
+    cpu->registers->C--;
+    if (cpu->registers->C > 0){
+        _jmp(cpu, mem);
+    }
+    else {
+        cpu->registers->PC += 4;
+    }
 }
 
 void _ret(CPU* cpu, memory* mem) {
@@ -364,21 +382,57 @@ void _shl(CPU* cpu, memory* mem) { }
 void _shr(CPU* cpu, memory* mem) { }
 void _outsw(CPU* cpu, memory* mem) { }
 void _lenw(CPU* cpu, memory* mem) { }
-void _jc(CPU* cpu, memory* mem) { }
-void _jo(CPU* cpu, memory* mem) { }
-void _jnc(CPU* cpu, memory* mem) { }
-void _jno(CPU* cpu, memory* mem) { }
-void _calc(CPU* cpu, memory* mem) { }
-void _calo(CPU* cpu, memory* mem) { }
-void _calnc(CPU* cpu, memory* mem) { }
-void _calno(CPU* cpu, memory* mem) { }
-void _clc(CPU* cpu, memory* mem) { }
-void _clo(CPU* cpu, memory* mem) { }
-void _clz(CPU* cpu, memory* mem) { }
-void _cln(CPU* cpu, memory* mem) { }
-void _cli(CPU* cpu, memory* mem) { }
-void _slc(CPU* cpu, memory* mem) { }
-void _slo(CPU* cpu, memory* mem) { }
-void _slz(CPU* cpu, memory* mem) { }
-void _sln(CPU* cpu, memory* mem) { }
-void _sli(CPU* cpu, memory* mem) { }
+void _jc(CPU* cpu, memory* mem) {
+    if (reg_check_flag(cpu->registers, FLG_C)) _jmp(cpu, mem);
+}
+void _jo(CPU* cpu, memory* mem) {
+    if (reg_check_flag(cpu->registers, FLG_O)) _jmp(cpu, mem);
+}
+void _jnc(CPU* cpu, memory* mem) {
+    if (!reg_check_flag(cpu->registers, FLG_C)) _jmp(cpu, mem);
+}
+void _jno(CPU* cpu, memory* mem) {
+    if (!reg_check_flag(cpu->registers, FLG_O)) _jmp(cpu, mem);
+}
+void _calc(CPU* cpu, memory* mem) {
+    if (reg_check_flag(cpu->registers, FLG_C)) _call(cpu, mem);
+}
+void _calo(CPU* cpu, memory* mem) {
+    if (reg_check_flag(cpu->registers, FLG_O)) _call(cpu, mem);
+}
+void _calnc(CPU* cpu, memory* mem) {
+    if (!reg_check_flag(cpu->registers, FLG_C)) _call(cpu, mem);
+}
+void _calno(CPU* cpu, memory* mem) {
+    if (!reg_check_flag(cpu->registers, FLG_O)) _call(cpu, mem);
+}
+void _clc(CPU* cpu, memory* mem) {
+    reg_clear_flags(cpu->registers, FLG_C);
+}
+void _clo(CPU* cpu, memory* mem) {
+    reg_clear_flags(cpu->registers, FLG_O);
+}
+void _clz(CPU* cpu, memory* mem) {
+    reg_clear_flags(cpu->registers, FLG_Z);
+}
+void _cln(CPU* cpu, memory* mem) {
+    reg_clear_flags(cpu->registers, FLG_N);
+}
+void _cli(CPU* cpu, memory* mem) {
+    reg_clear_flags(cpu->registers, FLG_I);
+}
+void _slc(CPU* cpu, memory* mem) {
+    reg_set_flags(cpu->registers, FLG_C);
+}
+void _slo(CPU* cpu, memory* mem) {
+    reg_set_flags(cpu->registers, FLG_O);
+}
+void _slz(CPU* cpu, memory* mem) {
+    reg_set_flags(cpu->registers, FLG_Z);
+}
+void _sln(CPU* cpu, memory* mem) {
+    reg_set_flags(cpu->registers, FLG_N);
+}
+void _sli(CPU* cpu, memory* mem) {
+    reg_set_flags(cpu->registers, FLG_I);
+}

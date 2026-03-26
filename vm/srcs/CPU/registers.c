@@ -7,13 +7,13 @@
 #include<utils/ds.h>
 
 void reg_write_b(union registerfile* regfile, int regcode, uint8_t val) {
-	regfile->b[regcode] = val % 0xff;
+	regfile->b[regcode] = val % (0xff + 1);
 }
 void reg_write_w(union registerfile* regfile, int regcode, uint16_t val) {
-	regfile->w[regcode] = val % 0xffff;
+	regfile->w[regcode] = val % (0xffff + 1);
 }
 void reg_write_dw(union registerfile* regfile, int regcode, uint32_t val) {
-	regfile->dw[regcode] = val % 0xffffffff;
+	regfile->dw[regcode] = val % (0xffffffffUL + 1);
 }
 
 uint8_t reg_read_b(union registerfile* regfile, int regcode) {

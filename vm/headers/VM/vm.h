@@ -10,18 +10,21 @@
 #define FILE_NOT_OPEN -1
 #define NOT_ENOUGH_MEMORY -2
 #define NO_VALID_TARGET -3
+#define VM_COULDNT_EXECUTE -4
 
 // WARNINGS: > 0
 #define FILE_INCOMPLETE 1
 
-#define SUCCESS 0
+#define VM_SUCCESS 0
+
+#define METADATA_SIZE 33
 
 extern CPU* vm_cpu;
 extern memory vm_memory;
 
 void vm_init(int memsize);
 void vm_init_nomem();
-int vm_load_binary_file(memory* target, const char* filepath);
+int vm_load_binary_file(memory* target, const char* filepath, uint32_t* entry_dest);
 int vm_handle_interrupt(CPU* cpu);
 int vm_runp(CPU* cpu, memory* mem, uint32_t entry);
 int vm_runf(CPU* cpu, memory* mem, const char* filepath);

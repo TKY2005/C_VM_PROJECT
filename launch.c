@@ -6,11 +6,9 @@
 #include<stdlib.h>
 #include<stdio.h>
 
-int main() {
+int main(int argc, char** argv) {
     
     vm_init(1024);
-
-    vm_load_binary_file(&vm_memory, "./test.tky");
 
     vm_cpu->registers->A = 0xfcbb4050;
     vm_cpu->registers->DI = 0x30;
@@ -20,7 +18,7 @@ int main() {
     
     // f0 11 ff 90
     mem_write_dword(&vm_memory, 0x50, 0xf011ff90);
-    vm_runp(vm_cpu, &vm_memory, 0x0);
+    vm_runf(vm_cpu, &vm_memory, "./test.tky");
 
     char* regs = display_registers(vm_cpu->registers);
     char* mem = mem_display(&vm_memory, 0, 0xff, -1);
