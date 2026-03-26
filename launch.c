@@ -13,8 +13,6 @@ int main(int argc, char** argv) {
     vm_cpu->registers->A = 0xfcbb4050;
     vm_cpu->registers->DI = 0x30;
     vm_cpu->registers->SP = 0x7f;
-
-    reg_set_flags(vm_cpu->registers, FLG_I);
     
     // f0 11 ff 90
     mem_write_dword(&vm_memory, 0x50, 0xf011ff90);

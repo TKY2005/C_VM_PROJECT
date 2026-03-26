@@ -74,13 +74,13 @@ ParseResult* Parser::parseTokens(vector<Token> tokens) {
             if (currentLine[0].subtype == SubType::DIR_ORG) {
                 
                 if (currentLine[1].maintype == MainType::NUM) {
-                    program_offset = (uint32_t) std::stoi(currentLine[1].tokenstr);
+                    program_offset = (uint32_t) std::stoll(currentLine[1].tokenstr);
                 }
 
                 else if (currentLine[1].maintype == MainType::SYM) {
                     uint32_t base = result->symmap[currentLine[1].tokenstr];
                     if (currentLine[2].maintype == MainType::SEMICOLON) {
-                        uint32_t offset = (uint32_t) std::stoi(currentLine[3].tokenstr);
+                        uint32_t offset = (uint32_t) std::stoll(currentLine[3].tokenstr);
                         program_offset = base + offset;
                     }
                     else program_offset = base;
@@ -99,7 +99,7 @@ ParseResult* Parser::parseTokens(vector<Token> tokens) {
                 if (currentLine[0].subtype == SubType::DIR_RESB) scale = 1;
                 else if (currentLine[0].subtype == SubType::DIR_RESW) scale = 2;
 
-                uint32_t amount = (uint32_t) std::stoi(currentLine[1].tokenstr);
+                uint32_t amount = (uint32_t) std::stoll(currentLine[1].tokenstr);
                 program_offset += amount * scale;
             }
         }
@@ -175,7 +175,7 @@ ProgData* Parser::parseData(vector<Token> dparts) {
         if (dparts[2].maintype != MainType::NUM) {
             // error reporting
         }
-        else length += std::stoi(dparts[2].tokenstr) * scale;
+        else length += std::stoll(dparts[2].tokenstr) * scale;
     }
     else {
         vector<Token> data = extractData(dparts);
@@ -263,7 +263,7 @@ void Parser::evaluateDestinationOperand(vector<Token> operand, ProgIns& result, 
         length += 4; // only allowed for instructions that may take an immediate for operand, no opertype byte needed.
         result.hasImmediate = true;
         result.immediateSize = 4;
-        result.encoding_info->imm_val = (uint32_t) std::stoi(operand[0].tokenstr);
+        result.encoding_info->imm_val = (uint32_t) std::stoll(operand[0].tokenstr);
         // in case of jmp and call instructions, the operand types byte won't be present
         if ( 
             (result.encoding_info->opcode >= INS_CALL && result.encoding_info->opcode <= INS_JB) || 
@@ -371,7 +371,7 @@ void Parser::evaluateSourceOperand(vector<Token> operand, ProgIns& result, int& 
     else if (operand[0].maintype == MainType::NUM) {
         result.hasImmediate = true;
         result.encoding_info->opertype.src_type = NUMBER;
-        uint32_t num = (uint32_t) std::stoi(operand[0].tokenstr);
+        uint32_t num = (uint32_t) std::stoll(operand[0].tokenstr);
         
         switch (result.encoding_info->opertype.dest_type) // immediate size matches the destination type.
         {
@@ -425,14 +425,14 @@ void Parser::evaluateMemoryExpression(vector<Token> expr, ProgIns& result, int& 
                 result.encoding_info->dispinfo.disp_enable = 1;
                 length += 4; // displacement value
                 int val = 0;
-                if (expr[i - 1].subtype == SubType::OPER_SUB) val = std::stoi("-" + expr[i].tokenstr);
-                else val = std::stoi(expr[i].tokenstr);
+                if (expr[i - 1].subtype == SubType::OPER_SUB) val = (int32_t) std::stoll("-" + expr[i].tokenstr);
+                else val = (int32_t) std::stoll(expr[i].tokenstr);
 
                 result.encoding_info->disp_val = val;
             }
         }
         else if (expr[i].subtype == SubType::OPER_MUL) {
-            switch(std::stoi(expr[i + 1].tokenstr)) {
+            switch(std::stoll(expr[i + 1].tokenstr)) {
                 case 1:
                 result.encoding_info->opertype.mem_mode = X1SCALE;
                 break;

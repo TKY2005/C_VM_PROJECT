@@ -277,19 +277,56 @@ void _pop(CPU* cpu, memory* mem) {
         CPU_write_dest(cpu, mem, ins, val);
     }
 }
+
 void _call(CPU* cpu, memory* mem) {
     ins_encoding dummy = {0};
     CPU_step(cpu); // position the PC at the beginning of the address.
     CPU_read_sym(cpu, mem, &dummy);
     CPU_call_addr(cpu, mem, dummy.sym);
 }
-void _cale(CPU* cpu, memory* mem) { }
-void _calne(CPU* cpu, memory* mem) { }
-void _cal(CPU* cpu, memory* mem) { }
-void _calle(CPU* cpu, memory* mem) { }
-void _calg(CPU* cpu, memory* mem) { }
-void _calge(CPU* cpu, memory* mem) { }
-void _calb(CPU* cpu, memory* mem) { }
+void _cale(CPU* cpu, memory* mem) {
+    if (reg_check_flag(cpu->registers, FLG_Z)) _call(cpu, mem);
+    else {
+        cpu->registers->PC += 4;
+    }
+}
+void _calne(CPU* cpu, memory* mem) {
+    if (reg_check_flag(cpu->registers, FLG_Z)) _call(cpu, mem);
+    else {
+        cpu->registers->PC += 4;
+    }
+}
+void _cal(CPU* cpu, memory* mem) {
+    if (reg_check_flag(cpu->registers, FLG_Z)) _call(cpu, mem);
+    else {
+        cpu->registers->PC += 4;
+    }
+}
+void _calle(CPU* cpu, memory* mem) {
+    if (reg_check_flag(cpu->registers, FLG_Z)) _call(cpu, mem);
+    else {
+        cpu->registers->PC += 4;
+    }
+}
+void _calg(CPU* cpu, memory* mem) {
+    if (reg_check_flag(cpu->registers, FLG_Z)) _call(cpu, mem);
+    else {
+        cpu->registers->PC += 4;
+    }
+}
+void _calge(CPU* cpu, memory* mem) {
+    if (reg_check_flag(cpu->registers, FLG_Z)) _call(cpu, mem);
+    else {
+        cpu->registers->PC += 4;
+    }
+}
+void _calb(CPU* cpu, memory* mem) {
+    if (reg_check_flag(cpu->registers, FLG_Z)) _call(cpu, mem);
+    else {
+        cpu->registers->PC += 4;
+    }
+}
+
 void _jmp(CPU* cpu, memory* mem) {
 
     ins_encoding dummy = {0};
@@ -300,25 +337,46 @@ void _jmp(CPU* cpu, memory* mem) {
 void _je(CPU* cpu, memory* mem) {
 
     if (reg_check_flag(cpu->registers, FLG_Z)) _jmp(cpu, mem);
+    else {
+        cpu->registers->PC += 4;
+    }
 }
 void _jne(CPU* cpu, memory* mem) {
 
     if (!reg_check_flag(cpu->registers, FLG_Z)) _jmp(cpu, mem);
+    else {
+        cpu->registers->PC += 4;
+    }
 }
 void _jl(CPU* cpu, memory* mem) {
     if (reg_check_flag(cpu->registers, FLG_N)) _jmp(cpu, mem);
+    else {
+        cpu->registers->PC += 4;
+    }
 }
 void _jle(CPU* cpu, memory* mem) {
     if (reg_check_flag(cpu->registers, FLG_Z) || reg_check_flag(cpu->registers, FLG_N)) _jmp(cpu, mem);
+    else {
+        cpu->registers->PC += 4;
+    }
 }
 void _jg(CPU* cpu, memory* mem) {
     if ( !reg_check_flag(cpu->registers, FLG_N) ) _jmp(cpu, mem);
+    else {
+        cpu->registers->PC += 4;
+    }
 }
 void _jge(CPU* cpu, memory* mem) {
     if ( !reg_check_flag(cpu->registers, FLG_N) || reg_check_flag(cpu->registers, FLG_Z) ) _jmp(cpu, mem);
+    else {
+        cpu->registers->PC += 4;
+    }
 }
 void _jb(CPU* cpu, memory* mem) {
     if ( reg_check_flag(cpu->registers, FLG_O) && reg_check_flag(cpu->registers, FLG_N) ) _jmp(cpu, mem);
+    else {
+        cpu->registers->PC += 4;
+    }
 }
 void _and_(CPU* cpu, memory* mem) { }
 void _or_(CPU* cpu, memory* mem) { }
@@ -384,27 +442,51 @@ void _outsw(CPU* cpu, memory* mem) { }
 void _lenw(CPU* cpu, memory* mem) { }
 void _jc(CPU* cpu, memory* mem) {
     if (reg_check_flag(cpu->registers, FLG_C)) _jmp(cpu, mem);
+    else {
+        cpu->registers->PC += 4;
+    }
 }
 void _jo(CPU* cpu, memory* mem) {
     if (reg_check_flag(cpu->registers, FLG_O)) _jmp(cpu, mem);
+    else {
+        cpu->registers->PC += 4;
+    }
 }
 void _jnc(CPU* cpu, memory* mem) {
     if (!reg_check_flag(cpu->registers, FLG_C)) _jmp(cpu, mem);
+    else {
+        cpu->registers->PC += 4;
+    }
 }
 void _jno(CPU* cpu, memory* mem) {
     if (!reg_check_flag(cpu->registers, FLG_O)) _jmp(cpu, mem);
+    else {
+        cpu->registers->PC += 4;
+    }
 }
 void _calc(CPU* cpu, memory* mem) {
     if (reg_check_flag(cpu->registers, FLG_C)) _call(cpu, mem);
+    else {
+        cpu->registers->PC += 4;
+    }
 }
 void _calo(CPU* cpu, memory* mem) {
     if (reg_check_flag(cpu->registers, FLG_O)) _call(cpu, mem);
+    else {
+        cpu->registers->PC += 4;
+    }
 }
 void _calnc(CPU* cpu, memory* mem) {
     if (!reg_check_flag(cpu->registers, FLG_C)) _call(cpu, mem);
+    else {
+        cpu->registers->PC += 4;
+    }
 }
 void _calno(CPU* cpu, memory* mem) {
     if (!reg_check_flag(cpu->registers, FLG_O)) _call(cpu, mem);
+    else {
+        cpu->registers->PC += 4;
+    }
 }
 void _clc(CPU* cpu, memory* mem) {
     reg_clear_flags(cpu->registers, FLG_C);

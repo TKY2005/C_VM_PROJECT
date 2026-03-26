@@ -46,6 +46,7 @@ int vm_runf(CPU* cpu, memory* mem, const char* filepath) {
     }
 
     cpu->state->CPU_RUNNING = 1;
+    reg_set_flags(cpu->registers, FLG_I);
     CPU_run(cpu, mem);
 
     return VM_SUCCESS;

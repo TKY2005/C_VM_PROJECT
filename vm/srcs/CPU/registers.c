@@ -13,7 +13,7 @@ void reg_write_w(union registerfile* regfile, int regcode, uint16_t val) {
 	regfile->w[regcode] = val % (0xffff + 1);
 }
 void reg_write_dw(union registerfile* regfile, int regcode, uint32_t val) {
-	regfile->dw[regcode] = val % (0xffffffffUL + 1);
+	regfile->dw[regcode] = (uint32_t) val;
 }
 
 uint8_t reg_read_b(union registerfile* regfile, int regcode) {
