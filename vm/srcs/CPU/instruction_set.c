@@ -85,6 +85,10 @@ void _add(CPU* cpu, memory* mem) {
         uint32_t src = CPU_decode_src(cpu, mem, ins);
         uint32_t val = dest + src;
         CPU_write_dest(cpu, mem, ins, val);
+
+        if (CPU_destsize_8(ins->opertype.dest_type)) CPU_update_flags8(cpu, dest, src, val);
+        else if (CPU_destsize_16(ins->opertype.dest_type)) CPU_update_flags16(cpu, dest, src, val);
+        else if (CPU_destsize_32(ins->opertype.dest_type)) CPU_update_flags32(cpu, dest, src, val);
     }
 }
 void _sub(CPU* cpu, memory* mem) {
@@ -262,7 +266,12 @@ void _pop(CPU* cpu, memory* mem) {
         CPU_write_dest(cpu, mem, ins, val);
     }
 }
-void _call(CPU* cpu, memory* mem) { }
+void _call(CPU* cpu, memory* mem) {
+    ins_encoding dummy = {0};
+    CPU_step(cpu); // position the PC at the beginning of the address.
+    CPU_read_sym(cpu, mem, &dummy);
+    CPU_call_addr(cpu, mem, dummy.sym);
+}
 void _cale(CPU* cpu, memory* mem) { }
 void _calne(CPU* cpu, memory* mem) { }
 void _cal(CPU* cpu, memory* mem) { }
@@ -277,22 +286,61 @@ void _jmp(CPU* cpu, memory* mem) {
     CPU_read_sym(cpu, mem, &dummy);
     CPU_jump_addr(cpu, dummy.sym);
 }
-void _je(CPU* cpu, memory* mem) { }
-void _jne(CPU* cpu, memory* mem) { }
-void _jl(CPU* cpu, memory* mem) { }
-void _jle(CPU* cpu, memory* mem) { }
-void _jg(CPU* cpu, memory* mem) { }
-void _jge(CPU* cpu, memory* mem) { }
-void _jb(CPU* cpu, memory* mem) { }
+void _je(CPU* cpu, memory* mem) {
+
+    if (reg_check_flag(cpu->registers, FLG_Z)) _jmp(cpu, mem);
+}
+void _jne(CPU* cpu, memory* mem) {
+
+    if (!reg_check_flag(cpu->registers, FLG_Z)) _jmp(cpu, mem);
+}
+void _jl(CPU* cpu, memory* mem) {
+    if (reg_check_flag(cpu->registers, FLG_N)) _jmp(cpu, mem);
+}
+void _jle(CPU* cpu, memory* mem) {
+    if (reg_check_flag(cpu->registers, FLG_Z) || reg_check_flag(cpu->registers, FLG_N)) _jmp(cpu, mem);
+}
+void _jg(CPU* cpu, memory* mem) {
+    if ( !reg_check_flag(cpu->registers, FLG_N) ) _jmp(cpu, mem);
+}
+void _jge(CPU* cpu, memory* mem) {
+    if ( !reg_check_flag(cpu->registers, FLG_N) || reg_check_flag(cpu->registers, FLG_Z) ) _jmp(cpu, mem);
+}
+void _jb(CPU* cpu, memory* mem) {
+    if ( reg_check_flag(cpu->registers, FLG_O) && reg_check_flag(cpu->registers, FLG_N) ) _jmp(cpu, mem);
+}
 void _and_(CPU* cpu, memory* mem) { }
 void _or_(CPU* cpu, memory* mem) { }
 void _xor(CPU* cpu, memory* mem) { }
 void _not_(CPU* cpu, memory* mem) { }
 void _nand(CPU* cpu, memory* mem) { }
 void _nor(CPU* cpu, memory* mem) { }
-void _cmp(CPU* cpu, memory* mem) { }
-void _loop(CPU* cpu, memory* mem) { }
-void _ret(CPU* cpu, memory* mem) { }
+
+void _cmp(CPU* cpu, memory* mem) {
+    ins_encoding encoding = {0};
+    ins_encoding* ins = &encoding;
+    ins->resolve_sym = 1;
+
+    int read = CPU_read_operand_bytes(cpu, mem, ins);
+    if (read == MEM_READ_FAILURE) {
+        CPU_fail(cpu, "Invalid read operation @ 0x%08X.", cpu->registers->PC);
+    }
+    else {
+        uint32_t dest = CPU_decode_dest(cpu, mem, ins);
+        uint32_t src = CPU_decode_src(cpu, mem, ins);
+        uint32_t val = dest - src;
+        CPU_update_flags32(cpu, dest, src, val);
+    }
+}
+void _loop(CPU* cpu, memory* mem) {
+    
+    if (cpu->registers->C > 0) _jmp(cpu, mem);
+}
+
+void _ret(CPU* cpu, memory* mem) {
+    CPU_stack_pop(cpu, mem, &cpu->registers->PC);
+}
+
 void _end(CPU* cpu, memory* mem) { }
 void _int_(CPU* cpu, memory* mem) { }
 

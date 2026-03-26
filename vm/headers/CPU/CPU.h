@@ -60,7 +60,11 @@ int CPU_write_dest(CPU* cpu, memory* mem, ins_encoding* ins, uint32_t val);
 int CPU_stack_push(CPU* cpu, memory* mem, uint32_t val);
 int CPU_stack_pop(CPU* cpu, memory* mem, uint32_t* result);
 void CPU_jump_addr(CPU* cpu, uint32_t jmpaddr);
-void CPU_call_addr(CPU* cpu, uint32_t calladdr);
+void CPU_call_addr(CPU* cpu, memory* mem, uint32_t calladdr);
+
+void CPU_update_flags8(CPU* cpu, uint8_t dest, uint8_t src, uint8_t val);
+void CPU_update_flags16(CPU* cpu, uint16_t dest, uint16_t src, uint16_t val);
+void CPU_update_flags32(CPU* cpu, uint32_t dest, uint32_t src, uint32_t val);
 
 uint32_t CPU_calc_addr(CPU* cpu, ins_encoding* ins);
 

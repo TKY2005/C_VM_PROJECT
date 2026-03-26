@@ -165,8 +165,35 @@ void CPU_jump_addr(CPU* cpu, uint32_t jmpaddr) {
     cpu->registers->PC = jmpaddr;
     cpu->registers->PC--; // because the CPU auto increments PC after each instruction cycle.
 }
-void CPU_call_addr(CPU* cpu, uint32_t calladdr) {
-    // left as a stub until i make the decision about where the return address should go.
+void CPU_call_addr(CPU* cpu, memory* mem, uint32_t calladdr) {
+
+    CPU_stack_push(cpu, mem, cpu->registers->PC - 1);
+    CPU_jump_addr(cpu, calladdr);
+}
+
+void CPU_update_flags8(CPU* cpu, uint8_t dest, uint8_t src, uint8_t val) {
+    int8_t flag_setter = (int8_t) val;
+    if (flag_setter == 0) reg_set_flags(cpu->registers, FLG_Z);
+    if (flag_setter < 0) reg_set_flags(cpu->registers, FLG_N);
+
+    if ((uint16_t) dest + (uint16_t) src > 0xff) reg_set_flags(cpu->registers, FLG_C);
+    if ( (dest ^ val) & ((src ^ val) & 0x80) != 0 ) reg_set_flags(cpu->registers, FLG_O);
+}
+void CPU_update_flags16(CPU* cpu, uint16_t dest, uint16_t src, uint16_t val) {
+    
+    if ( (int16_t) val == 0 ) reg_set_flags(cpu->registers, FLG_Z);
+    if ( (int16_t) val < 0) reg_set_flags(cpu->registers, FLG_N);
+
+    if ( (uint32_t) dest + (uint32_t) src > 0xffff ) reg_set_flags(cpu->registers, FLG_C);
+    if ( (dest ^ val) & ( (src ^ val) & 0x8000 ) != 0 ) reg_set_flags(cpu->registers, FLG_O);
+}
+void CPU_update_flags32(CPU* cpu, uint32_t dest, uint32_t src, uint32_t val) {
+
+    if ((int32_t) val == 0) reg_set_flags(cpu->registers, FLG_Z);
+    if ((int32_t) val < 0) reg_set_flags(cpu->registers, FLG_N);
+
+    if ( (uint64_t) dest + (uint64_t) src > 0xffffffff ) reg_set_flags(cpu->registers, FLG_C);
+    if ( (dest ^ val) & ( (src ^ val) & 0x80000000 ) != 0 ) reg_set_flags(cpu->registers, FLG_O);
 }
 
 int CPU_read_displacement_value(CPU* cpu, memory* mem, ins_encoding* ins) {

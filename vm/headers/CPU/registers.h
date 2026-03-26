@@ -13,8 +13,15 @@
 #define REG_SS_IDX 12
 #define REG_DS_IDX 13
 
+#define FLG_Z (1 << 0)
+#define FLG_N (1 << 1)
+#define FLG_C (1 << 2)
+#define FLG_O (1 << 3)
+#define FLG_I (1 << 4)
+#define FLG_T (1 << 5)
 
-static char* reglist[] = {"a", "b", "c", "d", "e", "f", "pc", "si", "di", "sp", "bp", "cs", "ss", "ds"};
+
+static char* reglist[] = {"a", "b", "c", "d", "e", "f", "PC", "SI", "DI", "SP", "BP", "CS", "SS", "DS"};
 
 union registerfile {
 	
@@ -61,11 +68,12 @@ union registerfile {
 		uint16_t SSL, SSH;
 		uint16_t DSL, DSH;
 	};
-	
+
 	struct {
 		uint32_t A, B, C, D, E, F;
 		uint32_t PC, SI, DI, SP, BP, CS, SS, DS;
-	};
+		uint8_t flags;
+	};	
 };
 
 // These functions take the index of the corresponding word index, not the byte index
@@ -76,6 +84,10 @@ void reg_write_dw(union registerfile* regfile, int regcode, uint32_t val);
 uint8_t reg_read_b(union registerfile* regfile, int regcode);
 uint16_t reg_read_w(union registerfile* regfile, int regcode);
 uint32_t reg_read_dw(union registerfile* regfile, int regcode);
+
+void reg_set_flags(union registerfile* regfile, uint8_t flags);
+void reg_clear_flags(union registerfile* regfile, uint8_t flags);
+int reg_check_flag(union registerfile* regfile, uint8_t flag);
 
 int reg_get_index(const char* reg); // returns the byte index of the given register, -1 if not found.
 

@@ -26,6 +26,16 @@ uint32_t reg_read_dw(union registerfile* regfile, int regcode) {
 	return regfile->dw[regcode];
 }
 
+void reg_set_flags(union registerfile* regfile, uint8_t flags) {
+	regfile->flags |= flags;
+}
+void reg_clear_flags(union registerfile* regfile, uint8_t flags) {
+	regfile->flags &= ~flags;
+}
+int reg_check_flag(union registerfile* regfile, uint8_t flag) {
+	return regfile->flags & flag;
+}
+
 int reg_get_index(const char* reg) {
 	
 	char regname[10] = {0};
@@ -66,21 +76,22 @@ char* display_registers(union registerfile* regfile) {
 	
 	strbuilder regs = strbuilder_init();
 
-	char reg_char = 'A';
 	int row_count = 3;
-	for(int i = 0; i < 6; i++) {
+	int reg_count = sizeof(reglist) / sizeof(reglist[0]);
+	for(int i = 0; i < reg_count; i++) {
 		if ( i % row_count == 0) strbuilder_append(&regs, "\n");
-		strbuilder_appendf(&regs, "E%cX: 0x%08X  ", reg_char, regfile->dw[i]);
-		reg_char++;
+		
+		if (i >= REG_PC_IDX){
+			strbuilder_appendf(&regs, "%s: 0x%08X  ", reglist[i], regfile->dw[i]);
+		}
+		else strbuilder_appendf(&regs, "E%cX: 0x%08X  ", toupper(reglist[i][0]) ,regfile->dw[i]);
 	}
-	strbuilder_append(&regs, "\n");
-	strbuilder_appendf(&regs, "PC: 0x%08X\n", regfile->dw[REG_PC_IDX]);
-	strbuilder_appendf(&regs, "SI: 0x%08X\n", regfile->dw[REG_SI_IDX]);
-	strbuilder_appendf(&regs, "DI: 0x%08X\n", regfile->dw[REG_DI_IDX]);
-	strbuilder_appendf(&regs, "SP: 0x%08X\n", regfile->dw[REG_SP_IDX]);
-	strbuilder_appendf(&regs, "BP: 0x%08X\n", regfile->dw[REG_BP_IDX]);
-	strbuilder_appendf(&regs, "CS: 0x%08X\n", regfile->dw[REG_CS_IDX]);
-	strbuilder_appendf(&regs, "SS: 0x%08X\n", regfile->dw[REG_SS_IDX]);
-	strbuilder_appendf(&regs, "DS: 0x%08X", regfile->dw[REG_DS_IDX]);
+	strbuilder_appendf(&regs, "FLAG REGISTER: Z = %d N = %d C = %d O = %d I = %d T = %d", 
+	((regfile->flags & FLG_Z) != 0) ? 1 : 0,
+	((regfile->flags & FLG_N) != 0) ? 1 : 0,
+	((regfile->flags & FLG_C) != 0) ? 1 : 0,
+	((regfile->flags & FLG_O) != 0) ? 1 : 0,
+	((regfile->flags & FLG_I) != 0) ? 1 : 0,
+	((regfile->flags & FLG_T) != 0) ? 1 : 0);
 	return strbuilder_getstr(&regs);
 }
