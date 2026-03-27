@@ -91,3 +91,13 @@ int vm_runp(CPU* cpu, memory* mem, uint32_t entry) {
 
     CPU_run(cpu, mem);
 }
+
+int vm_interrupt(CPU* cpu, memory* mem, uint8_t icode) {
+
+}
+
+void vm_shell() {
+    printf("======== TKY VIRTUAL MACHINE V%s ========\n", VM_VER);
+    printf("The shell is still under construction. please run with the binary file path as argument for now.");
+    return;
+}

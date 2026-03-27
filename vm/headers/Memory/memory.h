@@ -35,8 +35,8 @@ int mem_read_word_e(memory* m, uint32_t addr, uint16_t* result, vm_func_event e,
 int mem_read_dword_e(memory* m, uint32_t addr, uint32_t* result, vm_func_event e, void** args);
 int mem_read_bytes_e(memory* m, uint32_t addr, int count, uint8_t* result, vm_func_event e, void** args);
 
-int is_valid_addr(uint32_t addr);
-char* mem_display(memory* m, uint32_t start, int count, int chunk_size);
+int is_valid_addr(memory* m, uint32_t addr);
+char* mem_display(memory* mem, uint32_t start, int count, int chunk_size);
 
 void mem_destroy(memory* m);
 

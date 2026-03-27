@@ -7,26 +7,28 @@
 #include<stdio.h>
 
 int main(int argc, char** argv) {
-    
-    vm_init(1024);
 
-    vm_cpu->registers->A = 0xfcbb4050;
-    vm_cpu->registers->DI = 0x30;
-    vm_cpu->registers->SP = 0x7f;
-    
-    // f0 11 ff 90
-    mem_write_dword(&vm_memory, 0x50, 0xf011ff90);
-    vm_runf(vm_cpu, &vm_memory, "./test.tky");
+    if (argc < 2) {
+        vm_shell();
+    }
+    else {
+        vm_init(1024);
 
-    char* regs = display_registers(vm_cpu->registers);
-    char* mem = mem_display(&vm_memory, 0, 0xff, -1);
+        vm_cpu->registers->SP = 0x7f;
+        
+        // f0 11 ff 90
+        vm_runf(vm_cpu, &vm_memory, argv[1]);
 
-    printf("%s\n\n", regs);
-    printf("%s\n\n", mem);
+        char* regs = display_registers(vm_cpu->registers);
+        char* mem = mem_display(&vm_memory, 0, 0xff, -1);
 
-    free(regs);
-    free(mem);
-    
-    vm_shutdown();
+        printf("%s\n\n", regs);
+        printf("%s\n\n", mem);
+
+        free(regs);
+        free(mem);
+        
+        vm_shutdown();
+    }
     return 0;
 }

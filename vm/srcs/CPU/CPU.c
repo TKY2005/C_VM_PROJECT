@@ -4,6 +4,7 @@
 #include<CPU/instruction_set.h>
 #include<ISA_encoding_info.h>
 #include<debuglogger.h>
+#include<VM/vm.h>
 
 #include<stdarg.h>
 #include<stdlib.h>
@@ -493,6 +494,19 @@ int CPU_srcsize_16(uint8_t src) {
 }
 int CPU_srcsize_8(uint8_t src) {
     return ( src == REG8 || src == MEM8 );
+}
+
+void CPU_write_out(CPU* cpu, memory* mem, const char* txt, ...) {
+
+    char buff[4096] = {0};
+    va_list args;
+    va_start(args, txt);
+
+    vsnprintf(buff, sizeof(buff), txt, args);
+    
+    va_end(args);
+
+    vm_interrupt(cpu, mem, VM_INTR_WRITE);
 }
 
 void CPU_fail(CPU* cpu, const char* msg, ...) {

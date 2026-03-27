@@ -243,7 +243,18 @@ void _la(CPU* cpu, memory* mem) {
 }
 void _len(CPU* cpu, memory* mem) { }
 void _str(CPU* cpu, memory* mem) { }
-void _outs(CPU* cpu, memory* mem) { }
+void _outs(CPU* cpu, memory* mem) {
+
+    uint32_t straddr = cpu->registers->SI;
+    uint8_t chr;
+    uint32_t offset = 0;
+    int read;
+    while ( (read = mem_read_byte(mem, straddr + offset, &chr)) != MEM_READ_FAILURE ) {
+        if (chr == '\0') break;
+        printf("%c", chr);
+        offset++;
+    }
+}
 void _inp(CPU* cpu, memory* mem) { }
 void _inps(CPU* cpu, memory* mem) { }
 
@@ -378,12 +389,113 @@ void _jb(CPU* cpu, memory* mem) {
         cpu->registers->PC += 4;
     }
 }
-void _and_(CPU* cpu, memory* mem) { }
-void _or_(CPU* cpu, memory* mem) { }
-void _xor(CPU* cpu, memory* mem) { }
-void _not_(CPU* cpu, memory* mem) { }
-void _nand(CPU* cpu, memory* mem) { }
-void _nor(CPU* cpu, memory* mem) { }
+void _and_(CPU* cpu, memory* mem) {
+    ins_encoding encoding = {0};
+    ins_encoding* ins = &encoding;
+    ins->resolve_sym = 1;
+    ins->flg_mod = 1;
+
+    int read = CPU_read_operand_bytes(cpu, mem, ins);
+    if (read == MEM_READ_FAILURE) {
+        CPU_fail(cpu, "Invalid read operation @ 0x%08X.", cpu->registers->PC);
+    }
+    else {
+        uint32_t dest = CPU_decode_dest(cpu, mem, ins);
+        uint32_t src = CPU_decode_src(cpu, mem, ins);
+        uint32_t val = dest & src;
+        CPU_write_dest(cpu, mem, ins, val);
+        CPU_update_flags(cpu, ins, dest, src, val);
+    }
+}
+void _or_(CPU* cpu, memory* mem) {
+    ins_encoding encoding = {0};
+    ins_encoding* ins = &encoding;
+    ins->resolve_sym = 1;
+    ins->flg_mod = 1;
+
+    int read = CPU_read_operand_bytes(cpu, mem, ins);
+    if (read == MEM_READ_FAILURE) {
+        CPU_fail(cpu, "Invalid read operation @ 0x%08X.", cpu->registers->PC);
+    }
+    else {
+        uint32_t dest = CPU_decode_dest(cpu, mem, ins);
+        uint32_t src = CPU_decode_src(cpu, mem, ins);
+        uint32_t val = dest | src;
+        CPU_write_dest(cpu, mem, ins, val);
+        CPU_update_flags(cpu, ins, dest, src, val);
+    }
+}
+void _xor(CPU* cpu, memory* mem) {
+    ins_encoding encoding = {0};
+    ins_encoding* ins = &encoding;
+    ins->resolve_sym = 1;
+    ins->flg_mod = 1;
+
+    int read = CPU_read_operand_bytes(cpu, mem, ins);
+    if (read == MEM_READ_FAILURE) {
+        CPU_fail(cpu, "Invalid read operation @ 0x%08X.", cpu->registers->PC);
+    }
+    else {
+        uint32_t dest = CPU_decode_dest(cpu, mem, ins);
+        uint32_t src = CPU_decode_src(cpu, mem, ins);
+        uint32_t val = dest ^ src;
+        CPU_write_dest(cpu, mem, ins, val);
+        CPU_update_flags(cpu, ins, dest, src, val);
+    }
+}
+void _not_(CPU* cpu, memory* mem) {
+    ins_encoding encoding = {0};
+    ins_encoding* ins = &encoding;
+    ins->single_oper = 1;
+    ins->flg_mod = 1;
+
+    int read = CPU_read_operand_bytes(cpu, mem, ins);
+    if (read == MEM_READ_FAILURE) {
+        CPU_fail(cpu, "Invalid read operation @ 0x%08X.", cpu->registers->PC);
+    }
+    else {
+        uint32_t val = CPU_decode_dest(cpu, mem, ins);
+        val = ~val;
+        CPU_write_dest(cpu, mem, ins, val);
+        CPU_update_flags(cpu, ins, ~val, 1, val);
+    }
+}
+void _nand(CPU* cpu, memory* mem) {
+    ins_encoding encoding = {0};
+    ins_encoding* ins = &encoding;
+    ins->resolve_sym = 1;
+    ins->flg_mod = 1;
+
+    int read = CPU_read_operand_bytes(cpu, mem, ins);
+    if (read == MEM_READ_FAILURE) {
+        CPU_fail(cpu, "Invalid read operation @ 0x%08X.", cpu->registers->PC);
+    }
+    else {
+        uint32_t dest = CPU_decode_dest(cpu, mem, ins);
+        uint32_t src = CPU_decode_src(cpu, mem, ins);
+        uint32_t val = ~(dest & src);
+        CPU_write_dest(cpu, mem, ins, val);
+        CPU_update_flags(cpu, ins, dest, src, val);
+    }
+}
+void _nor(CPU* cpu, memory* mem) {
+    ins_encoding encoding = {0};
+    ins_encoding* ins = &encoding;
+    ins->resolve_sym = 1;
+    ins->flg_mod = 1;
+
+    int read = CPU_read_operand_bytes(cpu, mem, ins);
+    if (read == MEM_READ_FAILURE) {
+        CPU_fail(cpu, "Invalid read operation @ 0x%08X.", cpu->registers->PC);
+    }
+    else {
+        uint32_t dest = CPU_decode_dest(cpu, mem, ins);
+        uint32_t src = CPU_decode_src(cpu, mem, ins);
+        uint32_t val = ~(dest | src);
+        CPU_write_dest(cpu, mem, ins, val);
+        CPU_update_flags(cpu, ins, dest, src, val);
+    }
+}
 
 void _cmp(CPU* cpu, memory* mem) {
     ins_encoding encoding = {0};
@@ -436,9 +548,53 @@ void _outc(CPU* cpu, memory* mem) {
     }
 }
 
-void _shl(CPU* cpu, memory* mem) { }
-void _shr(CPU* cpu, memory* mem) { }
-void _outsw(CPU* cpu, memory* mem) { }
+void _shl(CPU* cpu, memory* mem) {
+    ins_encoding encoding = {0};
+    ins_encoding* ins = &encoding;
+    ins->resolve_sym = 1;
+    ins->flg_mod = 1;
+
+    int read = CPU_read_operand_bytes(cpu, mem, ins);
+    if (read == MEM_READ_FAILURE) {
+        CPU_fail(cpu, "Invalid read operation @ 0x%08X.", cpu->registers->PC);
+    }
+    else {
+        uint32_t dest = CPU_decode_dest(cpu, mem, ins);
+        uint32_t src = CPU_decode_src(cpu, mem, ins);
+        uint32_t val = dest << src;
+        CPU_write_dest(cpu, mem, ins, val);
+        CPU_update_flags(cpu, ins, dest, src, val);
+    }
+}
+void _shr(CPU* cpu, memory* mem) {
+    ins_encoding encoding = {0};
+    ins_encoding* ins = &encoding;
+    ins->resolve_sym = 1;
+    ins->flg_mod = 1;
+
+    int read = CPU_read_operand_bytes(cpu, mem, ins);
+    if (read == MEM_READ_FAILURE) {
+        CPU_fail(cpu, "Invalid read operation @ 0x%08X.", cpu->registers->PC);
+    }
+    else {
+        uint32_t dest = CPU_decode_dest(cpu, mem, ins);
+        uint32_t src = CPU_decode_src(cpu, mem, ins);
+        uint32_t val = dest >> src;
+        CPU_write_dest(cpu, mem, ins, val);
+        CPU_update_flags(cpu, ins, dest, src, val);
+    }
+}
+void _outsw(CPU* cpu, memory* mem) {
+    uint32_t straddr = cpu->registers->SI;
+    uint16_t chr;
+    uint32_t offset = 0;
+    int read;
+    while ( (read = mem_read_word(mem, straddr + offset, &chr)) != MEM_READ_FAILURE ) {
+        if (chr == '\0') break;
+        printf("%c", chr);
+        offset += 2;
+    }
+}
 void _lenw(CPU* cpu, memory* mem) { }
 void _jc(CPU* cpu, memory* mem) {
     if (reg_check_flag(cpu->registers, FLG_C)) _jmp(cpu, mem);

@@ -19,8 +19,8 @@ memory mem_init(int sizeB) {
   m.mem = (uint8_t*) calloc(sizeB, sizeof(uint8_t));
   return m;
 }
-int is_valid_addr(uint32_t addr) {
-  if (addr < 0 || addr > BIT32_MAX_SIZE)
+int is_valid_addr(memory* mem, uint32_t addr) {
+  if (addr < 0 || addr >= mem->size)
     return 0;
   else
     return 1;
@@ -29,7 +29,7 @@ int is_valid_addr(uint32_t addr) {
 int mem_size(const memory *m) { return m->size; }
 
 int mem_write_byte(memory *m, uint32_t addr, uint8_t val) {
-  if (!is_valid_addr(addr))
+  if (!is_valid_addr(m, addr))
     return MEM_WRITE_FAILURE;
   else
     m->mem[addr] = val;
@@ -37,7 +37,7 @@ int mem_write_byte(memory *m, uint32_t addr, uint8_t val) {
 }
 
 int mem_write_word(memory *m, uint32_t addr, uint16_t val) {
-  if (!is_valid_addr(addr) || !is_valid_addr(addr + 1))
+  if (!is_valid_addr(m, addr) || !is_valid_addr(m, addr + 1))
     return MEM_WRITE_FAILURE;
   else {
     uint8_t low = 0, high = 0;
@@ -50,7 +50,7 @@ int mem_write_word(memory *m, uint32_t addr, uint16_t val) {
 }
 unsigned int mem_write_dword(memory *m, uint32_t addr, uint32_t val) {
   for (int i = 0; i < 4; i++)
-    if (!is_valid_addr(addr + i))
+    if (!is_valid_addr(m, addr + i))
       return MEM_WRITE_FAILURE;
 
   uint8_t high, lhigh, hlow, low;
@@ -70,7 +70,7 @@ unsigned int mem_write_dword(memory *m, uint32_t addr, uint32_t val) {
 int mem_write_bytes(memory *m, uint32_t addr, int count, uint8_t *vals) {
 
   for (int i = 0; i < count; i++) {
-    if (!is_valid_addr(addr + i))
+    if (!is_valid_addr(m, addr + i))
       return MEM_WRITE_FAILURE;
     m->mem[addr + i] = vals[i];
   }
@@ -78,14 +78,14 @@ int mem_write_bytes(memory *m, uint32_t addr, int count, uint8_t *vals) {
 }
 
 int mem_read_byte(memory *m, uint32_t addr, uint8_t* result) {
-  if (is_valid_addr(addr)){
+  if (is_valid_addr(m, addr)){
 	  *result = m->mem[addr];
 	  return 0;
   }
   else return MEM_READ_FAILURE;
 }
 int mem_read_word(memory *m, uint32_t addr, uint16_t* result) {
-  if (is_valid_addr(addr) && is_valid_addr(addr + 1)) {
+  if (is_valid_addr(m, addr) && is_valid_addr(m, addr + 1)) {
     uint8_t high = m->mem[addr];
     uint8_t low = m->mem[addr + 1];
     *result = (high << 8) | low;
@@ -95,7 +95,7 @@ int mem_read_word(memory *m, uint32_t addr, uint16_t* result) {
 }
 int mem_read_dword(memory *m, uint32_t addr, uint32_t* result) {
   for (int i = 0; i < 4; i++)
-    if (!is_valid_addr(addr + i))
+    if (!is_valid_addr(m, addr + i))
       return MEM_READ_FAILURE;
 
   uint16_t high = (m->mem[addr + 0] << 8) | m->mem[addr + 1];
@@ -107,7 +107,7 @@ int mem_read_dword(memory *m, uint32_t addr, uint32_t* result) {
 int mem_read_bytes(memory *m, uint32_t addr, int count, uint8_t* result) {
   uint8_t *vals = malloc(count * sizeof(uint8_t));
   for (int i = 0; i < count; i++) {
-    if (!is_valid_addr(addr + i)){
+    if (!is_valid_addr(m, addr + i)){
 	    free(vals);
       	    return MEM_READ_FAILURE;
     }

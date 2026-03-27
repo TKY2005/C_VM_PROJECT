@@ -88,6 +88,8 @@ int CPU_srcsize_32(uint8_t src);
 int CPU_srcsize_16(uint8_t src);
 int CPU_srcsize_8(uint8_t src);
 
+void CPU_write_out(CPU* cpu, memory* mem, const char* txt, ...);
+
 void CPU_fail(CPU* cpu, const char* msg, ...);
 
 #endif
