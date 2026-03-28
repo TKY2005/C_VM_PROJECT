@@ -2,16 +2,21 @@ CC = gcc
 CCCOMP = g++
 INCLUDE_EMU = ./vm/headers
 INCLUDE_ASM = ./assembler/headers
+INCLUDE_PLATFORM = ./vm/platform_code/headers
+INCLUDE_PLATFORM_SRC = ./vm/platform_code/srcs
 INCLUDE_SHARED = ./shared
+VM_FILES = $(wildcard ./vm/srcs/*/*.c)
+PLATFORM_FILES = $(wildcard ./vm/platform_code/srcs/*.c)
 SHARED_FILES = $(wildcard ./shared/*/*.c)
 LIBS = -lm
-SRCS = $(wildcard ./*.c ./vm/srcs/*/*.c) $(SHARED_FILES) -I $(INCLUDE_EMU) -I $(INCLUDE_SHARED) $(LIBS)
+SRCS = $(wildcard ./*.c) $(VM_FILES) $(PLATFORM_FILES) $(SHARED_FILES) -I $(INCLUDE_EMU) -I $(INCLUDE_PLATFORM) -I $(INCLUDE_PLATFORM_SRC) -I $(INCLUDE_SHARED) $(LIBS)
 ASM_FILES = $(wildcard ./assembler/*.cpp ./assembler/srcs/*.cpp ./assembler/srcs/*/*.cpp) $(SHARED_FILES) -I $(INCLUDE_ASM) -I $(INCLUDE_SHARED)
 
-dbg_flags = -g -fno-omit-frame-pointer -fsanitize=address
+dbg_flags = -g -fno-omit-frame-pointer
 make_output = mkdir bin
 
 ifeq ($(OS),Windows_NT)
+	SRCS += -DPLT_WIN
 	exec_path_r = .\bin\windows\release
 	exec_path_d = .\bin\windows\debug
 	target = $(exec_path_r)\emu.exe
@@ -26,6 +31,8 @@ ifeq ($(OS),Windows_NT)
 	outputcheck = .\bin
 	output_target_os = .\bin\windows
 else
+	SRCS += -DPLT_LINUX
+	dbg_flags += -fsanitize=address
 	exec_path_r = ./bin/linux/release
 	exec_path_d = ./bin/linux/debug
 	target = $(exec_path_r)/emu

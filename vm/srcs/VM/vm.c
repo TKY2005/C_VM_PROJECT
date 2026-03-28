@@ -8,6 +8,7 @@
 #include<Memory/memory.h>
 #include<CPU/instruction_set.h>
 #include<ISA_encoding_info.h>
+#include<IO/keyboard_driver.h>
 
 #include<utils/helpers.h>
 
@@ -112,7 +113,38 @@ int vm_runp(CPU* cpu, memory* mem, uint32_t entry) {
 }
 
 int vm_interrupt(CPU* cpu, memory* mem, uint8_t icode) {
+    
+    if (!reg_check_flag(cpu->registers, FLG_I)) {
+        return INTERRUPT_FLAG_DISABLED;
+    }
+    else {
 
+        switch(icode) {
+            case VM_INTR_WRITE:
+            break;
+            case VM_INTR_READ_TO_BUFF:
+                uint32_t write_addr = cpu->registers->SI; // buffer address
+                uint32_t write_amount = cpu->registers->D; // buffer size
+                uint8_t mode = cpu->registers->ALL; // write mode.
+                int chr;
+                uint32_t offset = 0;
+                while ( (chr = keyboard_translate_key(keyboard_getchr())) != VM_KEY_ENTR && offset < write_amount) {
+                    
+                    if (chr == VM_KEY_DEL) {
+                        if (offset <= 0) continue;
+                        mem_write_byte(mem, write_addr + offset, 0x0);
+                        printf("%c", chr);
+                        offset--;
+                    }
+                    else {
+                        mem_write_byte(mem, write_addr + offset, chr);
+                        printf("%c", chr);
+                        offset++;
+                    }
+                }
+            break;
+        }
+    }
 }
 
 void vm_shell() {

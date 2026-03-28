@@ -4,6 +4,7 @@
 #include<Memory/memory.h>
 #include<CPU/instruction_set.h>
 #include<CPU/CPU.h>
+#include<vm/vm.h>
 #include<ISA_encoding_info.h>
 #include<math.h>
 #include<time.h>
@@ -530,7 +531,14 @@ void _ret(CPU* cpu, memory* mem) {
 }
 
 void _end(CPU* cpu, memory* mem) { }
-void _int_(CPU* cpu, memory* mem) { }
+void _int_(CPU* cpu, memory* mem) {
+    ins_encoding dummy = {0};
+    CPU_step(cpu); // skip the operand types byte for now.
+    CPU_step(cpu); // position the PC at the beginning of the address.
+    CPU_read_imm32(cpu, mem, &dummy);
+    vm_interrupt(cpu, mem, (uint8_t) dummy.imm_val);
+    cpu->registers->PC--;
+}
 
 void _outc(CPU* cpu, memory* mem) {
     ins_encoding encoding = {0};

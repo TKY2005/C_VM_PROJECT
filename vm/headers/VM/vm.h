@@ -13,6 +13,7 @@
 #define NOT_ENOUGH_MEMORY -2
 #define NO_VALID_TARGET -3
 #define VM_COULDNT_EXECUTE -4
+#define INTERRUPT_FLAG_DISABLED -5
 
 // WARNINGS: > 0
 #define FILE_INCOMPLETE 1
@@ -22,6 +23,11 @@
 #define METADATA_SIZE 33
 
 #define VM_INTR_WRITE 0x01
+#define VM_INTR_READ_TO_BUFF 0x02
+#define VM_INTR_READ_CHR 0x03
+
+#define VM_KEY_ENTR 0x0d
+#define VM_KEY_DEL 0x08
 
 extern CPU* vm_cpu;
 extern memory vm_memory;
