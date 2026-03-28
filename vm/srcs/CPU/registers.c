@@ -86,7 +86,7 @@ char* display_registers(union registerfile* regfile) {
 		}
 		else strbuilder_appendf(&regs, "E%cX: 0x%08X  ", toupper(reglist[i][0]) ,regfile->dw[i]);
 	}
-	strbuilder_appendf(&regs, "FLAG REGISTER: Z = %d N = %d C = %d O = %d I = %d T = %d", 
+	strbuilder_appendf(&regs, "FLAGS: Z = %d N = %d C = %d O = %d I = %d T = %d", 
 	((regfile->flags & FLG_Z) != 0) ? 1 : 0,
 	((regfile->flags & FLG_N) != 0) ? 1 : 0,
 	((regfile->flags & FLG_C) != 0) ? 1 : 0,

@@ -19,6 +19,8 @@ typedef struct memory {
 } memory;
 
 memory mem_init(int sizeB);
+void mem_reset(memory* mem);
+
 int mem_size(const memory* m);
 int mem_write_byte(memory* m, uint32_t addr, uint8_t val);
 int mem_write_word(memory* m, uint32_t addr, uint16_t val);

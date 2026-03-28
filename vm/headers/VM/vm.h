@@ -21,7 +21,7 @@
 
 #define METADATA_SIZE 33
 
-#define VM_INTR_WRITE 0x00
+#define VM_INTR_WRITE 0x01
 
 extern CPU* vm_cpu;
 extern memory vm_memory;
@@ -36,5 +36,6 @@ int vm_runf(CPU* cpu, memory* mem, const char* filepath);
 void vm_shutdown();
 
 void vm_shell();
+void vm_run_shell_command(char* command);
 
 #endif

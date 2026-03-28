@@ -19,6 +19,12 @@ memory mem_init(int sizeB) {
   m.mem = (uint8_t*) calloc(sizeB, sizeof(uint8_t));
   return m;
 }
+
+void mem_reset(memory* mem) {
+  free(mem->mem);
+  mem->mem = calloc(mem->size, sizeof(uint8_t));
+}
+
 int is_valid_addr(memory* mem, uint32_t addr) {
   if (addr < 0 || addr >= mem->size)
     return 0;

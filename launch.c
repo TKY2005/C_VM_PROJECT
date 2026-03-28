@@ -13,10 +13,7 @@ int main(int argc, char** argv) {
     }
     else {
         vm_init(1024);
-
-        vm_cpu->registers->SP = 0x7f;
         
-        // f0 11 ff 90
         vm_runf(vm_cpu, &vm_memory, argv[1]);
 
         char* regs = display_registers(vm_cpu->registers);

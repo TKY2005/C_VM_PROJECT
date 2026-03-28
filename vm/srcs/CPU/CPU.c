@@ -24,6 +24,13 @@ CPU* mkCPU(union registerfile* regfile, instruction* ins_set) {
     return cpu;
 }
 
+void CPU_reset_state(CPU* cpu) {
+    free(cpu->registers);
+    free(cpu->state);
+    cpu->registers = calloc(1, sizeof(union registerfile));
+    cpu->state = calloc(1, sizeof(CPU_STATE));
+}
+
 void CPU_destroy(CPU* cpu) {
     free(cpu->instruction_set);
     free(cpu->registers);
