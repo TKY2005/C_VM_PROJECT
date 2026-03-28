@@ -181,5 +181,37 @@ void vm_run_shell_command(char* command) {
         printf("%s\n", s);
         free(s);
     }
+
+    else if (strcmp(parts[0], "memwrite") == 0) {
+        uint32_t addr = strtol(parts[1], NULL, 0);
+        uint32_t val = strtol(parts[2], NULL, 0);
+        char* wmode = &parts[3][0];
+        if (!wmode) printf("You need to specifiy the write mode.\n");
+        else{
+            char mode = *wmode;
+            uint32_t wr = 0;
+            if (mode == 'b') wr = mem_write_byte(&vm_memory, addr, val);
+            else if (mode == 'w') wr = mem_write_word(&vm_memory, addr, val);
+            else if (mode == 'd') wr = mem_write_dword(&vm_memory, addr, val);
+            else printf("Unknown write mode '%c'\n", mode);
+
+            if (wr != val) printf("Unable to write value: %u to address: 0x%08X\n", val, addr);
+        }
+    }
+    else if (strcmp(parts[0], "regwrite") == 0) {
+        int index = reg_get_index(parts[1]);
+        if (index == -1) printf("Unkown register alias: '%s'\n", parts[1]);
+        else{
+            uint32_t val = strtol(parts[2], NULL, 0);
+            char* wmode = &parts[3][0];
+            if (!wmode) printf("You need to specify the write mode.\n");
+            else {
+                char mode = *wmode;
+                if (mode == 'b') reg_write_b(vm_cpu->registers, index, val);
+                else if (mode == 'w') reg_write_w(vm_cpu->registers, index / 2, val);
+                else if (mode == 'd') reg_write_dw(vm_cpu->registers, index / 4, val);
+            }
+        }
+    }
     else printf("Unkown command.\n");
 }
