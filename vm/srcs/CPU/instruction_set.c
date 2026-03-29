@@ -532,12 +532,18 @@ void _ret(CPU* cpu, memory* mem) {
 
 void _end(CPU* cpu, memory* mem) { }
 void _int_(CPU* cpu, memory* mem) {
-    ins_encoding dummy = {0};
-    CPU_step(cpu); // skip the operand types byte for now.
-    CPU_step(cpu); // position the PC at the beginning of the address.
-    CPU_read_imm32(cpu, mem, &dummy);
-    vm_interrupt(cpu, mem, (uint8_t) dummy.imm_val);
-    cpu->registers->PC--;
+    ins_encoding encoding = {0};
+    ins_encoding* ins = &encoding;
+    ins->single_oper = 1;
+
+    int read = CPU_read_operand_bytes(cpu, mem, ins);
+    if (read == MEM_READ_FAILURE) {
+        CPU_fail(cpu, "Invalid read operation @ 0x%08X.", cpu->registers->PC);
+    }
+    else {
+        uint32_t intcode = CPU_decode_dest(cpu, mem, ins);
+        vm_interrupt(cpu, mem, (uint8_t) intcode);
+    }
 }
 
 void _outc(CPU* cpu, memory* mem) {

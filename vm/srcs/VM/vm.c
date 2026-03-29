@@ -122,27 +122,41 @@ int vm_interrupt(CPU* cpu, memory* mem, uint8_t icode) {
         switch(icode) {
             case VM_INTR_WRITE:
             break;
-            case VM_INTR_READ_TO_BUFF:
-                uint32_t write_addr = cpu->registers->SI; // buffer address
-                uint32_t write_amount = cpu->registers->D; // buffer size
-                uint8_t mode = cpu->registers->ALL; // write mode.
-                int chr;
-                uint32_t offset = 0;
-                while ( (chr = vm_getchr()) != VM_KEY_ENTER && offset < write_amount) {
-                    
-                    if (chr == VM_KEY_DEL) {
-                        if (offset <= 0) continue;
-                        mem_write_byte(mem, write_addr + offset, 0x0);
-                        printf("%c", chr);
-                        offset--;
+            case VM_INTR_READ_TO_BUFF: {
+                    uint32_t write_addr = cpu->registers->SI; // buffer address
+                    uint32_t write_amount = cpu->registers->D; // buffer size
+                    uint8_t mode = cpu->registers->ALL; // write mode.
+                    int chr;
+                    uint32_t offset = 0;
+                    while ( (chr = vm_getchr()) != VM_KEY_ENTER && offset < write_amount) {
+                        
+                        if (chr == VM_KEY_DEL) {
+                            if (offset <= 0) continue;
+                            mem_write_byte(mem, write_addr + offset, 0x0);
+                            printf("%c", chr);
+                            offset--;
+                        }
+                        else {
+                            mem_write_byte(mem, write_addr + offset, chr);
+                            printf("%c", chr);
+                            offset++;
+                        }
                     }
-                    else {
-                        mem_write_byte(mem, write_addr + offset, chr);
-                        printf("%c", chr);
-                        offset++;
-                    }
-                }
-            break;
+                break;
+            }
+            case VM_INTR_READ_CHR: {
+                int chr = vm_getchr();
+                cpu->registers->D = chr; // the character will be placed in the EDX register
+                break;
+            }
+            case VM_INTR_READ_NUM: {
+                int mode = cpu->registers->ALL; // read mode: AL
+                uint32_t num; scanf("%u", &num);
+                if (mode == 1) cpu->registers->DLL = (uint8_t) num;
+                else if (mode == 2) cpu->registers->DXL = (uint16_t) num;
+                else if (mode == 3) cpu->registers->D = num;
+                else cpu->registers->DXL = (uint16_t) num; 
+            }
         }
     }
 }
