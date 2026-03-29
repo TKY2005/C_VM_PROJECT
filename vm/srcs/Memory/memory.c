@@ -206,6 +206,8 @@ char* mem_display(memory* m, uint32_t start, int count, int chunk_size) {
 }
 
 void mem_destroy(memory* m) {
-  free(m->mem);
-  m->size = -1;
+  if (m || m->mem){
+    free(m->mem);
+    m->size = -1;
+  }
 }

@@ -26,9 +26,6 @@
 #define VM_INTR_READ_TO_BUFF 0x02
 #define VM_INTR_READ_CHR 0x03
 
-#define VM_KEY_ENTR 0x0d
-#define VM_KEY_DEL 0x08
-
 extern CPU* vm_cpu;
 extern memory vm_memory;
 

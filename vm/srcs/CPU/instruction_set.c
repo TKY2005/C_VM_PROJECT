@@ -4,7 +4,7 @@
 #include<Memory/memory.h>
 #include<CPU/instruction_set.h>
 #include<CPU/CPU.h>
-#include<vm/vm.h>
+#include<VM/vm.h>
 #include<ISA_encoding_info.h>
 #include<math.h>
 #include<time.h>

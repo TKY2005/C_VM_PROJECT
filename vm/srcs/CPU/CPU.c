@@ -32,10 +32,12 @@ void CPU_reset_state(CPU* cpu) {
 }
 
 void CPU_destroy(CPU* cpu) {
-    free(cpu->instruction_set);
-    free(cpu->registers);
-    free(cpu->state);
-    free(cpu);
+    if (cpu){
+        free(cpu->instruction_set);
+        free(cpu->registers);
+        free(cpu->state);
+        free(cpu);
+    }
 }
 
 int CPU_run(CPU* cpu, memory* mem) {

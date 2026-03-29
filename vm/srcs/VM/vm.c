@@ -8,7 +8,7 @@
 #include<Memory/memory.h>
 #include<CPU/instruction_set.h>
 #include<ISA_encoding_info.h>
-#include<IO/keyboard_driver.h>
+#include<VM/vm_input.h>
 
 #include<utils/helpers.h>
 
@@ -128,7 +128,7 @@ int vm_interrupt(CPU* cpu, memory* mem, uint8_t icode) {
                 uint8_t mode = cpu->registers->ALL; // write mode.
                 int chr;
                 uint32_t offset = 0;
-                while ( (chr = keyboard_translate_key(keyboard_getchr())) != VM_KEY_ENTR && offset < write_amount) {
+                while ( (chr = vm_getchr()) != VM_KEY_ENTER && offset < write_amount) {
                     
                     if (chr == VM_KEY_DEL) {
                         if (offset <= 0) continue;

@@ -25,7 +25,7 @@ char** split_string(const char* str, char delimiter) {
     }
 
     // Allocate array of char* (plus NULL terminator)
-    char **result = malloc((count + 1) * sizeof(char *));
+    char **result = (char**) malloc((count + 1) * sizeof(char *));
     if (!result) return NULL;
 
     int index = 0;
@@ -35,7 +35,7 @@ char** split_string(const char* str, char delimiter) {
     while (*p) {
         if (*p == delimiter) {
             size_t len = p - start;
-            result[index] = malloc(len + 1);
+            result[index] = (char*) malloc(len + 1);
             memcpy(result[index], start, len);
             result[index][len] = '\0';
             index++;
@@ -46,7 +46,7 @@ char** split_string(const char* str, char delimiter) {
 
     // Last token
     size_t len = p - start;
-    result[index] = malloc(len + 1);
+    result[index] = (char*) malloc(len + 1);
     memcpy(result[index], start, len);
     result[index][len] = '\0';
     index++;
