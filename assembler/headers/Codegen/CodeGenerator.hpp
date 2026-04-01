@@ -32,7 +32,7 @@ class CodeGenerator {
     int siglen = signature.length() + 1;
     std::string date = "3/22/2026\0";
     int datelen = date.length() + 1;
-    const uint32_t version = 0xC1000002;
+    const uint32_t version = 0xC1000010;
     uint32_t metaDataOffset = siglen + datelen + sizeof(uint32_t) + sizeof(uint8_t) + sizeof(uint32_t);
 };
 

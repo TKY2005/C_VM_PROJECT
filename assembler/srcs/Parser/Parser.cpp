@@ -277,10 +277,11 @@ void Parser::evaluateDestinationOperand(vector<Token> operand, ProgIns& result, 
     }
     else if (operand[0].maintype == MainType::REG) {
         length += 1; // register select byte //
-        
+        bool is8bit = false;
         switch(operand[0].subtype) {
             case SubType::REG8:
             result.encoding_info->opertype.dest_type = REG8;
+            is8bit = true;
             break;
             case SubType::REG16:
             result.encoding_info->opertype.dest_type = REG16;
@@ -289,10 +290,20 @@ void Parser::evaluateDestinationOperand(vector<Token> operand, ProgIns& result, 
             result.encoding_info->opertype.dest_type = REG32;
             break;
         }
-        for(auto const& pair : ArchInfo::reg_select_map) {
-            if (Lexer::toLowerCase(operand[0].tokenstr) == pair.first){
-                result.encoding_info->regselect.dest = pair.second;
-                break;
+        if (is8bit) {
+            uint8_t lhselect = 0;
+            char mode = tolower(operand[0].tokenstr[1]);
+            if (mode == 'l') lhselect = 0;
+            else if (mode == 'h') lhselect = 1;
+            uint8_t code = ArchInfo::index_select_map[Lexer::toLowerCase(operand[0].tokenstr)];
+            setRegister8bit(&result.encoding_info->regselect, DEST, lhselect, code);
+        }
+        else {
+            for(auto const& pair : ArchInfo::reg_select_map) {
+                if (Lexer::toLowerCase(operand[0].tokenstr) == pair.first){
+                    result.encoding_info->regselect.dest = pair.second;
+                    break;
+                }
             }
         }
     }
@@ -328,9 +339,11 @@ void Parser::evaluateSourceOperand(vector<Token> operand, ProgIns& result, int& 
         if (!isDestReg(result.encoding_info->opertype.dest_type))
             length += 1; // we should add the register select byte only if we haven't encountered it yet //
         
+        bool is8bit = false;
         switch(operand[0].subtype) {
             case SubType::REG8:
             result.encoding_info->opertype.src_type = REG8;
+            is8bit = true;
             break;
             case SubType::REG16:
             result.encoding_info->opertype.src_type = REG16;
@@ -339,11 +352,21 @@ void Parser::evaluateSourceOperand(vector<Token> operand, ProgIns& result, int& 
             result.encoding_info->opertype.src_type = REG32;
             break;
         }
-        // TODO: Check to see if the source register size > destination register size
-        for(auto const& pair : ArchInfo::reg_select_map) {
-            if (Lexer::toLowerCase(operand[0].tokenstr) == pair.first){
-                result.encoding_info->regselect.src = pair.second;
-                break;
+        if (is8bit) {
+            uint8_t lhselect = 0;
+            char mode = tolower(operand[0].tokenstr[1]);
+            if (mode == 'l') lhselect = 0;
+            else if (mode == 'h') lhselect = 1;
+            uint8_t regcode = ArchInfo::index_select_map[Lexer::toLowerCase(operand[0].tokenstr)];
+            setRegister8bit(&result.encoding_info->regselect, SRC, lhselect, regcode);
+        }
+        else {
+            // TODO: Check to see if the source register size > destination register size
+            for(auto const& pair : ArchInfo::reg_select_map) {
+                if (Lexer::toLowerCase(operand[0].tokenstr) == pair.first){
+                    result.encoding_info->regselect.src = pair.second;
+                    break;
+                }
             }
         }
     }
@@ -449,6 +472,16 @@ void Parser::evaluateMemoryExpression(vector<Token> expr, ProgIns& result, int& 
             }
         }
     }
+}
+
+void Parser::setRegister8bit(REG_SELECT* reg, int operselect, uint8_t lhselect, uint8_t regcode) {
+    uint8_t r = 0;
+    if (operselect == DEST) r = reg->dest;
+    else if (operselect == SRC) r = reg->src;
+    r = (r << 4) | lhselect;
+    r = (r << 3) | regcode;
+    if (operselect == DEST) reg->dest = r;
+    else if (operselect == SRC) reg->src = r;
 }
 
 bool Parser::matchTypes(MainType t, std::initializer_list<MainType> a) {

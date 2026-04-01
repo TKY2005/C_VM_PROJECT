@@ -157,21 +157,13 @@ int CPU_read_imm32(CPU* cpu, memory* mem, ins_encoding* ins) {
     return mem_read_dword_e(mem, cpu->registers->PC, &ins->imm_val, CPU_step_e, (void*) &cpu);
 }
 
-void CPU_set_regselect_8bit(REG_SELECT* reg, uint8_t operselect, uint8_t lhselect, uint8_t regcode) {
-    uint8_t r = 0;
-    if (operselect == SRC) r = reg->src;
-    else if (operselect == DEST) r = reg->dest;
-    r = (r << 4) | lhselect;
-    r = (r << 3) | regcode;
-    if (operselect == SRC) reg->src = r;
-    else if (operselect == DEST) reg->dest = r;
-}
+
 int CPU_check_lh_8bit(REG_SELECT* reg, uint8_t operselect) {
     if (operselect == SRC) return reg->src & LH_CHECK;
     else if (operselect == DEST) return reg->dest & LH_CHECK;
     else return -1;
 }
-int CPU_check_regcode_8bit(REG_SELECT* reg, uint8_t operselect) {
+int CPU_get_regcode_8bit(REG_SELECT* reg, uint8_t operselect) {
     if (operselect == SRC) return reg->src & REG_CHECK;
     else if (operselect == DEST) return reg->dest & REG_CHECK;
     else return -1;
@@ -251,13 +243,18 @@ uint32_t CPU_decode_dest(CPU* cpu, memory* mem, ins_encoding* ins) {
 
     uint32_t val = 0;
     if ( CPU_dest_is_reg(ins->opertype.dest_type) ) {
+        int is8bit = ins->opertype.dest_type == REG8;
 
-        int reg_idx = CPU_get_reg_idx(ins->regselect.dest);
+        int reg_idx = 0;
+        if (is8bit) reg_idx = CPU_get_reg_idx( CPU_get_regcode_8bit(&ins->regselect, DEST) );
+        else reg_idx = CPU_get_reg_idx(ins->regselect.dest);
 
         switch(ins->opertype.dest_type) {
-            case REG8:
-            val = reg_read_b(cpu->registers, reg_idx);
-            break;
+            case REG8: {
+                if (CPU_check_lh_8bit(&ins->regselect, DEST) != 0) val = reg_read_b(cpu->registers, reg_idx + 1);
+                else val = reg_read_b(cpu->registers, reg_idx);
+                break;
+            }
             case REG16:
             val = reg_read_w(cpu->registers, reg_idx / 2);
             break;
@@ -297,13 +294,17 @@ uint32_t CPU_decode_dest(CPU* cpu, memory* mem, ins_encoding* ins) {
 uint32_t CPU_decode_src(CPU* cpu, memory* mem, ins_encoding* ins) {
     uint32_t val = 0;
     if ( CPU_src_is_reg(ins->opertype.src_type) ) {
-
-        int reg_idx = CPU_get_reg_idx(ins->regselect.src);
+        int is8bit = ins->opertype.src_type == REG8;
+        int reg_idx = 0;
+        if (is8bit) reg_idx = CPU_get_reg_idx( CPU_get_regcode_8bit(&ins->regselect, SRC) );
+        else reg_idx = CPU_get_reg_idx(ins->regselect.src);
 
         switch(ins->opertype.src_type) {
-            case REG8:
-            val = reg_read_b(cpu->registers, reg_idx);
-            break;
+            case REG8: {
+                if (CPU_check_lh_8bit(&ins->regselect, SRC) != 0) val = reg_read_b(cpu->registers, reg_idx + 1);
+                else val = reg_read_b(cpu->registers, reg_idx);
+                break;
+            }
             case REG16:
             val = reg_read_w(cpu->registers, reg_idx / 2);
             break;
@@ -349,13 +350,18 @@ uint32_t CPU_decode_src(CPU* cpu, memory* mem, ins_encoding* ins) {
 int CPU_write_dest(CPU* cpu, memory* mem, ins_encoding* ins, uint32_t val) {
 
     if (CPU_dest_is_reg(ins->opertype.dest_type)){
+        int is8bit = ins->opertype.dest_type == REG8;
 
-        int idx = CPU_get_reg_idx(ins->regselect.dest);
+        int idx = 0;
+        if (is8bit) idx = CPU_get_reg_idx( CPU_get_regcode_8bit(&ins->regselect, DEST) );
+        else idx = CPU_get_reg_idx(ins->regselect.dest);
 
         switch(ins->opertype.dest_type) {
-            case REG8:
-            reg_write_b(cpu->registers, idx, (uint8_t) val);
-            break;
+            case REG8: {
+                if (CPU_check_lh_8bit(&ins->regselect, DEST) != 0) reg_write_b(cpu->registers, idx + 1, (uint32_t) val);
+                else reg_write_b(cpu->registers, idx, (uint8_t) val);
+                break;
+            }
             case REG16:
             reg_write_w(cpu->registers, idx / 2, (uint16_t) val);
             break;

@@ -170,6 +170,8 @@ class Parser {
     void evaluateSourceOperand(std::vector<Token> operand, ProgIns& result, int& length);
     void evaluateMemoryExpression(std::vector<Token> expr, ProgIns& result, int& length);
 
+    void setRegister8bit(REG_SELECT* reg, int operselect, uint8_t lhselect, uint8_t regcode);
+
     bool isDestReg(uint8_t dest) {
         return (dest >= REG8 && dest <= REG32);
     }
