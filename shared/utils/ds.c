@@ -5,6 +5,7 @@
 #include<string.h>
 
 #include "./ds.h"
+#include "ds.h"
 
 int vptoint(void* d) {
 	return (int)(uintptr_t) d;

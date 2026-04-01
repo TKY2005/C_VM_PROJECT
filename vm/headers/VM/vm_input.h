@@ -6,14 +6,18 @@
 #define VM_KEY_ARROW_LEFT 0x12
 #define VM_KEY_ARROW_RIGHT 0x13
 
+#define KEYMAP_SIZE 4
+
 #define READ_MODE_BYTE 1
 #define READ_MODE_WORD 2
 #define READ_MODE_DWORD 3
 
 #include<stdint.h>
 
+extern int vm_keymap[KEYMAP_SIZE];
+
 int vm_getchr();
 uint32_t vm_getnum();
-uint32_t vmchr_to_platform(int vmchar);
+int vmchr_to_platform(int vmchar);
 
 #endif

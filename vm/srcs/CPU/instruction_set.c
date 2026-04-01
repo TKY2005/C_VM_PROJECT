@@ -5,6 +5,7 @@
 #include<CPU/instruction_set.h>
 #include<CPU/CPU.h>
 #include<VM/vm.h>
+#include<VM/vm_input.h>
 #include<ISA_encoding_info.h>
 #include<math.h>
 #include<time.h>
@@ -558,7 +559,7 @@ void _outc(CPU* cpu, memory* mem) {
     }
     else {
         uint32_t val = CPU_decode_dest(cpu, mem, ins);
-        printf("%c", val);
+        printf("%c", vmchr_to_platform(val));
     }
 }
 

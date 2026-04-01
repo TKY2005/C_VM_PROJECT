@@ -49,7 +49,7 @@ int vm_software_interrupt(CPU* cpu, memory* mem) {
                 else if (mode == READ_MODE_WORD) mem_write_word(mem, buffaddr + index,(uint16_t) chr);
                 else if (mode == READ_MODE_DWORD) mem_write_dword(mem, buffaddr + index, chr);
                 else mem_write_byte(mem, buffaddr + index, (uint8_t) chr);
-                printf("%c", chr);
+                printf("%c", vmchr_to_platform(chr));
                 if(chr == VM_KEY_DEL) index -= inc;
                 else index += inc;
             }

@@ -9,6 +9,8 @@
 #define KEY_L_ARR 0x1B5B44
 #define KEY_R_ARR 0xff53
 
+int platform_keymap[] = {KEY_ENTR, KEY_DEL, KEY_L_ARR, KEY_R_ARR};
+
 int keyboard_getchr() {
 
     struct termios oldt, newt;
@@ -24,21 +26,15 @@ int keyboard_getchr() {
 }
 
 int keyboard_translate_key(int key) {
-    switch(key) {
-        case KEY_ENTR: 
-        return VM_KEY_ENTER;
-        break;
-        case KEY_DEL:
-        return VM_KEY_DEL;
-        break;
-        case KEY_L_ARR:
-        return VM_KEY_ARROW_LEFT;
-        break;
-        case KEY_R_ARR:
-        return VM_KEY_ARROW_RIGHT;
-        break;
-        default:
-        return key;
-        break;
+    for(int i = 0; i < KEYMAP_SIZE; i++) {
+        if (key == platform_keymap[i]) return vm_keymap[i];
     }
+    return key;
+}
+
+int keyboard_get_platform_code(int vmcode) {
+    for(int i = 0; i < KEYMAP_SIZE; i++) {
+        if (vmcode == vm_keymap[i]) return platform_keymap[i];
+    }
+    return vmcode;
 }
