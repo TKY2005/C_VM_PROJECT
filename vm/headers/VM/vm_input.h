@@ -14,5 +14,6 @@
 
 int vm_getchr();
 uint32_t vm_getnum();
+uint32_t vmchr_to_platform(int vmchar);
 
 #endif

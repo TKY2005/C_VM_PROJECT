@@ -3,7 +3,6 @@
 #include<cstdint>
 #include<map>
 #include<vector>
-#include<optional>
 #include<sstream>
 #include<regex>
 #include<cctype>
@@ -11,7 +10,8 @@
 
 #include "../../headers/LexicalAnalyzer/Tokenizer.hpp"
 
-using std::string, std::vector, std::optional;
+using std::string;
+using std::vector;
 
 vector<Token> Tokenizer::tokenize(string source) {
 

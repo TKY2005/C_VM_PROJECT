@@ -8,7 +8,9 @@
 #include "../../headers/LexicalAnalyzer/Lexer.hpp"
 #include "../../../shared/ISA_encoding_info.h"
 
-using std::vector, std::map, std::string;
+using std::vector;
+using std::map;
+using std::string;
 
 
 ParseResult* Parser::parseTokens(vector<Token> tokens) {

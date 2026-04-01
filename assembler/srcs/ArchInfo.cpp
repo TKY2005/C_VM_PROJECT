@@ -6,7 +6,9 @@
 #include "../../shared/dtypes.h"
 #include "../../shared/ISA_encoding_info.h"
 
-using std::string, std::map, std::vector;
+using std::string;
+using std::map;
+using std::vector;
 
 
 string ArchInfo::operators = "+-*/";

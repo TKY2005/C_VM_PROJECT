@@ -9,8 +9,8 @@ VM_FILES = $(wildcard ./vm/srcs/*/*.c)
 PLATFORM_FILES = $(wildcard ./vm/platform_code/srcs/*.c)
 SHARED_FILES = $(wildcard ./shared/*/*.c)
 LIBS = -lm
-SRCS = $(wildcard ./*.c) $(VM_FILES) $(PLATFORM_FILES) $(SHARED_FILES) -I $(INCLUDE_EMU) -I $(INCLUDE_PLATFORM) -I $(INCLUDE_PLATFORM_SRC) -I $(INCLUDE_SHARED) $(LIBS)
-ASM_FILES = $(wildcard ./assembler/*.cpp ./assembler/srcs/*.cpp ./assembler/srcs/*/*.cpp) $(SHARED_FILES) -I $(INCLUDE_ASM) -I $(INCLUDE_SHARED)
+SRCS = $(wildcard ./*.c) -std=c11 $(VM_FILES) $(PLATFORM_FILES) $(SHARED_FILES) -I $(INCLUDE_EMU) -I $(INCLUDE_PLATFORM) -I $(INCLUDE_PLATFORM_SRC) -I $(INCLUDE_SHARED) $(LIBS)
+ASM_FILES = $(wildcard ./assembler/*.cpp ./assembler/srcs/*.cpp ./assembler/srcs/*/*.cpp) -std=c++11 $(SHARED_FILES) -I $(INCLUDE_ASM) -I $(INCLUDE_SHARED)
 
 dbg_flags = -g -fno-omit-frame-pointer
 make_output = mkdir bin
