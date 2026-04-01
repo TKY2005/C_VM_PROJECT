@@ -9,6 +9,7 @@
 #include<CPU/instruction_set.h>
 #include<ISA_encoding_info.h>
 #include<VM/vm_input.h>
+#include<VM/vm_interrupts.h>
 
 #include<utils/helpers.h>
 
@@ -118,46 +119,13 @@ int vm_interrupt(CPU* cpu, memory* mem, uint8_t icode) {
         return INTERRUPT_FLAG_DISABLED;
     }
     else {
-
-        switch(icode) {
-            case VM_INTR_WRITE:
-            break;
-            case VM_INTR_READ_TO_BUFF: {
-                    uint32_t write_addr = cpu->registers->SI; // buffer address
-                    uint32_t write_amount = cpu->registers->D; // buffer size
-                    uint8_t mode = cpu->registers->ALL; // write mode.
-                    int chr;
-                    uint32_t offset = 0;
-                    while ( (chr = vm_getchr()) != VM_KEY_ENTER && offset < write_amount) {
-                        
-                        if (chr == VM_KEY_DEL) {
-                            if (offset <= 0) continue;
-                            mem_write_byte(mem, write_addr + offset, 0x0);
-                            printf("%c", chr);
-                            offset--;
-                        }
-                        else {
-                            mem_write_byte(mem, write_addr + offset, chr);
-                            printf("%c", chr);
-                            offset++;
-                        }
-                    }
-                break;
-            }
-            case VM_INTR_READ_CHR: {
-                int chr = vm_getchr();
-                cpu->registers->D = chr; // the character will be placed in the EDX register
-                break;
-            }
-            case VM_INTR_READ_NUM: {
-                int mode = cpu->registers->ALL; // read mode: AL
-                uint32_t num; scanf("%u", &num);
-                if (mode == 1) cpu->registers->DLL = (uint8_t) num;
-                else if (mode == 2) cpu->registers->DXL = (uint16_t) num;
-                else if (mode == 3) cpu->registers->D = num;
-                else cpu->registers->DXL = (uint16_t) num; 
-            }
+        if (icode == VM_HARDWARE_INTERRUPT) return vm_hardware_interrupt(cpu, mem);
+        else if (icode == VM_SOFTWARE_INTERRUPT) return vm_software_interrupt(cpu, mem);
+        else if (icode == VM_TRAP_INTERRUPT){
+            reg_set_flags(vm_cpu->registers, FLG_T);
+            vm_debug_shell();
         }
+        else return VM_UNKNOWN_INTERRUPT;
     }
 }
 
@@ -179,6 +147,18 @@ void vm_shell() {
         vm_run_shell_command(command);
     }
     return;
+}
+
+void vm_debug_shell() {
+    printf("PC = 0x%08X -> 0x%02X\n", vm_cpu->registers->PC + 1, vm_memory.mem[vm_cpu->registers->PC + 1]);
+    while (reg_check_flag(vm_cpu->registers, FLG_T) != 0) {
+        printf(">> ");
+        char buff[2048] = {0};
+        fgets(buff, sizeof(buff), stdin);
+        buff[strlen(buff) - 1] = '\0';
+        vm_run_shell_command(buff);
+        printf("\n");
+    }
 }
 
 void vm_run_shell_command(char* command) {
@@ -259,5 +239,6 @@ void vm_run_shell_command(char* command) {
             }
         }
     }
+    else if (strcmp(parts[0], "c") == 0) reg_clear_flags(vm_cpu->registers, FLG_T);
     else printf("Unkown command.\n");
 }

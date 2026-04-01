@@ -6,7 +6,7 @@
 
 #include<stdint.h>
 
-#define VM_VER "1.0b"
+#define VM_VER "1.1b"
 
 // ERRORS: < 0
 #define FILE_NOT_OPEN -1
@@ -22,11 +22,6 @@
 
 #define METADATA_SIZE 33
 
-#define VM_INTR_WRITE 0x01
-#define VM_INTR_READ_TO_BUFF 0x02
-#define VM_INTR_READ_CHR 0x03
-#define VM_INTR_READ_NUM 0x04
-
 extern CPU* vm_cpu;
 extern memory vm_memory;
 
@@ -41,5 +36,6 @@ void vm_shutdown();
 
 void vm_shell();
 void vm_run_shell_command(char* command);
+void vm_debug_shell();
 
 #endif

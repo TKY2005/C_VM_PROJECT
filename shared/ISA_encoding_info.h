@@ -7,6 +7,11 @@
 #define REGSELECT_DEFAULT 0b11111111
 #define DISP_DEFAULT 0b00111111
 
+#define SRC 0
+#define DEST 1
+#define LH_CHECK 0b1000
+#define REG_CHECK 0b0111
+
 #define INSTRUCTION_LIST(X) \
     X(EXT,   0xFF, _ext) \
     X(NOP,   0x01, _nop) \

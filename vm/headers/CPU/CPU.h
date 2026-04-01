@@ -52,6 +52,10 @@ int CPU_read_imm8(CPU* cpu, memory* mem, ins_encoding* ins);
 int CPU_read_imm16(CPU* cpu, memory* mem, ins_encoding* ins);
 int CPU_read_imm32(CPU* cpu, memory* mem, ins_encoding* ins);
 
+void CPU_set_regselect_8bit(REG_SELECT* reg, uint8_t operselect, uint8_t lhselect, uint8_t regcode);
+int CPU_check_lh_8bit(REG_SELECT* reg, uint8_t operselect);
+int CPU_check_regcode_8bit(REG_SELECT* reg, uint8_t operselect);
+
 uint32_t CPU_decode_dest(CPU* cpu, memory* mem, ins_encoding* ins);
 uint32_t CPU_decode_src(CPU* cpu, memory* mem, ins_encoding* ins);
 

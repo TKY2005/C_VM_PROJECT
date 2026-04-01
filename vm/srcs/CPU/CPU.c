@@ -5,6 +5,7 @@
 #include<ISA_encoding_info.h>
 #include<debuglogger.h>
 #include<VM/vm.h>
+#include<VM/vm_interrupts.h>
 
 #include<stdarg.h>
 #include<stdlib.h>
@@ -50,6 +51,8 @@ int CPU_run(CPU* cpu, memory* mem) {
             // error handling
         }
         else {
+            //printf("Executing instruction 0x%02X at address: 0x%08X\n", opcode, cpu->registers->PC);
+            if (reg_check_flag(cpu->registers, FLG_T)) vm_debug_shell();
             CPU_exec_ins(cpu, mem, opcode);
         }
     }
@@ -152,6 +155,26 @@ int CPU_read_imm16(CPU* cpu, memory* mem, ins_encoding* ins) {
 }
 int CPU_read_imm32(CPU* cpu, memory* mem, ins_encoding* ins) {
     return mem_read_dword_e(mem, cpu->registers->PC, &ins->imm_val, CPU_step_e, (void*) &cpu);
+}
+
+void CPU_set_regselect_8bit(REG_SELECT* reg, uint8_t operselect, uint8_t lhselect, uint8_t regcode) {
+    uint8_t r = 0;
+    if (operselect == SRC) r = reg->src;
+    else if (operselect == DEST) r = reg->dest;
+    r = (r << 4) | lhselect;
+    r = (r << 3) | regcode;
+    if (operselect == SRC) reg->src = r;
+    else if (operselect == DEST) reg->dest = r;
+}
+int CPU_check_lh_8bit(REG_SELECT* reg, uint8_t operselect) {
+    if (operselect == SRC) return reg->src & LH_CHECK;
+    else if (operselect == DEST) return reg->dest & LH_CHECK;
+    else return -1;
+}
+int CPU_check_regcode_8bit(REG_SELECT* reg, uint8_t operselect) {
+    if (operselect == SRC) return reg->src & REG_CHECK;
+    else if (operselect == DEST) return reg->dest & REG_CHECK;
+    else return -1;
 }
 
 int CPU_deref_sym(CPU* cpu, memory* mem, ins_encoding* ins, uint32_t* result) {
@@ -515,7 +538,7 @@ void CPU_write_out(CPU* cpu, memory* mem, const char* txt, ...) {
     
     va_end(args);
 
-    vm_interrupt(cpu, mem, VM_INTR_WRITE);
+    vm_interrupt(cpu, mem, VM_SINTR_WRITE_FD);
 }
 
 void CPU_fail(CPU* cpu, const char* msg, ...) {
