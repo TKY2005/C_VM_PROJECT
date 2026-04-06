@@ -3,9 +3,11 @@
 #include<fstream>
 #include<map>
 
-#include "../../headers/Codegen/CodeGenerator.hpp"
-#include "../../headers/Parser/Parser.hpp"
-#include "../../headers/LexicalAnalyzer/Lexer.hpp"
+#include<Codegen/CodeGenerator.hpp>
+#include<Parser/Parser.hpp>
+#include<LexicalAnalyzer/Tokenizer.hpp>
+#include<ErrorHandler/ErrorHandler.hpp>
+#include<Assembler.hpp>
 
 std::ofstream CodeGenerator::makeBinaryFile(std::string outputFilePath, ParseResult* parseResult) {
     std::ofstream outputfile(outputFilePath, std::ios::out | std::ios::binary);
@@ -23,9 +25,7 @@ std::ofstream CodeGenerator::makeBinaryFile(std::string outputFilePath, ParseRes
         filemeta.entrypoint = entry;
     }
     catch(const std::out_of_range& e) {
-        std::cout << 
-        "Warning: MAIN not found. setting the entry point value to the beginning of CODE section instead(0 if also not found)"
-        << std::endl;
+        ErrorBucket::addWarning(Assembler::filename, "MAIN Not found. setting the entry point to the CODE section instead.");
         try {
             uint32_t entry = parseResult->sections.at("CODE");
             filemeta.entrypoint = entry;
@@ -168,9 +168,6 @@ bin_form* CodeGenerator::instructionToByteCode(ProgIns* ins, std::map<std::strin
     return f;
 }
 
-// This function doesn't handle resb or resw directives.
-// They're handled at makeBinaryFile() function.
-// since they just tell the assembler to skip over a given number of bytes and no data is generated.
 bin_form* CodeGenerator::dataToBin(ProgData* data) {
     bin_form* f = (bin_form*) malloc(sizeof(bin_form));
     f->size = data->len;
@@ -186,7 +183,7 @@ bin_form* CodeGenerator::dataToBin(ProgData* data) {
         f->bindata[index++] = d[2];
         f->bindata[index++] = d[3];
     }
-    else if (data->parts[1].subtype == SubType::DIR_RESB || data->parts[1].subtype == SubType::DIR_RESW) {
+    else if (data->parts[1].subtype == SubType::DIR_RESB || data->parts[1].subtype == SubType::DIR_RESW || data->parts[1].subtype == SubType::DIR_RESDW) {
 
         f->size = (uint8_t) std::stoi(data->parts[2].tokenstr);
         f->bindata = (uint8_t*) calloc(f->size, sizeof(uint8_t));

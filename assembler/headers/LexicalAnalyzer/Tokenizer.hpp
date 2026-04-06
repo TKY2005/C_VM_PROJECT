@@ -35,7 +35,7 @@ class Token {
         std::string toString() {
             return tokenstr;
         }
-    
+    Token() = default;
     Token(std::string tokstr, MainType main, SubType sub, int r, int c) {
         this->tokenstr = tokstr;
         this->maintype = main;
@@ -43,7 +43,7 @@ class Token {
         this->row = r;
         this->column = c;
     }
-
+    
 };
 
 class Tokenizer {

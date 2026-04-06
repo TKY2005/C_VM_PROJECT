@@ -5,10 +5,7 @@
 #include<string>
 #include<sstream>
 
-#include "./headers/LexicalAnalyzer/Tokenizer.hpp"
-#include "./headers/Parser/Parser.hpp"
-#include "./headers/Codegen/CodeGenerator.hpp"
-#include "../shared/utils/ds.h"
+#include<Assembler.hpp>
 
 int main(int argc, char** argv) {
 	if (argv[1] == NULL) {
@@ -21,37 +18,19 @@ int main(int argc, char** argv) {
 	}
 	else outputFileName = argv[2];
 
-	std::ifstream sourcefile(argv[1]);
+	Assembler x;
 
-	if (!sourcefile.is_open()) {
-		std::cout << "Unable to open file: '" << argv[1] << "'" << std::endl;
-		return 0;
+	int result = x.assembleSource(argv[1], argv[2]);
+
+	if (result == ERR_ASM_FAIL) {
+		std::cout << "Assembler failed and no output file was written." << std::endl;
 	}
-	else{
-		std::ostringstream content;
-		content << sourcefile.rdbuf();
-		std::string source = content.str();
-
-		Tokenizer* t = new Tokenizer();
-		std::string code = t->preProcessCode(source);
-		std::vector<Token> s = t->tokenize(code);
-
-		Parser p;
-
-		ParseResult* result = p.parseTokens(s);
-
-		std::cout << "[Symbol map entries]" << std::endl;
-		for(auto const& pair : result->symmap) printf("%s -> %08X\n", pair.first.c_str(), pair.second);
-		std::cout << "[					 ]" << std::endl;
-
-		CodeGenerator* codegen = new CodeGenerator();
-
-		std::ofstream output = codegen->makeBinaryFile(outputFileName, result);
-		output.close();
-
-		delete t;
-		delete codegen;
-		delete result;
-		return 0;
+	else if (result == ERR_ASM_WARN) {
+		std::cout << 
+		"The code has been successfully assembled with warnings." 
+		<< std::endl;
 	}
+
+	std::cout << "Assembler returned with code: " << result << std::endl;
+	return 0;
 }

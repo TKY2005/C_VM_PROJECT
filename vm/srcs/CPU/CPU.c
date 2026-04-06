@@ -224,6 +224,7 @@ void CPU_update_flags32(CPU* cpu, uint32_t dest, uint32_t src, uint32_t val) {
 void CPU_update_flags(CPU* cpu, ins_encoding* ins, uint32_t dest, uint32_t src, uint32_t val) {
 
     if (ins->flg_mod) {
+        //reg_reset_arithmetic_flags(cpu->registers);
         if (CPU_destsize_8(ins->opertype.dest_type)) CPU_update_flags8(cpu, dest, src, val);
         else if (CPU_destsize_16(ins->opertype.dest_type)) CPU_update_flags16(cpu, dest, src, val);
         else if (CPU_destsize_32(ins->opertype.dest_type)) CPU_update_flags32(cpu, dest, src, val);

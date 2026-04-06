@@ -62,10 +62,13 @@ SubType Lexer::decideSubType(string tok, MainType t) {
         else if (tok == "equ") return SubType::DIR_EQU;
         else if (tok == "byte") return SubType::DIR_BYTE;
         else if (tok == "word") return SubType::DIR_WORD;
+        else if (tok == "dword") return SubType::DIR_DWORD;
         else if (tok == "defb") return SubType::DIR_DEFB;
         else if (tok == "defw") return SubType::DIR_DEFW;
+        else if (tok == "defdw") return SubType::DIR_DEFDW;
         else if (tok == "resb") return SubType::DIR_RESB;
         else if (tok == "resw") return SubType::DIR_RESW;
+        else if (tok == "resdw") return SubType::DIR_RESDW;
         else return SubType::NONE;
     }
     else if (t == MainType::OPER) {

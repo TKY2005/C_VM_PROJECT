@@ -162,8 +162,12 @@ class Parser {
     bool isMemoryOperand(std::vector<Token> operand);
     ProgIns* parseInstruction(std::vector<Token> insparts);
     ProgData* parseData(std::vector<Token> dparts);
+    std::vector<ProgLine> progLines;
 
     std::vector<Token> extractMemoryExpression(std::vector<Token> operand);
+    std::vector<Token> getLine(int linenum) {
+        return progLines[linenum].tokens;
+    }
 
     void evaluateOperands(std::vector<std::vector<Token>> operands, ProgIns& result, int& length);
     void evaluateDestinationOperand(std::vector<Token> operand, ProgIns& result, int& length);
@@ -176,8 +180,13 @@ class Parser {
         return (dest >= REG8 && dest <= REG32);
     }
 
+    bool isSourceBiggerThanDest(ins_encoding* ins);
+    uint8_t getSrcSize(OPER_TYPE* t);
+    uint8_t getDestSize(OPER_TYPE* t);
+
     private:
     uint32_t program_offset = 0;
+    uint32_t positionCounter = 0;
 };
 
 #endif

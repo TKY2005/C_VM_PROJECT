@@ -85,6 +85,7 @@ uint8_t reg_read_b(union registerfile* regfile, int regcode);
 uint16_t reg_read_w(union registerfile* regfile, int regcode);
 uint32_t reg_read_dw(union registerfile* regfile, int regcode);
 
+void reg_reset_arithmetic_flags(union registerfile* regfile);
 void reg_set_flags(union registerfile* regfile, uint8_t flags);
 void reg_clear_flags(union registerfile* regfile, uint8_t flags);
 int reg_check_flag(union registerfile* regfile, uint8_t flag);

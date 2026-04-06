@@ -26,6 +26,10 @@ uint32_t reg_read_dw(union registerfile* regfile, int regcode) {
 	return regfile->dw[regcode];
 }
 
+void reg_reset_arithmetic_flags(union registerfile* regfile) {
+	reg_clear_flags(regfile, FLG_Z | FLG_N | FLG_C | FLG_O);
+}
+
 void reg_set_flags(union registerfile* regfile, uint8_t flags) {
 	regfile->flags |= flags;
 }

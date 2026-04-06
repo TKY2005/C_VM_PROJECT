@@ -28,9 +28,9 @@ vector<string> ArchInfo::reglist = {
 
 vector<string> ArchInfo::dirList = {
 	"org", "section", "equ", "define",
-	"byte", "word",
-	"defb", "defw",
-	"resb", "resw"
+	"byte", "word", "dword",
+	"defb", "defw", "defdw",
+	"resb", "resw", "resdw"
 };
 
 map<string, uint8_t> ArchInfo::insmap = {

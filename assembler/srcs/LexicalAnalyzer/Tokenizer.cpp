@@ -8,7 +8,9 @@
 #include<cctype>
 #include<unordered_map>
 
-#include "../../headers/LexicalAnalyzer/Tokenizer.hpp"
+#include<LexicalAnalyzer/Tokenizer.hpp>
+#include<ErrorHandler/ErrorHandler.hpp>
+#include<Assembler.hpp>
 
 using std::string;
 using std::vector;
@@ -99,6 +101,9 @@ vector<Token> Tokenizer::tokenize(string source) {
         else {
             consume();
             toklist.emplace_back(current, MainType::UNDEFINED, SubType::NONE, row, colstart);
+            vector<Token> x;
+            x.emplace_back(toklist[toklist.size() - 1]);
+            ErrorBucket::addError(x, x[0], Assembler::filename, "Undefined token.");
         }
 
         current.clear();

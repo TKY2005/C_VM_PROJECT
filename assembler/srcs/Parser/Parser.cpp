@@ -3,10 +3,12 @@
 #include<cstdint>
 #include<string>
 
-#include "../../headers/LexicalAnalyzer/Tokenizer.hpp"
-#include "../../headers/Parser/Parser.hpp"
-#include "../../headers/LexicalAnalyzer/Lexer.hpp"
-#include "../../../shared/ISA_encoding_info.h"
+#include<LexicalAnalyzer/Tokenizer.hpp>
+#include<Parser/Parser.hpp>
+#include<LexicalAnalyzer/Lexer.hpp>
+#include<ISA_encoding_info.h>
+#include<ErrorHandler/ErrorHandler.hpp>
+#include<Assembler.hpp>
 
 using std::vector;
 using std::map;
@@ -21,6 +23,7 @@ ParseResult* Parser::parseTokens(vector<Token> tokens) {
     result->symmap["$"] = program_offset;
 
     vector<ProgLine> lines = extractLines(tokens);
+    progLines = lines;
 
     vector<Token> currentLine;
     for(int i = 0; i < lines.size(); i++) {
@@ -95,11 +98,12 @@ ParseResult* Parser::parseTokens(vector<Token> tokens) {
                 result->sections[section] = program_offset;
             }
 
-            else if (matchSubTypes(currentLine[0].subtype, {SubType::DIR_RESB, SubType::DIR_RESW}))
+            else if (matchSubTypes(currentLine[0].subtype, {SubType::DIR_RESB, SubType::DIR_RESW, SubType::DIR_RESDW}))
             {
                 int scale = 0;
                 if (currentLine[0].subtype == SubType::DIR_RESB) scale = 1;
                 else if (currentLine[0].subtype == SubType::DIR_RESW) scale = 2;
+                else if (currentLine[0].subtype == SubType::DIR_RESDW) scale = 4;
 
                 uint32_t amount = (uint32_t) std::stoll(currentLine[1].tokenstr);
                 program_offset += amount * scale;
@@ -111,6 +115,8 @@ ParseResult* Parser::parseTokens(vector<Token> tokens) {
                 ProgIns* ins = parseInstruction(currentLine);
                 result->program_instructions.push_back(ins);
             }
+            else ErrorBucket::addError(currentLine, currentLine[0], 
+                Assembler::filename, "Instruction mnemonics aren't allowed in the DATA section.");
         }
         result->symmap["$"] = program_offset;
     }
@@ -122,12 +128,15 @@ ParseResult* Parser::parseTokens(vector<Token> tokens) {
 ProgIns* Parser::parseInstruction(vector<Token> insparts) {
     ProgIns* insobj = new ProgIns(insparts);
     ProgIns& ins = *insobj;
+    
     int length = 0;
     int& len = length;
     len += 1; // opcode byte
     
     if (insparts[0].maintype != MainType::INS)  {
         // todo : add error reporting mechanism
+        ErrorBucket::addError(insparts, insparts[0], Assembler::filename,
+        string("Expected an instruction instead found: ").append( Lexer::mainTypeToStr(insparts[0].maintype) ) );
     }
     else {
         insobj->encoding_info->opcode = ArchInfo::insmap[insparts[0].tokenstr];
@@ -171,11 +180,12 @@ ProgData* Parser::parseData(vector<Token> dparts) {
     int length = 0;
     if (matchSubTypes(dparts[1].subtype, {SubType::DIR_DEFB, SubType::DIR_RESB})) scale = 1;
     else if (matchSubTypes(dparts[1].subtype, {SubType::DIR_DEFW, SubType::DIR_RESW})) scale = 2;
-
-    if (dparts[1].subtype == SubType::DIR_RESB || dparts[1].subtype == SubType::DIR_RESW) {
+    else if (matchSubTypes(dparts[1].subtype, {SubType::DIR_DEFDW, SubType::DIR_RESDW})) scale = 4;
+    
+    if (matchSubTypes(dparts[1].subtype, {SubType::DIR_RESB, SubType::DIR_RESW, SubType::DIR_RESDW})) {
         d->isRes = true;
         if (dparts[2].maintype != MainType::NUM) {
-            // error reporting
+            ErrorBucket::addError(getLine(dparts[2].row), dparts[2], Assembler::filename, "Next token must be number.");
         }
         else length += std::stoll(dparts[2].tokenstr) * scale;
     }
@@ -249,6 +259,13 @@ void Parser::evaluateOperands(vector<vector<Token>> operands, ProgIns& result, i
 
 void Parser::evaluateDestinationOperand(vector<Token> operand, ProgIns& result, int& length) {
 
+    if (!matchTypes(operand[0].maintype, 
+        {MainType::REG, MainType::DIR, MainType::OPEN_BRACE, MainType::NUM, MainType::SYM})) {
+            ErrorBucket::addError(getLine(operand[0].row), operand[0], Assembler::filename,
+        string("Unexpected token type for an operand: ").append(Lexer::mainTypeToStr(operand[0].maintype)));
+        return;
+    }
+
     if (operand[0].maintype == MainType::SYM)  {
         if (result.operand_count == 1){
             result.hasSymbol = true;
@@ -258,23 +275,30 @@ void Parser::evaluateDestinationOperand(vector<Token> operand, ProgIns& result, 
             // TODO: lookahead to check if there's any displacement.
         }
         else {
-            // TODO: Error reporting
+            ErrorBucket::addError(getLine(operand[0].row), operand[0], Assembler::filename, 
+                "Symbols and numbers can't be a destination for 2-operand instructions.");
         }
     }
     else if (operand[0].maintype == MainType::NUM){
-        length += 4; // only allowed for instructions that may take an immediate for operand, no opertype byte needed.
-        result.hasImmediate = true;
-        result.immediateSize = 4;
-        result.encoding_info->imm_val = (uint32_t) std::stoll(operand[0].tokenstr);
-        // in case of jmp and call instructions, the operand types byte won't be present
-        if ( 
-            (result.encoding_info->opcode >= INS_CALL && result.encoding_info->opcode <= INS_JB) || 
-            result.encoding_info->opcode >= INS_JC && result.encoding_info->opcode <= INS_CALNO) 
-            {
-                length--;
+        if (result.operand_count == 1){
+            length += 4; // only allowed for instructions that may take an immediate for operand, no opertype byte needed.
+            result.hasImmediate = true;
+            result.immediateSize = 4;
+            result.encoding_info->imm_val = (uint32_t) std::stoll(operand[0].tokenstr);
+            // in case of jmp and call instructions, the operand types byte won't be present
+            if ( 
+                (result.encoding_info->opcode >= INS_CALL && result.encoding_info->opcode <= INS_JB) || 
+                result.encoding_info->opcode >= INS_JC && result.encoding_info->opcode <= INS_CALNO) 
+                {
+                    length--;
+                }
+            else{
+                result.encoding_info->opertype.dest_type = NUMBER;
             }
-        else{
-            result.encoding_info->opertype.dest_type = NUMBER;
+        }
+        else {
+            ErrorBucket::addError(getLine(operand[0].row), operand[0], Assembler::filename, 
+                "Symbols and numbers can't be a destination for 2-operand instructions.");
         }
     }
     else if (operand[0].maintype == MainType::REG) {
@@ -331,6 +355,13 @@ void Parser::evaluateDestinationOperand(vector<Token> operand, ProgIns& result, 
 
 void Parser::evaluateSourceOperand(vector<Token> operand, ProgIns& result, int& length) {
 
+    if (!matchTypes(operand[0].maintype, 
+        {MainType::REG, MainType::DIR, MainType::OPEN_BRACE, MainType::NUM, MainType::SYM})) {
+            ErrorBucket::addError(getLine(operand[0].row), operand[0], Assembler::filename,
+        string("Unexpected token type for an operand: ").append(Lexer::mainTypeToStr(operand[0].maintype)));
+        return;
+    }
+
     if (operand[0].maintype == MainType::SYM) {
         length += 4;
         result.hasSymbol = true;
@@ -370,6 +401,11 @@ void Parser::evaluateSourceOperand(vector<Token> operand, ProgIns& result, int& 
                     break;
                 }
             }
+        }
+
+        if (isSourceBiggerThanDest(result.encoding_info)) {
+            ErrorBucket::addWarning(getLine(operand[0].row), operand[0], Assembler::filename, 
+                "Source operand size is bigger than destination operand.");
         }
     }
     else if (isMemoryOperand(operand)) {
@@ -505,4 +541,49 @@ bool Parser::isMemoryOperand(vector<Token> operand) {
     return (operand[0].maintype == MainType::OPEN_BRACE || 
         ( matchSubTypes(operand[0].subtype, {SubType::DIR_BYTE, SubType::DIR_WORD}) 
         && operand[1].maintype == MainType::OPEN_BRACE ));
+}
+
+bool Parser::isSourceBiggerThanDest(ins_encoding* ins) {
+    uint8_t source = getSrcSize(&ins->opertype);
+    uint8_t dest = getDestSize(&ins->opertype);
+
+    return source > dest;
+}
+
+uint8_t Parser::getSrcSize(OPER_TYPE* t) {
+    switch(t->src_type) {
+        case REG8 : case MEM8 :
+        return 8;
+        break;
+        case REG16 : case MEM16 :
+        return 16;
+        break;
+        case REG32 : MEM32 :
+        return 32;
+        break;
+
+        default:
+        return 0;
+        break;
+    }
+    return 0;
+}
+
+uint8_t Parser::getDestSize(OPER_TYPE* t) {
+    switch(t->dest_type) {
+        case REG8 : case MEM8 :
+        return 8;
+        break;
+        case REG16 : case MEM16 :
+        return 16;
+        break;
+        case REG32 : MEM32 :
+        return 32;
+        break;
+
+        default:
+        return 0;
+        break;
+    }
+    return 0;
 }

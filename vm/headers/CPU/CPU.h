@@ -18,6 +18,8 @@ typedef union {
         uint8_t CPU_RUNNING : 1;
         uint8_t CPU_HALTED : 1;
         uint8_t CPU_INTERRUPTED : 1;
+        uint8_t CPU_INTERRUPT_LINE_ENABLE : 1;
+        uint8_t CPU_PREVILEGED_MODE : 1;
     };
     uint8_t state;
 } CPU_STATE;

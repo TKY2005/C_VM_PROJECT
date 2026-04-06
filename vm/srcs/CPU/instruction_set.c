@@ -304,37 +304,37 @@ void _cale(CPU* cpu, memory* mem) {
     }
 }
 void _calne(CPU* cpu, memory* mem) {
-    if (reg_check_flag(cpu->registers, FLG_Z)) _call(cpu, mem);
+    if (!reg_check_flag(cpu->registers, FLG_Z)) _call(cpu, mem);
     else {
         cpu->registers->PC += 4;
     }
 }
 void _cal(CPU* cpu, memory* mem) {
-    if (reg_check_flag(cpu->registers, FLG_Z)) _call(cpu, mem);
+    if (reg_check_flag(cpu->registers, FLG_N)) _call(cpu, mem);
     else {
         cpu->registers->PC += 4;
     }
 }
 void _calle(CPU* cpu, memory* mem) {
-    if (reg_check_flag(cpu->registers, FLG_Z)) _call(cpu, mem);
+    if (reg_check_flag(cpu->registers, FLG_N) || reg_check_flag(cpu->registers, FLG_Z)) _call(cpu, mem);
     else {
         cpu->registers->PC += 4;
     }
 }
 void _calg(CPU* cpu, memory* mem) {
-    if (reg_check_flag(cpu->registers, FLG_Z)) _call(cpu, mem);
+    if (!reg_check_flag(cpu->registers, FLG_N)) _call(cpu, mem);
     else {
         cpu->registers->PC += 4;
     }
 }
 void _calge(CPU* cpu, memory* mem) {
-    if (reg_check_flag(cpu->registers, FLG_Z)) _call(cpu, mem);
+    if (!reg_check_flag(cpu->registers, FLG_N) || reg_check_flag(cpu->registers, FLG_Z)) _call(cpu, mem);
     else {
         cpu->registers->PC += 4;
     }
 }
 void _calb(CPU* cpu, memory* mem) {
-    if (reg_check_flag(cpu->registers, FLG_Z)) _call(cpu, mem);
+    if (reg_check_flag(cpu->registers, FLG_O) && reg_check_flag(cpu->registers, FLG_N)) _call(cpu, mem);
     else {
         cpu->registers->PC += 4;
     }
@@ -374,7 +374,7 @@ void _jle(CPU* cpu, memory* mem) {
     }
 }
 void _jg(CPU* cpu, memory* mem) {
-    if ( !reg_check_flag(cpu->registers, FLG_N) ) _jmp(cpu, mem);
+    if ( !reg_check_flag(cpu->registers, FLG_N) && !reg_check_flag(cpu->registers, FLG_Z) ) _jmp(cpu, mem);
     else {
         cpu->registers->PC += 4;
     }
@@ -519,7 +519,7 @@ void _cmp(CPU* cpu, memory* mem) {
 void _loop(CPU* cpu, memory* mem) {
     
     cpu->registers->C--;
-    if (cpu->registers->C > 0){
+    if (cpu->registers->C != 0){
         _jmp(cpu, mem);
     }
     else {
