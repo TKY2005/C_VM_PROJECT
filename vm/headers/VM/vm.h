@@ -6,7 +6,7 @@
 
 #include<stdint.h>
 
-#define VM_VER "1.2.0b"
+#define VM_VER "1.2.1b"
 
 // ERRORS: < 0
 #define FILE_NOT_OPEN -1

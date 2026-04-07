@@ -154,13 +154,14 @@ int mem_read_bytes_e(memory* m, uint32_t addr, int count, uint8_t* result, vm_fu
 
 char* mem_display(memory* m, uint32_t start, int count, int chunk_size) {
 
-  if (count == -1 || count == NULL)
+  if (count == -1)
     count = m->size;
-  if (start == -1 || start == NULL)
+  if (start == -1)
     start = 0;
-  if (chunk_size == -1 || chunk_size == NULL)
+  if (chunk_size == -1)
     chunk_size = DEFAULT_CHUNK_SIZE;
 
+  int chunk_half = chunk_size / 2;
   // calculate the required padding to align the offset to the values
   char addr_dummy[25];
   snprintf(addr_dummy, sizeof(addr_dummy), "%08X:  ", 0x00);
@@ -175,8 +176,12 @@ char* mem_display(memory* m, uint32_t start, int count, int chunk_size) {
 
   strbuilder offset = strbuilder_init();
   for (int i = 0; i < chunk_size; i++) {
+  
     strbuilder_appendf(&offset, "%02X", i);
     strbuilder_fill_chr(&offset, ' ', val_size);
+    if ((i + 1) % chunk_half == 0) {
+      strbuilder_append(&offset, "  ");
+    }
   }
 
   strbuilder_fill_chr(&mem_str, ' ', addr_size);
@@ -185,13 +190,18 @@ char* mem_display(memory* m, uint32_t start, int count, int chunk_size) {
   strbuilder_destroy(&offset);
 
   for (int i = start; i < start + count; i++) {
-
+    
     if (i % chunk_size == 0) {
       strbuilder_appendf(&mem_str, "%08X:  ", i);
     }
     strbuilder_appendf(&mem_str, "0x%02X  ", m->mem[i]);
-
+    
     strbuilder_append_chr(&charset, (is_printable(m->mem[i]) == 0 ? (char)m->mem[i] : '.'));
+
+    if ((i + 1) % chunk_half == 0 && (i + 1) % chunk_size != 0) {
+      strbuilder_append(&mem_str, "  ");
+      strbuilder_append(&charset, "  ");
+    }
 
     if ((i + 1) % chunk_size == 0) {
       strbuilder_append_chr(&charset, '\0');
@@ -200,6 +210,11 @@ char* mem_display(memory* m, uint32_t start, int count, int chunk_size) {
       strbuilder_append(&mem_str, "|\n");
       strbuilder_reset(&charset);
     }
+  }
+  if (strbuilder_size(&charset) != 0){
+    strbuilder_append(&mem_str, "\t|");
+    strbuilder_append(&mem_str, strbuilder_getstr(&charset));
+    strbuilder_append(&mem_str, "|\n");
   }
   strbuilder_destroy(&charset);
   return strbuilder_getstr(&mem_str);
