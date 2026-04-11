@@ -7,7 +7,7 @@ INCLUDE_PLATFORM_SRC = ./vm/platform_code/srcs
 INCLUDE_SHARED = ./shared
 VM_FILES = $(wildcard ./vm/srcs/*/*.c)
 PLATFORM_FILES = $(wildcard ./vm/platform_code/srcs/*.c)
-SHARED_FILES = $(wildcard ./shared/*/*.c)
+SHARED_FILES = $(wildcard ./shared/*.c ./shared/utils/*.c ./shared/utils/*/*.c)
 LIBS = -lm
 SRCS = $(wildcard ./*.c) -std=c11 $(VM_FILES) $(PLATFORM_FILES) $(SHARED_FILES) -I $(INCLUDE_EMU) -I $(INCLUDE_PLATFORM) -I $(INCLUDE_PLATFORM_SRC) -I $(INCLUDE_SHARED) $(LIBS)
 ASM_FILES = $(wildcard ./assembler/*.cpp ./assembler/srcs/*.cpp ./assembler/srcs/*/*.cpp) -std=c++11 $(SHARED_FILES) -I $(INCLUDE_ASM) -I $(INCLUDE_SHARED)

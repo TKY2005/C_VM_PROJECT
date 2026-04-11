@@ -4,7 +4,7 @@
 #include<stdlib.h>
 
 #include<CPU/registers.h>
-#include<utils/ds.h>
+#include<utils/strbuilder/strbuilder.h>
 
 void reg_write_b(union registerfile* regfile, int regcode, uint8_t val) {
 	regfile->b[regcode] = val % (0xff + 1);

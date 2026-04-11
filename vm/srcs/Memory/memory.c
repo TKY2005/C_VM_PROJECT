@@ -2,11 +2,15 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include<stdbool.h>
 
 #include<Memory/memory.h>
-#include<utils/ds.h>
+#include<CPU/CPU.h>
+#include<VM/BIOS.h>
+#include<utils/strbuilder/strbuilder.h>
 #include<utils/helpers.h>
 #include<VM/vm_events.h>
+#include<VM/vm.h>
 
 memory mem_init(int sizeB) {
   memory m = {0};
@@ -25,6 +29,10 @@ void mem_reset(memory* mem) {
   mem->mem = calloc(mem->size, sizeof(uint8_t));
 }
 
+bool is_addr_ROM(uint32_t addr) {
+  return (addr >= ROM_START_ADDR && addr <= 0xffffffffu);
+}
+
 int is_valid_addr(memory* mem, uint32_t addr) {
   if (addr < 0 || addr >= mem->size)
     return 0;
@@ -35,6 +43,7 @@ int is_valid_addr(memory* mem, uint32_t addr) {
 int mem_size(const memory *m) { return m->size; }
 
 int mem_write_byte(memory *m, uint32_t addr, uint8_t val) {
+
   if (!is_valid_addr(m, addr))
     return MEM_WRITE_FAILURE;
   else
@@ -84,6 +93,8 @@ int mem_write_bytes(memory *m, uint32_t addr, int count, uint8_t *vals) {
 }
 
 int mem_read_byte(memory *m, uint32_t addr, uint8_t* result) {
+  if (is_addr_ROM(addr)) return BIOS_read_byte(addr, result);
+
   if (is_valid_addr(m, addr)){
 	  *result = m->mem[addr];
 	  return 0;
@@ -91,6 +102,8 @@ int mem_read_byte(memory *m, uint32_t addr, uint8_t* result) {
   else return MEM_READ_FAILURE;
 }
 int mem_read_word(memory *m, uint32_t addr, uint16_t* result) {
+  if (is_addr_ROM(addr)) return BIOS_read_word(addr, result);
+
   if (is_valid_addr(m, addr) && is_valid_addr(m, addr + 1)) {
     uint8_t high = m->mem[addr];
     uint8_t low = m->mem[addr + 1];
@@ -100,6 +113,7 @@ int mem_read_word(memory *m, uint32_t addr, uint16_t* result) {
   else return MEM_READ_FAILURE;
 }
 int mem_read_dword(memory *m, uint32_t addr, uint32_t* result) {
+  if (is_addr_ROM(addr)) return BIOS_read_dword(addr, result);
   for (int i = 0; i < 4; i++)
     if (!is_valid_addr(m, addr + i))
       return MEM_READ_FAILURE;
@@ -188,15 +202,15 @@ char* mem_display(memory* m, uint32_t start, int count, int chunk_size) {
   strbuilder_append(&mem_str, strbuilder_getstr(&offset));
   strbuilder_append(&mem_str, "\n");
   strbuilder_destroy(&offset);
-
+  uint8_t c;
   for (int i = start; i < start + count; i++) {
     
-    if (i % chunk_size == 0) {
+    if (i % chunk_size == 0 || i - start == 0) {
       strbuilder_appendf(&mem_str, "%08X:  ", i);
     }
-    strbuilder_appendf(&mem_str, "0x%02X  ", m->mem[i]);
-    
-    strbuilder_append_chr(&charset, (is_printable(m->mem[i]) == 0 ? (char)m->mem[i] : '.'));
+    strbuilder_appendf(&mem_str, "0x%02X  ", c);
+    mem_read_byte(m, i, &c);
+    strbuilder_append_chr(&charset, (is_printable(c) == 0 ? (char) c : '.'));
 
     if ((i + 1) % chunk_half == 0 && (i + 1) % chunk_size != 0) {
       strbuilder_append(&mem_str, "  ");

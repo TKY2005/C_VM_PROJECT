@@ -36,41 +36,39 @@ ParseResult* Parser::parseTokens(vector<Token> tokens) {
         }
 
         else if (currentLine[0].maintype == MainType::SYM) {
-            if (section == "DATA") {
-                if (currentLine[1].subtype == SubType::DIR_EQU) {
-                    uint32_t lhs = result->symmap[currentLine[2].tokenstr];
-                    SubType oper = currentLine[3].subtype;
-                    uint32_t rhs = result->symmap[currentLine[4].tokenstr];
-                    uint32_t operresult;
+            if (currentLine[1].subtype == SubType::DIR_EQU) {
+                uint32_t lhs = result->symmap[currentLine[2].tokenstr];
+                SubType oper = currentLine[3].subtype;
+                uint32_t rhs = result->symmap[currentLine[4].tokenstr];
+                uint32_t operresult;
 
-                    // temporary.
-                    switch(oper) {
-                        case SubType::OPER_ADD:
-                        operresult = lhs + rhs;
-                        break;
-                        case SubType::OPER_SUB:
-                        operresult = lhs - rhs;
-                        break;
-                        case SubType::OPER_MUL:
-                        operresult = lhs * rhs;
-                        break;
-                        case SubType::OPER_DIV:
-                        operresult = lhs / rhs;
-                        break;
-                        default:
-                        operresult = 0;
-                        break;
-                    }
-                    ProgData* d = new ProgData(currentLine, 4, program_offset, operresult);
-                    result->symmap[currentLine[0].tokenstr] = program_offset;
-                    program_offset += d->len;
-                    result->program_data.push_back(d);
+                // temporary.
+                switch(oper) {
+                    case SubType::OPER_ADD:
+                    operresult = lhs + rhs;
+                    break;
+                    case SubType::OPER_SUB:
+                    operresult = lhs - rhs;
+                    break;
+                    case SubType::OPER_MUL:
+                    operresult = lhs * rhs;
+                    break;
+                    case SubType::OPER_DIV:
+                    operresult = lhs / rhs;
+                    break;
+                    default:
+                    operresult = 0;
+                    break;
                 }
-                else {
-                    ProgData* d = parseData(currentLine);
-                    result->program_data.push_back(d);
-                    result->symmap[currentLine[0].tokenstr] = d->addr;
-                }
+                ProgData* d = new ProgData(currentLine, 4, program_offset, operresult);
+                result->symmap[currentLine[0].tokenstr] = program_offset;
+                program_offset += d->len;
+                result->program_data.push_back(d);
+            }
+            else {
+                ProgData* d = parseData(currentLine);
+                result->program_data.push_back(d);
+                result->symmap[currentLine[0].tokenstr] = d->addr;
             }
         }
 

@@ -6,9 +6,9 @@
 #include<cstdint>
 #include<iomanip>
 
-#include "../../headers/LexicalAnalyzer/Tokenizer.hpp"
-#include "../../../shared/utils/ds.h"
-#include"../../../shared/ISA_encoding_info.h"
+#include<LexicalAnalyzer/Tokenizer.hpp>
+#include<utils/strbuilder/strbuilder.h>
+#include<ISA_encoding_info.h>
 
 #define MODE_BYTE 1
 #define MODE_WORD 2

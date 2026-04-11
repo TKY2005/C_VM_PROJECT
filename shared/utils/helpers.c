@@ -2,8 +2,29 @@
 #include<stdio.h>
 #include<stdlib.h>
 #include<string.h>
+#include<stdint.h>
 
 #include "./helpers.h"
+
+int vptoint(void* d) {
+    int i;
+    memcpy(&i, d, sizeof(int));
+	return i;
+}
+float vptofloat(void* d){
+	float f;
+	memcpy(&f, d, sizeof(float));
+	return f;
+}
+char vptochar(void* d) {
+	char c;
+	memcpy(&c, d, sizeof(char));
+	return c;
+	
+}
+char* vptostr(void* d){
+	return (char*) d;
+}
 
 int is_printable(char c) {
     return (c >= 0x20 && c <= 0x7E) ? 0 : 1;

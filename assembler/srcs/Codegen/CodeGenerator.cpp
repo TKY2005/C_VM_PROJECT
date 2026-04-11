@@ -34,13 +34,13 @@ std::ofstream CodeGenerator::makeBinaryFile(std::string outputFilePath, ParseRes
         }
     }
 
-    outputfile.seekp(0, std::ios::end);
+    /*outputfile.seekp(0, std::ios::end);
 
     outputfile.write(filemeta.signature, siglen);
     outputfile.write(filemeta.date, datelen);
     outputfile.write(reinterpret_cast<const char*>(&filemeta.ver), sizeof(filemeta.ver));
     outputfile.write(reinterpret_cast<const char*>(&filemeta.arch), sizeof(filemeta.arch));
-    outputfile.write(reinterpret_cast<const char*>(&filemeta.entrypoint), sizeof(filemeta.entrypoint));
+    outputfile.write(reinterpret_cast<const char*>(&filemeta.entrypoint), sizeof(filemeta.entrypoint));*/
 
     std::vector<ProgIns*> instructions = parseResult->program_instructions;
     for(int i = 0; i < instructions.size(); i++) {
@@ -51,7 +51,7 @@ std::ofstream CodeGenerator::makeBinaryFile(std::string outputFilePath, ParseRes
             printf("0x%02x ", bin->bindata[j]);
         }
         printf("\n");
-        outputfile.seekp(instructions[i]->addr + metaDataOffset, std::ios::beg);
+        //outputfile.seekp(instructions[i]->addr + metaDataOffset, std::ios::beg);
         outputfile.write(reinterpret_cast<const char*>(bin->bindata), bin->size);
         free(bin->bindata);
         free(bin);
@@ -63,7 +63,7 @@ std::ofstream CodeGenerator::makeBinaryFile(std::string outputFilePath, ParseRes
         for(int i = 0; i < data.size(); i++) {
 
             bin_form* bin = dataToBin(data[i]);
-            outputfile.seekp(data[i]->addr + metaDataOffset, std::ios::beg);
+            //outputfile.seekp(data[i]->addr + metaDataOffset, std::ios::beg);
             outputfile.write(reinterpret_cast<const char*>(bin->bindata), bin->size);
             free(bin->bindata);
             free(bin);

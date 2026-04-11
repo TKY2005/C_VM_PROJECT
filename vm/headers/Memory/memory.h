@@ -2,6 +2,7 @@
 #define MEMORY_H
 
 #include<stdint.h>
+#include<stdbool.h>
 
 #include<VM/vm_events.h>
 
@@ -20,6 +21,8 @@ typedef struct memory {
 
 memory mem_init(int sizeB);
 void mem_reset(memory* mem);
+
+bool is_addr_ROM(uint32_t addr);
 
 int mem_size(const memory* m);
 int mem_write_byte(memory* m, uint32_t addr, uint8_t val);

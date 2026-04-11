@@ -10,6 +10,7 @@
 #include<stdarg.h>
 #include<stdlib.h>
 #include<stdint.h>
+#include<stdbool.h>
 
 CPU* mkCPU(union registerfile* regfile, instruction* ins_set) {
     CPU* cpu = malloc(sizeof(CPU));

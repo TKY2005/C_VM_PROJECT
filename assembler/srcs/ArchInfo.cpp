@@ -27,7 +27,7 @@ vector<string> ArchInfo::reglist = {
 };
 
 vector<string> ArchInfo::dirList = {
-	"org", "section", "equ", "define",
+	"org", "section", "equ", "define", "times", 
 	"byte", "word", "dword",
 	"defb", "defw", "defdw",
 	"resb", "resw", "resdw"

@@ -9,6 +9,8 @@
 #include<CPU/instruction_set.h>
 #include<ISA_encoding_info.h>
 
+#define ROM_START_ADDR 0xFFFEFFFFu
+
 #define CPU_EXEC_SUCCESS 0
 
 #define CPU_UNDEFINED_OPCODE -1

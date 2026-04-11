@@ -60,6 +60,7 @@ SubType Lexer::decideSubType(string tok, MainType t) {
         if (tok == "org") return SubType::DIR_ORG;
         else if (tok == "section") return SubType::DIR_SECTION;
         else if (tok == "equ") return SubType::DIR_EQU;
+        else if (tok == "times") return SubType::DIR_TIMES;
         else if (tok == "byte") return SubType::DIR_BYTE;
         else if (tok == "word") return SubType::DIR_WORD;
         else if (tok == "dword") return SubType::DIR_DWORD;
@@ -224,6 +225,10 @@ string Lexer::subTypeToStr(SubType t) {
 
         case SubType::DIR_ORG:
         return "ORG DIRECTIVE";
+        break;
+
+        case SubType::DIR_TIMES:
+        return "TIMES DIRECTIVE";
         break;
         
         case SubType::DIR_BYTE:

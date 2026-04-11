@@ -7,7 +7,6 @@
 #include<Parser/Parser.hpp>
 #include<Codegen/CodeGenerator.hpp>
 #include<ErrorHandler/ErrorHandler.hpp>
-#include<utils/ds.h>
 
 std::string Assembler::filename;
 

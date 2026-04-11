@@ -10,14 +10,48 @@
 #include<ISA_encoding_info.h>
 #include<VM/vm_input.h>
 #include<VM/vm_interrupts.h>
+#include<VM/BIOS.h>
 
 #include<utils/helpers.h>
+#include<utils/hashmap/hmap.h>
 
+struct vm_config vm_conf = {0};
 CPU* vm_cpu;
 memory vm_memory;
+uint8_t* bios_memory;
+
+hmap* vm_get_settings(const char* filepath) {
+    FILE* f = fopen(filepath, "r");
+
+    if (!f) {
+        return NULL;
+    }
+
+    char buff[255];
+    hmap* h = hmap_create(fnv1_1a_hash);
+
+    while ( (fgets(buff, sizeof(buff), f)) ) {
+        char** split = split_string(buff, '=');
+        if(split[1][strlen(split[1]) - 1] == '\n') split[1][strlen(split[1]) - 1] = '\0';
+        hmap_put(h, split[0], strlen(split[0]), (void*) split[1]);
+    }
+    fclose(f);
+    return h;
+}
+
+void vm_set_settings(hmap* source, struct vm_config* target) {
+    target->mem_size = (uint32_t) strtol( (char*) hmap_get(source, "memsize", strlen("memsize")), NULL, 0);
+    target->cycle_count = (uint32_t) strtol( (char*) hmap_get(source, "cycles", strlen("cycles")), NULL, 0);
+    if (target->bios_path) {
+        free(target->bios_path);
+    }
+    target->bios_path = (char*) malloc(sizeof(char) * 1024);
+    target->bios_path = (char*) hmap_get( source, "bios", strlen("bios") );
+}
 
 void vm_init(int memsize) {
     if (&vm_memory.mem != NULL) mem_destroy(&vm_memory);
+    if (bios_memory) free(bios_memory);
     if (vm_cpu) CPU_reset_state(vm_cpu);
     else {
         union registerfile* regfile = calloc(1, sizeof(union registerfile));    
@@ -25,6 +59,7 @@ void vm_init(int memsize) {
         vm_cpu = mkCPU(regfile, ins_set);
     }
     vm_memory = mem_init(memsize);
+    bios_memory = load_BIOS_img(vm_conf.bios_path);
 }
 
 void vm_init_nomem() {
@@ -38,6 +73,14 @@ void vm_shutdown() {
     
     CPU_destroy(vm_cpu);
     mem_destroy(&vm_memory);
+    free(bios_memory);
+}
+
+int vm_boot_sequence(CPU* cpu, memory* mem) {
+    cpu->registers->PC = BIOS_ENTRY_ADDR;
+    cpu->state->CPU_RUNNING = 1;
+    reg_set_flags(cpu->registers, FLG_I);
+    CPU_run(cpu, mem);
 }
 
 int vm_runf(CPU* cpu, memory* mem, const char* filepath) {
@@ -150,7 +193,8 @@ void vm_shell() {
 }
 
 void vm_debug_shell() {
-    printf("PC = 0x%08X -> 0x%02X\n", vm_cpu->registers->PC + 1, vm_memory.mem[vm_cpu->registers->PC + 1]);
+    uint8_t o; mem_read_byte(&vm_memory, vm_cpu->registers->PC + 1, &o);
+    printf("PC = 0x%08X -> 0x%02X\n", vm_cpu->registers->PC + 1, o);
     while (reg_check_flag(vm_cpu->registers, FLG_T) != 0) {
         printf(">> ");
         char buff[2048] = {0};
@@ -166,9 +210,18 @@ void vm_run_shell_command(char* command) {
     char** parts = split_string(command, ' ');
 
     if (strcmp(parts[0], "vm_init") == 0) {
-        uint32_t size = strtol(parts[1], NULL, 0);
+        hmap* conf = vm_get_settings(CONFIG_PATH);
+        vm_set_settings(conf, &vm_conf);
+        free(conf);
+        uint32_t size;
+        char* msize = &parts[1][0];
+        if (!msize) size = vm_conf.mem_size;
+        else size = strtol(parts[1], NULL, 0);
         vm_init(size);
         printf("Initialized the VM with %d bytes of available virtual memory.\n", vm_memory.size);
+    }
+    else if (strcmp(parts[0], "boot") == 0) {
+        vm_boot_sequence(vm_cpu, &vm_memory);
     }
     else if (strcmp(parts[0], "loadfile") == 0) {
 
