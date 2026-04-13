@@ -32,7 +32,7 @@ hmap* vm_get_settings(const char* filepath) {
 
     while ( (fgets(buff, sizeof(buff), f)) ) {
         char** split = split_string(buff, '=');
-        if(split[1][strlen(split[1]) - 1] == '\n') split[1][strlen(split[1]) - 1] = '\0';
+        if(split[1][strlen(split[1]) - 1] != '\0') split[1][strlen(split[1]) - 1] = '\0';
         hmap_put(h, split[0], strlen(split[0]), (void*) split[1]);
     }
     fclose(f);
@@ -85,7 +85,7 @@ int vm_boot_sequence(CPU* cpu, memory* mem) {
 
 int vm_runf(CPU* cpu, memory* mem, const char* filepath) {
 
-    int read = vm_load_binary_file(mem, filepath, &cpu->registers->PC);
+    int read = vm_load_code_file(mem, filepath, &cpu->registers->PC);
 
     if (read == NO_VALID_TARGET) {
         printf("File has been opened but couldn't be loaded into memory.\n");
@@ -103,7 +103,7 @@ int vm_runf(CPU* cpu, memory* mem, const char* filepath) {
     return VM_SUCCESS;
 }
 
-int vm_load_binary_file(memory* target, const char* filepath, uint32_t* entry_dest) {
+int vm_load_code_file(memory* target, const char* filepath, uint32_t* entry_dest) {
     
     FILE* src = fopen(filepath, "rb");
     if (src == NULL) return FILE_NOT_OPEN;
@@ -138,6 +138,34 @@ int vm_load_binary_file(memory* target, const char* filepath, uint32_t* entry_de
     long read = fread(target->mem, sizeof(uint8_t), size, src);
 
     if (read != size - METADATA_SIZE){
+        fclose(src);
+        return FILE_INCOMPLETE;
+    }
+
+    fclose(src);
+    return VM_SUCCESS;
+}
+
+int vm_load_binary_file(memory* target, const char* filepath, uint32_t load_addr) {
+    FILE* src = fopen(filepath, "rb");
+    if (src == NULL) return FILE_NOT_OPEN;
+    if (target == NULL){
+        fclose(src);
+        return NO_VALID_TARGET;
+    }
+
+    fseek(src, 0, SEEK_END);
+    long size = ftell(src);
+    rewind(src);
+
+    if (size > mem_size(target) - load_addr){
+        fclose(src);
+        return NOT_ENOUGH_MEMORY;
+    }
+
+    long read = fread(target->mem + load_addr, sizeof(uint8_t), size, src);
+
+    if (read < size){
         fclose(src);
         return FILE_INCOMPLETE;
     }
@@ -227,7 +255,7 @@ void vm_run_shell_command(char* command) {
 
         if (vm_memory.mem == NULL) printf("No virtual memory to load the file to. initialize with vm_init first.\n");
         else {
-            int load = vm_load_binary_file(&vm_memory, parts[1], &vm_cpu->registers->PC);
+            int load = vm_load_code_file(&vm_memory, parts[1], &vm_cpu->registers->PC);
             switch(load) {
                 case NOT_ENOUGH_MEMORY:
                 printf("There isn't enough memory to load the file to. please allocate more memory.\n");
@@ -244,16 +272,46 @@ void vm_run_shell_command(char* command) {
             }
         }
     }
+    else if (strcmp(parts[0], "loadbin") == 0) {
+        if (vm_memory.mem == NULL) printf("No virtual memory to load the file to. initialize with vm_init first.\n");
+        else {
+            char* al = &parts[2][0];
+            if (!al) {
+                printf("for flat binary files, you must specify the address where the file will be loaded.\n");
+            }
+            else {
+                uint32_t load_addr = (uint32_t) strtoul(parts[2], NULL, 0);
+                int load = vm_load_binary_file(&vm_memory, parts[1], load_addr);
+                switch(load) {
+                    case NOT_ENOUGH_MEMORY:
+                    printf("There isn't enough memory to load the file to. please allocate more memory.\n");
+                    break;
+                    case FILE_INCOMPLETE:
+                    printf("Warning: The file has not been completley loaded into memory.\n");
+                    break;
+                    case FILE_NOT_OPEN:
+                    printf("Couldn't open the requested file '%s'\n", parts[1]);
+                    break;
+                    case VM_SUCCESS:
+                    printf("Successfully loaded file into memory.\n");
+                    break;
+                }
+            }
+        }
+    }
     else if (strcmp(parts[0], "run") == 0) {
         vm_runp(vm_cpu, &vm_memory, vm_cpu->registers->PC);
     }
     else if (strcmp(parts[0], "memview") == 0) {
-        uint32_t start = strtol(parts[1], NULL, 0);
+        uint32_t start = (uint32_t) strtoul(parts[1], NULL, 0);
         int count = strtol(parts[2], NULL, 0);
         int chunk = strtol(parts[3], NULL, 0);
         char* s = mem_display(&vm_memory, start, count, chunk);
-        printf("%s\n", s);
-        free(s);
+        if (s == NULL) printf("Error displaying memory. Either the start address is out of bounds or memory is not initialized.\n");
+        else {
+            printf("%s\n", s);
+            free(s);
+        }
     }
     else if (strcmp(parts[0], "regview") == 0) {
         char* s = display_registers(vm_cpu->registers);
@@ -262,8 +320,8 @@ void vm_run_shell_command(char* command) {
     }
 
     else if (strcmp(parts[0], "memwrite") == 0) {
-        uint32_t addr = strtol(parts[1], NULL, 0);
-        uint32_t val = strtol(parts[2], NULL, 0);
+        uint32_t addr = strtoul(parts[1], NULL, 0);
+        uint32_t val = strtoul(parts[2], NULL, 0);
         char* wmode = &parts[3][0];
         if (!wmode) printf("You need to specifiy the write mode.\n");
         else{

@@ -9,7 +9,7 @@
 #include<CPU/instruction_set.h>
 #include<ISA_encoding_info.h>
 
-#define ROM_START_ADDR 0xFFFEFFFFu
+#define ROM_START_ADDR 0xf9C00000u
 
 #define CPU_EXEC_SUCCESS 0
 

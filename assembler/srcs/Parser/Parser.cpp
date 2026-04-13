@@ -21,6 +21,7 @@ ParseResult* Parser::parseTokens(vector<Token> tokens) {
 
     ParseResult* result = new ParseResult();
     result->symmap["$"] = program_offset;
+    result->symmap["$$"] = 0;
 
     vector<ProgLine> lines = extractLines(tokens);
     progLines = lines;
@@ -94,6 +95,7 @@ ParseResult* Parser::parseTokens(vector<Token> tokens) {
                 section = currentLine[1].tokenstr;
                 result->symmap[section] = program_offset;
                 result->sections[section] = program_offset;
+                result->symmap["$$"] = program_offset;
             }
 
             else if (matchSubTypes(currentLine[0].subtype, {SubType::DIR_RESB, SubType::DIR_RESW, SubType::DIR_RESDW}))

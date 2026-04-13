@@ -3,8 +3,8 @@
 
 #include<stdint.h>
 
-#define BIOS_SIZE 0x8000
-#define BIOS_ENTRY_ADDR 0xFFFF7FFFu
+#define BIOS_SIZE 0xffff
+#define BIOS_ENTRY_ADDR 0xf9C00000u
 
 uint8_t* load_BIOS_img(const char* imgpath);
 

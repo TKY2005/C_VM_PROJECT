@@ -41,7 +41,8 @@ void vm_set_settings(hmap* source, struct vm_config* target);
 
 void vm_init(int memsize);
 void vm_init_nomem();
-int vm_load_binary_file(memory* target, const char* filepath, uint32_t* entry_dest);
+int vm_load_code_file(memory* target, const char* filepath, uint32_t* entry_dest);
+int vm_load_binary_file(memory* target, const char* filepath, uint32_t load_addr);
 int vm_interrupt(CPU* cpu, memory* mem, uint8_t icode);
 int vm_runp(CPU* cpu, memory* mem, uint32_t entry);
 int vm_runf(CPU* cpu, memory* mem, const char* filepath);

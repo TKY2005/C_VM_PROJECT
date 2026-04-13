@@ -167,7 +167,8 @@ int mem_read_bytes_e(memory* m, uint32_t addr, int count, uint8_t* result, vm_fu
 }
 
 char* mem_display(memory* m, uint32_t start, int count, int chunk_size) {
-
+  if (!m || !m->mem) return NULL;
+  if (start >= m->size && start < ROM_START_ADDR) return NULL;
   if (count == -1)
     count = m->size;
   if (start == -1)
@@ -208,8 +209,8 @@ char* mem_display(memory* m, uint32_t start, int count, int chunk_size) {
     if (i % chunk_size == 0 || i - start == 0) {
       strbuilder_appendf(&mem_str, "%08X:  ", i);
     }
-    strbuilder_appendf(&mem_str, "0x%02X  ", c);
     mem_read_byte(m, i, &c);
+    strbuilder_appendf(&mem_str, "0x%02X  ", c);
     strbuilder_append_chr(&charset, (is_printable(c) == 0 ? (char) c : '.'));
 
     if ((i + 1) % chunk_half == 0 && (i + 1) % chunk_size != 0) {

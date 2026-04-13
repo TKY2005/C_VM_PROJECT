@@ -3,7 +3,6 @@
 #include<VM/vm.h>
 #include<CPU/registers.h>
 #include<utils/hashmap/hmap.h>
-#include<string.h>
 
 int main(int argc, char** argv) {
     
@@ -16,7 +15,7 @@ int main(int argc, char** argv) {
         vm_init(vm_conf.mem_size);
         
         //vm_runf(vm_cpu, &vm_memory, argv[1]);
-        vm_load_binary_file(&vm_memory, "./asm_programs/executables/cipher.tky", &vm_cpu->registers->PC);
+        vm_load_code_file(&vm_memory, "./asm_programs/executables/cipher.tky", &vm_cpu->registers->PC);
         vm_boot_sequence(vm_cpu, &vm_memory);
         vm_shutdown();
     }
