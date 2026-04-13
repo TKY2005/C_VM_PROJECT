@@ -61,15 +61,16 @@ ParseResult* Parser::parseTokens(vector<Token> tokens) {
                     operresult = 0;
                     break;
                 }
-                ProgData* d = new ProgData(currentLine, 4, program_offset, operresult);
+                ProgData d(currentLine, 4, program_offset, operresult);
+                ProgData& dr = d;
                 result->symmap[currentLine[0].tokenstr] = program_offset;
-                program_offset += d->len;
-                result->program_data.push_back(d);
+                program_offset += d.len;
+                result->program_data.push_back(dr);
             }
             else {
-                ProgData* d = parseData(currentLine);
+                ProgData& d = parseData(currentLine);
                 result->program_data.push_back(d);
-                result->symmap[currentLine[0].tokenstr] = d->addr;
+                result->symmap[currentLine[0].tokenstr] = d.addr;
             }
         }
 
@@ -112,7 +113,7 @@ ParseResult* Parser::parseTokens(vector<Token> tokens) {
 
         else if (currentLine[0].maintype == MainType::INS) {
             if (section != "DATA"){
-                ProgIns* ins = parseInstruction(currentLine);
+                ProgIns& ins = parseInstruction(currentLine);
                 result->program_instructions.push_back(ins);
             }
             else ErrorBucket::addError(currentLine, currentLine[0], 
@@ -125,7 +126,7 @@ ParseResult* Parser::parseTokens(vector<Token> tokens) {
     return result;
 }
 
-ProgIns* Parser::parseInstruction(vector<Token> insparts) {
+ProgIns& Parser::parseInstruction(vector<Token> insparts) {
     ProgIns* insobj = new ProgIns(insparts);
     ProgIns& ins = *insobj;
     
@@ -146,22 +147,7 @@ ProgIns* Parser::parseInstruction(vector<Token> insparts) {
     ins.len = len;
     ins.addr = program_offset;
     program_offset += len;
-    return insobj;
-}
-
-vector<vector<Token>> Parser::extractOperands(vector<Token> insparts) {
-    vector<vector<Token>> operands;
-    vector<Token> current_operand;
-
-    for(int i = 1; i < insparts.size(); i++) {
-        if (insparts[i].maintype == MainType::COMMA){
-            operands.push_back(current_operand);
-            current_operand.clear();
-        }
-        else current_operand.push_back(insparts[i]);
-    }
-    if (!current_operand.empty()) operands.push_back(current_operand);
-    return operands;
+    return ins;
 }
 
 vector<Token> extractData(vector<Token> dparts) {
@@ -173,9 +159,9 @@ vector<Token> extractData(vector<Token> dparts) {
     return data;
 }
 
-ProgData* Parser::parseData(vector<Token> dparts) {
+ProgData& Parser::parseData(vector<Token> dparts) {
     
-    ProgData* d = new ProgData(dparts);
+    ProgData d(dparts);
     int scale = 0;
     int length = 0;
     if (matchSubTypes(dparts[1].subtype, {SubType::DIR_DEFB, SubType::DIR_RESB})) scale = 1;
@@ -183,7 +169,7 @@ ProgData* Parser::parseData(vector<Token> dparts) {
     else if (matchSubTypes(dparts[1].subtype, {SubType::DIR_DEFDW, SubType::DIR_RESDW})) scale = 4;
     
     if (matchSubTypes(dparts[1].subtype, {SubType::DIR_RESB, SubType::DIR_RESW, SubType::DIR_RESDW})) {
-        d->isRes = true;
+        d.isRes = true;
         if (dparts[2].maintype != MainType::NUM) {
             ErrorBucket::addError(getLine(dparts[2].row), dparts[2], Assembler::filename, "Next token must be number.");
         }
@@ -199,38 +185,10 @@ ProgData* Parser::parseData(vector<Token> dparts) {
             else if (data[i].maintype == MainType::NUM) length += scale;
         }
     }
-    d = new ProgData(dparts, length, scale, program_offset);
+    d = ProgData(dparts, length, scale, program_offset);
+    ProgData& dr = d;
     program_offset += length;
-    return d;
-}
-
-vector<ProgLine> Parser::extractLines(vector<Token> tokens) {
-    vector<ProgLine> lines;
-    vector<Token> lineparts;
-    int index = 0;
-    while (tokens[index].maintype != MainType::ENOF) {
-        if (tokens[index].maintype == MainType::NEWLINE) {
-            lines.push_back(lineparts);
-            lineparts.clear();
-        }
-        else lineparts.push_back(tokens[index]);
-        index++;
-    }
-    return lines;
-}
-
-vector<Token> Parser::extractMemoryExpression(vector<Token> operand){
-    vector<Token> memexpr;
-    bool add = false;
-    for(int i = 0; i < operand.size(); i++) {
-
-        if (operand[i].maintype == MainType::OPEN_BRACE) add = true;
-
-        if (add) memexpr.push_back(operand[i]);
-
-        if (operand[i].maintype == MainType::CLOSE_BRACE) return memexpr;
-    }
-    return memexpr;
+    return dr;
 }
 
 void Parser::evaluateOperands(vector<vector<Token>> operands, ProgIns& result, int& length) {
@@ -510,80 +468,4 @@ void Parser::evaluateMemoryExpression(vector<Token> expr, ProgIns& result, int& 
             }
         }
     }
-}
-
-void Parser::setRegister8bit(REG_SELECT* reg, int operselect, uint8_t lhselect, uint8_t regcode) {
-    uint8_t r = 0;
-    if (operselect == DEST) r = reg->dest;
-    else if (operselect == SRC) r = reg->src;
-    r = (r << 4) | lhselect;
-    r = (r << 3) | regcode;
-    if (operselect == DEST) reg->dest = r;
-    else if (operselect == SRC) reg->src = r;
-}
-
-bool Parser::matchTypes(MainType t, std::initializer_list<MainType> a) {
-    for(MainType type : a) {
-        if (t == type) return true;
-    }
-    return false;
-}
-
-bool Parser::matchSubTypes(SubType t, std::initializer_list<SubType> a) {
-
-    for(SubType type : a) {
-        if (t == type) return true;
-    }
-    return false;
-}
-
-bool Parser::isMemoryOperand(vector<Token> operand) {
-    return (operand[0].maintype == MainType::OPEN_BRACE || 
-        ( matchSubTypes(operand[0].subtype, {SubType::DIR_BYTE, SubType::DIR_WORD}) 
-        && operand[1].maintype == MainType::OPEN_BRACE ));
-}
-
-bool Parser::isSourceBiggerThanDest(ins_encoding* ins) {
-    uint8_t source = getSrcSize(&ins->opertype);
-    uint8_t dest = getDestSize(&ins->opertype);
-
-    return source > dest;
-}
-
-uint8_t Parser::getSrcSize(OPER_TYPE* t) {
-    switch(t->src_type) {
-        case REG8 : case MEM8 :
-        return 8;
-        break;
-        case REG16 : case MEM16 :
-        return 16;
-        break;
-        case REG32 : MEM32 :
-        return 32;
-        break;
-
-        default:
-        return 0;
-        break;
-    }
-    return 0;
-}
-
-uint8_t Parser::getDestSize(OPER_TYPE* t) {
-    switch(t->dest_type) {
-        case REG8 : case MEM8 :
-        return 8;
-        break;
-        case REG16 : case MEM16 :
-        return 16;
-        break;
-        case REG32 : MEM32 :
-        return 32;
-        break;
-
-        default:
-        return 0;
-        break;
-    }
-    return 0;
 }

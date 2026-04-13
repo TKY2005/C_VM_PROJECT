@@ -145,8 +145,8 @@ class ParseResult {
     std::vector<Token> tokens;
     std::map<std::string, uint32_t> symmap;
     std::map<std::string, uint32_t> sections;
-    std::vector<ProgIns*> program_instructions;
-    std::vector<ProgData*> program_data;
+    std::vector<ProgIns&> program_instructions;
+    std::vector<ProgData&> program_data;
 
     uint32_t code_section_addr = 0;
     uint32_t data_section_addr = 0;
@@ -154,39 +154,150 @@ class ParseResult {
 
 class Parser {
     public:
-    ParseResult* parseTokens(std::vector<Token> tokens);
-    std::vector<ProgLine> extractLines(std::vector<Token> tokens);
-    std::vector<std::vector<Token>> extractOperands(std::vector<Token> insparts);
-    bool matchTypes(MainType t, std::initializer_list<MainType> a);
-    bool matchSubTypes(SubType t, std::initializer_list<SubType> a);
-    bool isMemoryOperand(std::vector<Token> operand);
-    ProgIns* parseInstruction(std::vector<Token> insparts);
-    ProgData* parseData(std::vector<Token> dparts);
+    virtual ParseResult* parseTokens(std::vector<Token> tokens);
+    virtual ProgIns& parseInstruction(std::vector<Token> insparts);
+    virtual ProgData& parseData(std::vector<Token> dparts);
+    virtual void evaluateOperands(std::vector<std::vector<Token>> operands, ProgIns& result, int& length);
+    virtual void evaluateDestinationOperand(std::vector<Token> operand, ProgIns& result, int& length);
+    virtual void evaluateSourceOperand(std::vector<Token> operand, ProgIns& result, int& length);
+    virtual void evaluateMemoryExpression(std::vector<Token> expr, ProgIns& result, int& length);
+    virtual ~Parser() = default;
+
+    std::vector<ProgLine> extractLines(std::vector<Token> tokens) {
+        std::vector<ProgLine> lines;
+        std::vector<Token> lineparts;
+        int index = 0;
+        while (tokens[index].maintype != MainType::ENOF) {
+            if (tokens[index].maintype == MainType::NEWLINE) {
+                lines.push_back(lineparts);
+                lineparts.clear();
+            }
+            else lineparts.push_back(tokens[index]);
+            index++;
+        }
+        return lines;
+    }
+
+    std::vector<std::vector<Token>> extractOperands(std::vector<Token> insparts) {
+        std::vector<std::vector<Token>> operands;
+        std::vector<Token> current_operand;
+
+        for(int i = 1; i < insparts.size(); i++) {
+            if (insparts[i].maintype == MainType::COMMA){
+                operands.push_back(current_operand);
+                current_operand.clear();
+            }
+            else current_operand.push_back(insparts[i]);
+        }
+        if (!current_operand.empty()) operands.push_back(current_operand);
+        return operands;
+    }
+
+    
+    bool matchTypes(MainType t, std::initializer_list<MainType> a) {
+        for(MainType type : a) {
+            if (t == type) return true;
+        }
+        return false;
+    }
+
+    
+    bool matchSubTypes(SubType t, std::initializer_list<SubType> a) {
+
+        for(SubType type : a) {
+            if (t == type) return true;
+        }
+        return false;
+    }
+
+    bool isMemoryOperand(std::vector<Token> operand) {
+    return (operand[0].maintype == MainType::OPEN_BRACE || 
+            ( matchSubTypes(operand[0].subtype, {SubType::DIR_BYTE, SubType::DIR_WORD}) 
+            && operand[1].maintype == MainType::OPEN_BRACE ));
+    }
+
     std::vector<ProgLine> progLines;
 
-    std::vector<Token> extractMemoryExpression(std::vector<Token> operand);
+    std::vector<Token> extractMemoryExpression(std::vector<Token> operand){
+        std::vector<Token> memexpr;
+        bool add = false;
+        for(int i = 0; i < operand.size(); i++) {
+
+            if (operand[i].maintype == MainType::OPEN_BRACE) add = true;
+
+            if (add) memexpr.push_back(operand[i]);
+
+            if (operand[i].maintype == MainType::CLOSE_BRACE) return memexpr;
+        }
+        return memexpr;
+    }
+
     std::vector<Token> getLine(int linenum) {
         return progLines[linenum].tokens;
     }
 
-    void evaluateOperands(std::vector<std::vector<Token>> operands, ProgIns& result, int& length);
-    void evaluateDestinationOperand(std::vector<Token> operand, ProgIns& result, int& length);
-    void evaluateSourceOperand(std::vector<Token> operand, ProgIns& result, int& length);
-    void evaluateMemoryExpression(std::vector<Token> expr, ProgIns& result, int& length);
-
-    void setRegister8bit(REG_SELECT* reg, int operselect, uint8_t lhselect, uint8_t regcode);
+    void setRegister8bit(REG_SELECT* reg, int operselect, uint8_t lhselect, uint8_t regcode) {
+        uint8_t r = 0;
+        if (operselect == DEST) r = reg->dest;
+        else if (operselect == SRC) r = reg->src;
+        r = (r << 4) | lhselect;
+        r = (r << 3) | regcode;
+        if (operselect == DEST) reg->dest = r;
+        else if (operselect == SRC) reg->src = r;
+    }
 
     bool isDestReg(uint8_t dest) {
         return (dest >= REG8 && dest <= REG32);
     }
 
-    bool isSourceBiggerThanDest(ins_encoding* ins);
-    uint8_t getSrcSize(OPER_TYPE* t);
+    bool isSourceBiggerThanDest(ins_encoding* ins) {
+        uint8_t source = getSrcSize(&ins->opertype);
+        uint8_t dest = getDestSize(&ins->opertype);
+
+        return source > dest;
+    }
+    uint8_t getSrcSize(OPER_TYPE* t) {
+        switch(t->src_type) {
+            case REG8 : case MEM8 :
+            return 8;
+            break;
+            case REG16 : case MEM16 :
+            return 16;
+            break;
+            case REG32 : MEM32 :
+            return 32;
+            break;
+
+            default:
+            return 0;
+            break;
+        }
+        return 0;
+    }
     uint8_t getDestSize(OPER_TYPE* t);
 
-    private:
+    uint8_t getDestSize(OPER_TYPE* t) {
+        switch(t->dest_type) {
+            case REG8 : case MEM8 :
+            return 8;
+            break;
+            case REG16 : case MEM16 :
+            return 16;
+            break;
+            case REG32 : MEM32 :
+            return 32;
+            break;
+
+            default:
+            return 0;
+            break;
+        }
+        return 0;
+    }
+
+    protected:
     uint32_t program_offset = 0;
-    uint32_t positionCounter = 0;
+    uint32_t section_offset = 0;
 };
 
 #endif
