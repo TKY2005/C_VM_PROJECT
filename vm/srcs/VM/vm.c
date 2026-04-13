@@ -32,7 +32,7 @@ hmap* vm_get_settings(const char* filepath) {
 
     while ( (fgets(buff, sizeof(buff), f)) ) {
         char** split = split_string(buff, '=');
-        if(split[1][strlen(split[1]) - 1] != '\0') split[1][strlen(split[1]) - 1] = '\0';
+        split[1][strcspn(split[1], "\r\n")] = '\0';
         hmap_put(h, split[0], strlen(split[0]), (void*) split[1]);
     }
     fclose(f);

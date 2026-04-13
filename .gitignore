@@ -4,4 +4,4 @@ tkyc
 *.exe
 *.tky
 *.asm
-*.vconf
+config.vconf
