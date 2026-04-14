@@ -48,6 +48,15 @@ vector<Token> Tokenizer::tokenize(string source) {
             toklist.emplace_back(current, MainType::CLOSE_BRACE, SubType::NONE, row, colstart);
         }
 
+        else if (cur == '(') {
+            consume();
+            toklist.emplace_back(current, MainType::OPEN_PAREN, SubType::NONE, row, colstart);
+        }
+        else if (cur == ')') {
+            consume();
+            toklist.emplace_back(current, MainType::CLOSE_PAREN, SubType::NONE, row, colstart);
+        }
+
         else if (cur == ',') {
             consume();
             toklist.emplace_back(current, MainType::COMMA, SubType::NONE, row, colstart);
@@ -55,7 +64,12 @@ vector<Token> Tokenizer::tokenize(string source) {
 
         else if (cur == '$') {
             consume();
-            toklist.emplace_back(current, MainType::SYM, SubType::NONE, row, colstart);
+            SubType s = SubType::SPECIAL_PROG_OFFSET;
+            if (getCurChar() == '$'){ // check if the next character is another dollar sign.
+                consume();
+                s = SubType::SPECIAL_SECT_OFFSET;
+            }
+            toklist.emplace_back(current, MainType::SPECIAL, s, row, colstart);
         }
         else if (cur == ':') {
             consume();

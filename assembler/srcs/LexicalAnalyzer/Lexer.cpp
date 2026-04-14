@@ -7,7 +7,7 @@
 
 using std::string;
 
-string Lexer::delimeters = ",[]_\n ";
+string Lexer::delimeters = ",[]()_\n ";
 
 MainType Lexer::decideMainType(string tok) {
 
@@ -191,8 +191,21 @@ string Lexer::mainTypeToStr(MainType t) {
         return "CLOSE BRACE";
         break;
 
+        case MainType::OPEN_PAREN:
+        return "OPEN PARENTHISES";
+        break;
+
+        
+        case MainType::CLOSE_PAREN:
+        return "CLOSE PARENTHISES";
+        break;
+
         case MainType::SEMICOLON:
         return "SEMI COLON";
+        break;
+
+        case MainType::SPECIAL:
+        return "SPECIAL TOKEN";
         break;
         
         case MainType::UNDEFINED:
@@ -273,6 +286,14 @@ string Lexer::subTypeToStr(SubType t) {
 
         case SubType::OPER_DIV:
         return "DIV OPERATOR";
+        break;
+        
+        case SubType::SPECIAL_PROG_OFFSET:
+        return "PROGRAM OFFSET";
+        break;
+
+        case SubType::SPECIAL_SECT_OFFSET:
+        return "SECTION OFFSET";
         break;
 
         case SubType::NONE:

@@ -178,6 +178,15 @@ class Parser {
         return lines;
     }
 
+    std::vector<Token> extractData(std::vector<Token> dparts) {
+        std::vector<Token> data;
+
+        for(int i = 2; i < dparts.size(); i++) {
+            if (dparts[i].maintype != MainType::COMMA) data.push_back(dparts[i]);
+        }
+        return data;
+    }
+
     std::vector<std::vector<Token>> extractOperands(std::vector<Token> insparts) {
         std::vector<std::vector<Token>> operands;
         std::vector<Token> current_operand;
@@ -297,6 +306,7 @@ class Parser {
 
     protected:
     uint32_t program_offset = 0;
+    uint32_t section_begin = 0;
     uint32_t section_offset = 0;
 };
 

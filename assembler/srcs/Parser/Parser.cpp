@@ -150,15 +150,6 @@ ProgIns& Parser::parseInstruction(vector<Token> insparts) {
     return ins;
 }
 
-vector<Token> extractData(vector<Token> dparts) {
-    vector<Token> data;
-
-    for(int i = 2; i < dparts.size(); i++) {
-        if (dparts[i].maintype != MainType::COMMA) data.push_back(dparts[i]);
-    }
-    return data;
-}
-
 ProgData& Parser::parseData(vector<Token> dparts) {
     
     ProgData d(dparts);
