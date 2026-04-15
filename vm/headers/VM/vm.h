@@ -25,19 +25,9 @@
 
 #define METADATA_SIZE 33
 
-struct vm_config {
-    char* bios_path;
-    uint64_t cycle_count;
-    uint32_t mem_size;
-};
-
-extern struct vm_config vm_conf;
 extern CPU* vm_cpu;
 extern memory vm_memory;
 extern uint8_t* bios_memory;
-
-hmap* vm_get_settings(const char* filepath);
-void vm_set_settings(hmap* source, struct vm_config* target);
 
 void vm_init(int memsize);
 void vm_init_nomem();

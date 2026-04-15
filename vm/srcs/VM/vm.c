@@ -1,6 +1,7 @@
 #include<stdlib.h>
 #include<stdint.h>
 #include<string.h>
+#include<ctype.h>
 
 #include<VM/vm.h>
 #include<CPU/CPU.h>
@@ -11,43 +12,14 @@
 #include<VM/vm_input.h>
 #include<VM/vm_interrupts.h>
 #include<VM/BIOS.h>
+#include<VM/vm_settings.h>
 
 #include<utils/helpers.h>
 #include<utils/hashmap/hmap.h>
 
-struct vm_config vm_conf = {0};
 CPU* vm_cpu;
 memory vm_memory;
 uint8_t* bios_memory;
-
-hmap* vm_get_settings(const char* filepath) {
-    FILE* f = fopen(filepath, "r");
-
-    if (!f) {
-        return NULL;
-    }
-
-    char buff[255];
-    hmap* h = hmap_create(fnv1_1a_hash);
-
-    while ( (fgets(buff, sizeof(buff), f)) ) {
-        char** split = split_string(buff, '=');
-        split[1][strcspn(split[1], "\r\n")] = '\0';
-        hmap_put(h, split[0], strlen(split[0]), (void*) split[1]);
-    }
-    fclose(f);
-    return h;
-}
-
-void vm_set_settings(hmap* source, struct vm_config* target) {
-    target->mem_size = (uint32_t) strtol( (char*) hmap_get(source, "memsize", strlen("memsize")), NULL, 0);
-    target->cycle_count = (uint32_t) strtol( (char*) hmap_get(source, "cycles", strlen("cycles")), NULL, 0);
-    if (target->bios_path) {
-        free(target->bios_path);
-    }
-    target->bios_path = (char*) malloc(sizeof(char) * 1024);
-    target->bios_path = (char*) hmap_get( source, "bios", strlen("bios") );
-}
 
 void vm_init(int memsize) {
     if (&vm_memory.mem != NULL) mem_destroy(&vm_memory);
