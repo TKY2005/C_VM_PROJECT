@@ -14,17 +14,17 @@ class FlatParser : public Parser {
     
     public:
     ParseResult* parseTokens(std::vector<Token> tokens) override;
-    ProgIns& parseInstruction(std::vector<Token> insparts) override;
-    ProgData& parseData(std::vector<Token> dparts) override;
-    void evaluateOperands(std::vector<std::vector<Token>> operands, ProgIns& result, int& length) override;
-    void evaluateDestinationOperand(std::vector<Token> operand, ProgIns& result, int& length) override;
-    void evaluateSourceOperand(std::vector<Token> operand, ProgIns& result, int& length) override;
-    void evaluateMemoryExpression(std::vector<Token> expr, ProgIns& result, int& length) override;
+    ProgramInstruction& parseInstruction(std::vector<Token> insparts) override;
+    ProgramData& parseData(std::vector<Token> dparts) override;
+    void evaluateOperands(std::vector<std::vector<Token>> operands, ProgramInstruction& result, int& length) override;
+    void evaluateDestinationOperand(std::vector<Token> operand, ProgramInstruction& result, int& length) override;
+    void evaluateSourceOperand(std::vector<Token> operand, ProgramInstruction& result, int& length) override;
+    void evaluateMemoryExpression(std::vector<Token> expr, ProgramInstruction& result, int& length) override;
 
     //std::vector<Token> extractExpression(std::vector<Token> t);
     //uint32_t evalExpr(std::vector<Token> expr);
 
-    uint32_t calculateInstructionLength(std::vector<Token> insTokens);
+    uint32_t calculateInstructionLength(std::vector<Token> insTokens, ParseResult& result);
     void resolveDirective(std::vector<Token> dir, ParseResult& r);
 
     bool checkSyntax_INS_0_OPER(std::vector<Token> dir);

@@ -42,7 +42,7 @@ std::ofstream CodeGenerator::makeBinaryFile(std::string outputFilePath, ParseRes
     outputfile.write(reinterpret_cast<const char*>(&filemeta.arch), sizeof(filemeta.arch));
     outputfile.write(reinterpret_cast<const char*>(&filemeta.entrypoint), sizeof(filemeta.entrypoint));*/
 
-    std::vector<ProgIns*> instructions = parseResult->program_instructions;
+    std::vector<ProgramInstruction*> instructions = parseResult->program_instructions;
     for(int i = 0; i < instructions.size(); i++) {
 
         bin_form* bin = instructionToByteCode(instructions[i], parseResult->symmap);
@@ -57,7 +57,7 @@ std::ofstream CodeGenerator::makeBinaryFile(std::string outputFilePath, ParseRes
         free(bin);
     }
 
-    std::vector<ProgData*> data = parseResult->program_data;
+    std::vector<ProgramData*> data = parseResult->program_data;
     
     if (data.size() != 0) {
         for(int i = 0; i < data.size(); i++) {
@@ -73,7 +73,7 @@ std::ofstream CodeGenerator::makeBinaryFile(std::string outputFilePath, ParseRes
     return outputfile;
 }
 
-bin_form* CodeGenerator::instructionToByteCode(ProgIns* ins) {
+bin_form* CodeGenerator::instructionToByteCode(ProgramInstruction* ins) {
 
     bin_form* f = (bin_form*) malloc(sizeof(bin_form));
     f->size = ins->len;
@@ -117,7 +117,7 @@ bin_form* CodeGenerator::instructionToByteCode(ProgIns* ins) {
     return f;
 }
 
-bin_form* CodeGenerator::instructionToByteCode(ProgIns* ins, std::map<std::string, uint32_t> symmap) {
+bin_form* CodeGenerator::instructionToByteCode(ProgramInstruction* ins, std::map<std::string, uint32_t> symmap) {
     bin_form* f = (bin_form*) malloc(sizeof(bin_form));
     f->size = ins->len;
     f->bindata = (uint8_t*) calloc(f->size, sizeof(uint8_t));
@@ -168,7 +168,7 @@ bin_form* CodeGenerator::instructionToByteCode(ProgIns* ins, std::map<std::strin
     return f;
 }
 
-bin_form* CodeGenerator::dataToBin(ProgData* data) {
+bin_form* CodeGenerator::dataToBin(ProgramData* data) {
     bin_form* f = (bin_form*) malloc(sizeof(bin_form));
     f->size = data->len;
     f->bindata = (uint8_t*) calloc(f->size, sizeof(uint8_t)); 

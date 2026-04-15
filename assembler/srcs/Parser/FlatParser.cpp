@@ -29,7 +29,7 @@ ParseResult* FlatParser::parseTokens(std::vector<Token> tokens) {
                 break;
             }
             if (currentLine[j].maintype == MainType::INS){
-                program_offset += calculateInstructionLength(currentLine);
+                program_offset += calculateInstructionLength(currentLine, r);
                 break;
             }
             if (currentLine[j].maintype == MainType::SYM){
@@ -45,18 +45,21 @@ ParseResult* FlatParser::parseTokens(std::vector<Token> tokens) {
     return result;
 }
 
-uint32_t FlatParser::calculateInstructionLength(std::vector<Token> insParts) {
-    
+uint32_t FlatParser::calculateInstructionLength(std::vector<Token> insParts, ParseResult& result) {
+
+    ProgramInstruction* p = new ProgramInstruction(insParts);
+    ProgramInstruction& pr = *p;
     std::vector<std::vector<Token>> operands = extractOperands(insParts);
     int len = 0;
     len++; // opcode
     if (operands.size() == 0) return len;
-    else if (operands.size() == 1) len += calcLenSingleOperand(operands);
-    else if (operands.size() == 2) len += calcLenTwoOperand(operands);
+    else if (operands.size() == 1) len += calcLenSingleOperand(operands[0], pr);
+    else if (operands.size() == 2) len += calcLenTwoOperand(operands, pr);
     else {
         ErrorBucket::addError(getLine(operands[2][0].row), operands[2][0], Assembler::filename, 
         "Too many instruction operands.");
     }
+    result.program_instructions.push_back(pr);
     return len;
 }
 

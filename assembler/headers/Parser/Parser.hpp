@@ -27,7 +27,7 @@ class ProgLine {
     }
 };
 
-class ProgIns {
+class ProgramInstruction {
     public:
     std::vector<Token> parts;
     int len;
@@ -37,6 +37,7 @@ class ProgIns {
     bool hasImmediate = false;
     bool hasDisplacement = false;
     bool hasMemory = false;
+    bool hasReg = false;
     bool hasSymbol = false;
     std::string symbol;
 
@@ -44,7 +45,7 @@ class ProgIns {
     std::vector<std::vector<Token>> operands;
     uint32_t addr;
 
-    ProgIns(std::vector<Token> parts, int len, uint32_t addr) {
+    ProgramInstruction(std::vector<Token> parts, int len, uint32_t addr) {
         this->parts = parts;
         this->len = len;
         this->addr = addr;
@@ -52,7 +53,7 @@ class ProgIns {
         encoding_info = (ins_encoding*) malloc(sizeof(ins_encoding));
         setDefaultValues();
     }
-    ProgIns(std::vector<Token> parts) {
+    ProgramInstruction(std::vector<Token> parts) {
         this->parts = parts;
         operand_count = 0;
         len = 0;
@@ -94,8 +95,10 @@ class ProgIns {
         encoding_info->imm_val = 0;
         encoding_info->disp_val = 0;
     }
+
+    ~ProgramInstruction() = default;
 };
-class ProgData {
+class ProgramData {
     public:
     std::vector<Token> parts;
     int len;
@@ -105,16 +108,16 @@ class ProgData {
     uint32_t constval = 0;
     uint32_t addr;
 
-    ProgData(std::vector<Token> parts, int len, int data_mode, uint32_t addr) {
+    ProgramData(std::vector<Token> parts, int len, int data_mode, uint32_t addr) {
         this->parts = parts;
         this->len = len;
         this->data_store_mode = data_mode;
         this->addr = addr;
     }
-    ProgData(std::vector<Token> parts) {
+    ProgramData(std::vector<Token> parts) {
         this->parts = parts;
     }
-    ProgData(std::vector<Token> parts, int len, uint32_t addr, uint32_t constval) {
+    ProgramData(std::vector<Token> parts, int len, uint32_t addr, uint32_t constval) {
         this->parts = parts;
         this->len = len;
         this->addr = addr;
@@ -145,8 +148,8 @@ class ParseResult {
     std::vector<Token> tokens;
     std::map<std::string, uint32_t> symmap;
     std::map<std::string, uint32_t> sections;
-    std::vector<ProgIns&> program_instructions;
-    std::vector<ProgData&> program_data;
+    std::vector<ProgramInstruction&> program_instructions;
+    std::vector<ProgramData&> program_data;
 
     uint32_t code_section_addr = 0;
     uint32_t data_section_addr = 0;
@@ -155,12 +158,12 @@ class ParseResult {
 class Parser {
     public:
     virtual ParseResult* parseTokens(std::vector<Token> tokens);
-    virtual ProgIns& parseInstruction(std::vector<Token> insparts);
-    virtual ProgData& parseData(std::vector<Token> dparts);
-    virtual void evaluateOperands(std::vector<std::vector<Token>> operands, ProgIns& result, int& length);
-    virtual void evaluateDestinationOperand(std::vector<Token> operand, ProgIns& result, int& length);
-    virtual void evaluateSourceOperand(std::vector<Token> operand, ProgIns& result, int& length);
-    virtual void evaluateMemoryExpression(std::vector<Token> expr, ProgIns& result, int& length);
+    virtual ProgramInstruction& parseInstruction(std::vector<Token> insparts);
+    virtual ProgramData& parseData(std::vector<Token> dparts);
+    virtual void evaluateOperands(std::vector<std::vector<Token>> operands, ProgramInstruction& result, int& length);
+    virtual void evaluateDestinationOperand(std::vector<Token> operand, ProgramInstruction& result, int& length);
+    virtual void evaluateSourceOperand(std::vector<Token> operand, ProgramInstruction& result, int& length);
+    virtual void evaluateMemoryExpression(std::vector<Token> expr, ProgramInstruction& result, int& length);
     virtual ~Parser() = default;
 
     std::vector<ProgLine> extractLines(std::vector<Token> tokens) {
@@ -302,6 +305,90 @@ class Parser {
             break;
         }
         return 0;
+    }
+
+    uint32_t calcLenSingleOperand(std::vector<Token> operand, ProgramInstruction& p) {
+        int len = 0;
+        // Single operand is considered a destination operand.
+        // allowed types: register, memory, immediate, symbol
+        if (operandIsSymbol(operand)) {
+            len += 4; // symbols are always 4 bytes long
+            p.hasSymbol = true;
+        }
+
+        else if (operandIsReg(operand)){
+            len++; // regselect byte.
+            p.hasReg = true;
+        }
+
+        else if (operandIsImmediate(operand)) {
+            len += 4; // when the destination is an immediate it's always presumed to be 4 bytes.
+            p.hasImmediate = true;
+        }
+
+        else if (operandIsMemory(operand)) {
+            len++; // displacement info byte
+            p.hasMemory = true;
+            if (hasDisplacement(operand)){
+                len += 4; // displacement is always 4 bytes.
+                p.hasDisplacement = true;
+            }
+        }
+
+        return len;
+    }
+
+    uint32_t calcLenTwoOperand(std::vector<std::vector<Token>> operands, ProgramInstruction& p) {
+        // Evaluate destination.
+        // allowed types for destination: register, memory
+        // allowed types for source: register, memory, immediate, symbol
+        std::vector<Token> dest = operands[0];
+        std::vector<Token> src = operands[1];
+        int len = 0;
+
+        if (operandIsReg(dest)){
+            len++; // regselect byte.
+            p.hasReg = true;
+        }
+
+        else if (operandIsMemory(dest)) {
+            len++; // displacement info byte
+            p.hasMemory = true;
+            if (hasDisplacement(dest)) len += 4; // displacement is always 4 bytes.
+        }
+
+        // evaluate source
+        if (operandIsSymbol(src)) {
+            len += 4;
+            p.hasSymbol = true;
+        }
+
+        else if (operandIsReg(src)) {
+            if (!p.hasReg) {
+                len++; // add the regselect byte if not encountered yet.
+                p.hasReg = true;
+            }
+        }
+
+        else if (operandIsMemory(src)) {
+            if (!p.hasMemory) {
+                len++; // add the displacement info if not encountered. 
+                //(although that shouldn't happen because only one operand can be memory in a single instruction.)
+                p.hasMemory = true;
+                if (hasDisplacement(src)){
+                    len += 4;
+                    p.hasDisplacement = true;
+                }
+            }
+        }
+        
+        else if (operandIsImmediate(src)) {
+            // the immediate size should match the destination
+            int destsize = getOperandSizeB(dest);
+            len += destsize;
+            p.hasImmediate = true;
+        }
+        return len;
     }
 
     protected:

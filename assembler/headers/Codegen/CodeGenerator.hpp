@@ -17,9 +17,9 @@ class CodeGenerator {
 
     public:
     std::ofstream makeBinaryFile(std::string outputFilePath, ParseResult* parseResult);
-    bin_form* instructionToByteCode(ProgIns* ins);
-    bin_form* instructionToByteCode(ProgIns* ins, std::map<std::string, uint32_t> symmap);
-    bin_form* dataToBin(ProgData* data);
+    bin_form* instructionToByteCode(ProgramInstruction* ins);
+    bin_form* instructionToByteCode(ProgramInstruction* ins, std::map<std::string, uint32_t> symmap);
+    bin_form* dataToBin(ProgramData* data);
     //bin_form* dataToBin(ProgData* data, std::map<std::string, uint32_t> symmap);
 
     std::vector<uint8_t> dwordToBytes(uint32_t val);

@@ -61,14 +61,14 @@ ParseResult* Parser::parseTokens(vector<Token> tokens) {
                     operresult = 0;
                     break;
                 }
-                ProgData d(currentLine, 4, program_offset, operresult);
-                ProgData& dr = d;
+                ProgramData d(currentLine, 4, program_offset, operresult);
+                ProgramData& dr = d;
                 result->symmap[currentLine[0].tokenstr] = program_offset;
                 program_offset += d.len;
                 result->program_data.push_back(dr);
             }
             else {
-                ProgData& d = parseData(currentLine);
+                ProgramData& d = parseData(currentLine);
                 result->program_data.push_back(d);
                 result->symmap[currentLine[0].tokenstr] = d.addr;
             }
@@ -113,7 +113,7 @@ ParseResult* Parser::parseTokens(vector<Token> tokens) {
 
         else if (currentLine[0].maintype == MainType::INS) {
             if (section != "DATA"){
-                ProgIns& ins = parseInstruction(currentLine);
+                ProgramInstruction& ins = parseInstruction(currentLine);
                 result->program_instructions.push_back(ins);
             }
             else ErrorBucket::addError(currentLine, currentLine[0], 
@@ -126,9 +126,9 @@ ParseResult* Parser::parseTokens(vector<Token> tokens) {
     return result;
 }
 
-ProgIns& Parser::parseInstruction(vector<Token> insparts) {
-    ProgIns* insobj = new ProgIns(insparts);
-    ProgIns& ins = *insobj;
+ProgramInstruction& Parser::parseInstruction(vector<Token> insparts) {
+    ProgramInstruction* insobj = new ProgramInstruction(insparts);
+    ProgramInstruction& ins = *insobj;
     
     int length = 0;
     int& len = length;
@@ -150,9 +150,9 @@ ProgIns& Parser::parseInstruction(vector<Token> insparts) {
     return ins;
 }
 
-ProgData& Parser::parseData(vector<Token> dparts) {
+ProgramData& Parser::parseData(vector<Token> dparts) {
     
-    ProgData d(dparts);
+    ProgramData d(dparts);
     int scale = 0;
     int length = 0;
     if (matchSubTypes(dparts[1].subtype, {SubType::DIR_DEFB, SubType::DIR_RESB})) scale = 1;
@@ -176,13 +176,13 @@ ProgData& Parser::parseData(vector<Token> dparts) {
             else if (data[i].maintype == MainType::NUM) length += scale;
         }
     }
-    d = ProgData(dparts, length, scale, program_offset);
-    ProgData& dr = d;
+    d = ProgramData(dparts, length, scale, program_offset);
+    ProgramData& dr = d;
     program_offset += length;
     return dr;
 }
 
-void Parser::evaluateOperands(vector<vector<Token>> operands, ProgIns& result, int& length) {
+void Parser::evaluateOperands(vector<vector<Token>> operands, ProgramInstruction& result, int& length) {
     
     if (operands.size() == 0) {
         result.hasOperands = false;
@@ -206,7 +206,7 @@ void Parser::evaluateOperands(vector<vector<Token>> operands, ProgIns& result, i
     }
 }
 
-void Parser::evaluateDestinationOperand(vector<Token> operand, ProgIns& result, int& length) {
+void Parser::evaluateDestinationOperand(vector<Token> operand, ProgramInstruction& result, int& length) {
 
     if (!matchTypes(operand[0].maintype, 
         {MainType::REG, MainType::DIR, MainType::OPEN_BRACE, MainType::NUM, MainType::SYM})) {
@@ -302,7 +302,7 @@ void Parser::evaluateDestinationOperand(vector<Token> operand, ProgIns& result, 
     }
 }
 
-void Parser::evaluateSourceOperand(vector<Token> operand, ProgIns& result, int& length) {
+void Parser::evaluateSourceOperand(vector<Token> operand, ProgramInstruction& result, int& length) {
 
     if (!matchTypes(operand[0].maintype, 
         {MainType::REG, MainType::DIR, MainType::OPEN_BRACE, MainType::NUM, MainType::SYM})) {
@@ -405,7 +405,7 @@ void Parser::evaluateSourceOperand(vector<Token> operand, ProgIns& result, int& 
     }
 }
 
-void Parser::evaluateMemoryExpression(vector<Token> expr, ProgIns& result, int& length) {
+void Parser::evaluateMemoryExpression(vector<Token> expr, ProgramInstruction& result, int& length) {
 
     for(int i = 0; i < expr.size(); i++) {
 
