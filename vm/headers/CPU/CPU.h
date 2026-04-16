@@ -31,6 +31,7 @@ typedef struct CPU {
 	union registerfile* registers;
     CPU_STATE* state;
     instruction* instruction_set;
+    uint64_t clock_delay_ms;
 } CPU;
 
 

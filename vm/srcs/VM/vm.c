@@ -32,6 +32,11 @@ void vm_init(int memsize) {
     }
     vm_memory = mem_init(memsize);
     bios_memory = load_BIOS_img(vm_conf.bios_path);
+    vm_cpu->clock_delay_ms = vm_calculate_delay_ms(vm_conf.cycle_count);
+}
+
+uint64_t vm_calculate_delay_ms(uint64_t cycles) {
+    return 1000 / cycles;
 }
 
 void vm_init_nomem() {
@@ -219,6 +224,7 @@ void vm_run_shell_command(char* command) {
         else size = strtol(parts[1], NULL, 0);
         vm_init(size);
         printf("Initialized the VM with %d bytes of available virtual memory.\n", vm_memory.size);
+        printf("CPU speed set to %lu cycles/second with a delay of %lums\n", vm_conf.cycle_count, vm_cpu->clock_delay_ms);
     }
     else if (strcmp(parts[0], "boot") == 0) {
         vm_boot_sequence(vm_cpu, &vm_memory);

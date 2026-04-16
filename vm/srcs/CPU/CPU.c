@@ -6,6 +6,7 @@
 #include<debuglogger.h>
 #include<VM/vm.h>
 #include<VM/vm_interrupts.h>
+#include<Timing/clock.h>
 
 #include<stdarg.h>
 #include<stdlib.h>
@@ -77,14 +78,14 @@ void CPU_exec_ins(CPU* cpu, memory* mem, uint8_t opcode) {
 
 uint32_t CPU_step(CPU* cpu) {
     cpu->registers->PC++;
-    // Simulate delay...
+    clock_simulate_delay(cpu->clock_delay_ms);
     return cpu->registers->PC;
 }
 void CPU_step_e(void** arg) {
     CPU* cpu = (CPU*) arg[0];
 
     cpu->registers->PC++;
-    // Simulate delay
+    clock_simulate_delay(cpu->clock_delay_ms);
     return;
 }
 

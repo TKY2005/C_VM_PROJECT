@@ -38,6 +38,8 @@ int vm_runp(CPU* cpu, memory* mem, uint32_t entry);
 int vm_runf(CPU* cpu, memory* mem, const char* filepath);
 int vm_boot_sequence(CPU* cpu, memory* mem);
 
+uint64_t vm_calculate_delay_ms(uint64_t cycles);
+
 void vm_shutdown();
 
 void vm_shell();
