@@ -1,0 +1,3 @@
+memsize=512MB
+cycles=350mhz
+bios=./bios.tky
