@@ -3,6 +3,11 @@
 
 #include<stdint.h>
 #include<stdbool.h>
+#include<stddef.h>
+
+#include<Memory/RAM.h>
+#include<Memory/bios_rom.h>
+#include<Memory/framebuffer.h>
 
 #include<VM/vm_events.h>
 
@@ -14,20 +19,28 @@
 #define MEM_READ_FAILURE -1
 #define MEM_WRITE_FAILURE -2
 
+#define MEM_READ_SUCCESS 1
+#define MEM_WRITE_SUCCESS 2
+
 typedef struct memory {
-	int size;
-	uint8_t* mem;
+	RAM* ram;
+	BIOS_ROM* bios_rom;
+	framebuffer* fb;
 } memory;
 
 memory mem_init(int sizeB);
 void mem_reset(memory* mem);
 
 bool is_addr_ROM(uint32_t addr);
+bool is_addr_fb(uint32_t addr);
+
+int mem_dispatch_read(memory* m, uint32_t addr, size_t count, uint8_t* result);
+int mem_dispatch_write(memory* m, uint32_t addr, size_t count, uint8_t* val);
 
 int mem_size(const memory* m);
 int mem_write_byte(memory* m, uint32_t addr, uint8_t val);
 int mem_write_word(memory* m, uint32_t addr, uint16_t val);
-unsigned int mem_write_dword(memory* m,uint32_t addr, uint32_t val);
+int mem_write_dword(memory* m,uint32_t addr, uint32_t val);
 int mem_write_bytes(memory* m, uint32_t addr, int count, uint8_t* vals);
 
 int mem_read_byte(memory* m, uint32_t addr, uint8_t* result);
@@ -40,7 +53,6 @@ int mem_read_word_e(memory* m, uint32_t addr, uint16_t* result, vm_func_event e,
 int mem_read_dword_e(memory* m, uint32_t addr, uint32_t* result, vm_func_event e, void** args);
 int mem_read_bytes_e(memory* m, uint32_t addr, int count, uint8_t* result, vm_func_event e, void** args);
 
-int is_valid_addr(memory* m, uint32_t addr);
 char* mem_display(memory* mem, uint32_t start, int count, int chunk_size);
 
 void mem_destroy(memory* m);

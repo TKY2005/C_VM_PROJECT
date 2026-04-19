@@ -7,11 +7,13 @@
 #include<CPU/CPU.h>
 #include<CPU/registers.h>
 #include<Memory/memory.h>
+#include<Memory/RAM.h>
+#include<Memory/bios_rom.h>
+#include<Memory/framebuffer.h>
 #include<CPU/instruction_set.h>
 #include<ISA_encoding_info.h>
 #include<VM/vm_input.h>
 #include<VM/vm_interrupts.h>
-#include<VM/BIOS.h>
 #include<VM/vm_settings.h>
 
 #include<utils/helpers.h>
@@ -19,11 +21,9 @@
 
 CPU* vm_cpu;
 memory vm_memory;
-uint8_t* bios_memory;
 
 void vm_init(int memsize) {
-    if (&vm_memory.mem != NULL) mem_destroy(&vm_memory);
-    if (bios_memory) free(bios_memory);
+    if (vm_memory.ram != NULL && vm_memory.bios_rom != NULL && vm_memory.fb != NULL) mem_destroy(&vm_memory);
     if (vm_cpu) CPU_reset_state(vm_cpu);
     else {
         union registerfile* regfile = calloc(1, sizeof(union registerfile));    
@@ -31,7 +31,7 @@ void vm_init(int memsize) {
         vm_cpu = mkCPU(regfile, ins_set);
     }
     vm_memory = mem_init(memsize);
-    bios_memory = load_BIOS_img(vm_conf.bios_path);
+    vm_memory.bios_rom->mem = load_BIOS_img(vm_conf.bios_path);
     vm_cpu->clock_delay_ms = vm_calculate_delay_ms(vm_conf.cycle_count);
 }
 
@@ -50,11 +50,10 @@ void vm_shutdown() {
     
     CPU_destroy(vm_cpu);
     mem_destroy(&vm_memory);
-    free(bios_memory);
 }
 
 int vm_boot_sequence(CPU* cpu, memory* mem) {
-    cpu->registers->PC = BIOS_ENTRY_ADDR;
+    cpu->registers->PC = BIOS_ENTRY;
     cpu->state->CPU_RUNNING = 1;
     reg_set_flags(cpu->registers, FLG_I);
     CPU_run(cpu, mem);
@@ -62,7 +61,7 @@ int vm_boot_sequence(CPU* cpu, memory* mem) {
 
 int vm_runf(CPU* cpu, memory* mem, const char* filepath) {
 
-    int read = vm_load_code_file(mem, filepath, &cpu->registers->PC);
+    int read = vm_load_code_file(mem->ram, filepath, &cpu->registers->PC);
 
     if (read == NO_VALID_TARGET) {
         printf("File has been opened but couldn't be loaded into memory.\n");
@@ -80,7 +79,7 @@ int vm_runf(CPU* cpu, memory* mem, const char* filepath) {
     return VM_SUCCESS;
 }
 
-int vm_load_code_file(memory* target, const char* filepath, uint32_t* entry_dest) {
+int vm_load_code_file(RAM* target, const char* filepath, uint32_t* entry_dest) {
     
     FILE* src = fopen(filepath, "rb");
     if (src == NULL) return FILE_NOT_OPEN;
@@ -93,7 +92,7 @@ int vm_load_code_file(memory* target, const char* filepath, uint32_t* entry_dest
     long size = ftell(src);
     rewind(src);
 
-    if (size > mem_size(target)){
+    if (size > ram_size(target)){
         fclose(src);
         return NOT_ENOUGH_MEMORY;
     }
@@ -123,7 +122,7 @@ int vm_load_code_file(memory* target, const char* filepath, uint32_t* entry_dest
     return VM_SUCCESS;
 }
 
-int vm_load_binary_file(memory* target, const char* filepath, uint32_t load_addr) {
+int vm_load_binary_file(RAM* target, const char* filepath, uint32_t load_addr) {
     FILE* src = fopen(filepath, "rb");
     if (src == NULL) return FILE_NOT_OPEN;
     if (target == NULL){
@@ -135,7 +134,7 @@ int vm_load_binary_file(memory* target, const char* filepath, uint32_t load_addr
     long size = ftell(src);
     rewind(src);
 
-    if (size > mem_size(target) - load_addr){
+    if (size > ram_size(target) - load_addr){
         fclose(src);
         return NOT_ENOUGH_MEMORY;
     }
@@ -223,7 +222,7 @@ void vm_run_shell_command(char* command) {
         if (!msize) size = vm_conf.mem_size;
         else size = strtol(parts[1], NULL, 0);
         vm_init(size);
-        printf("Initialized the VM with %d bytes of available virtual memory.\n", vm_memory.size);
+        printf("Initialized the VM with %d bytes of available virtual memory.\n", ram_size(vm_memory.ram));
         printf("CPU speed set to %lu cycles/second with a delay of %lums\n", vm_conf.cycle_count, vm_cpu->clock_delay_ms);
     }
     else if (strcmp(parts[0], "boot") == 0) {
@@ -231,9 +230,9 @@ void vm_run_shell_command(char* command) {
     }
     else if (strcmp(parts[0], "loadfile") == 0) {
 
-        if (vm_memory.mem == NULL) printf("No virtual memory to load the file to. initialize with vm_init first.\n");
+        if (vm_memory.ram == NULL) printf("No virtual memory to load the file to. initialize with vm_init first.\n");
         else {
-            int load = vm_load_code_file(&vm_memory, parts[1], &vm_cpu->registers->PC);
+            int load = vm_load_code_file(vm_memory.ram, parts[1], &vm_cpu->registers->PC);
             switch(load) {
                 case NOT_ENOUGH_MEMORY:
                 printf("There isn't enough memory to load the file to. please allocate more memory.\n");
@@ -251,7 +250,7 @@ void vm_run_shell_command(char* command) {
         }
     }
     else if (strcmp(parts[0], "loadbin") == 0) {
-        if (vm_memory.mem == NULL) printf("No virtual memory to load the file to. initialize with vm_init first.\n");
+        if (vm_memory.ram == NULL) printf("No virtual memory to load the file to. initialize with vm_init first.\n");
         else {
             char* al = &parts[2][0];
             if (!al) {
@@ -259,7 +258,7 @@ void vm_run_shell_command(char* command) {
             }
             else {
                 uint32_t load_addr = (uint32_t) strtoul(parts[2], NULL, 0);
-                int load = vm_load_binary_file(&vm_memory, parts[1], load_addr);
+                int load = vm_load_binary_file(vm_memory.ram, parts[1], load_addr);
                 switch(load) {
                     case NOT_ENOUGH_MEMORY:
                     printf("There isn't enough memory to load the file to. please allocate more memory.\n");

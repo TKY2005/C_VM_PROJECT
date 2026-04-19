@@ -7,7 +7,7 @@
 
 #include<stdint.h>
 
-#define VM_VER "1.3.0b"
+#define VM_VER "1.3.2b"
 
 #define CONFIG_PATH "./config.vconf"
 
@@ -27,12 +27,11 @@
 
 extern CPU* vm_cpu;
 extern memory vm_memory;
-extern uint8_t* bios_memory;
 
 void vm_init(int memsize);
 void vm_init_nomem();
-int vm_load_code_file(memory* target, const char* filepath, uint32_t* entry_dest);
-int vm_load_binary_file(memory* target, const char* filepath, uint32_t load_addr);
+int vm_load_code_file(RAM* target, const char* filepath, uint32_t* entry_dest);
+int vm_load_binary_file(RAM* target, const char* filepath, uint32_t load_addr);
 int vm_interrupt(CPU* cpu, memory* mem, uint8_t icode);
 int vm_runp(CPU* cpu, memory* mem, uint32_t entry);
 int vm_runf(CPU* cpu, memory* mem, const char* filepath);

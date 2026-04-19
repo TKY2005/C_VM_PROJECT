@@ -16,7 +16,7 @@ int main(int argc, char** argv) {
         vm_init(vm_conf.mem_size);
         
         //vm_runf(vm_cpu, &vm_memory, argv[1]);
-        vm_load_code_file(&vm_memory, "./asm_programs/executables/cipher.tky", &vm_cpu->registers->PC);
+        vm_load_code_file(vm_memory.ram, "./asm_programs/executables/cipher.tky", &vm_cpu->registers->PC);
         vm_boot_sequence(vm_cpu, &vm_memory);
         vm_shutdown();
     }

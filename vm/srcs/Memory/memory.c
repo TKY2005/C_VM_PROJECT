@@ -1,12 +1,15 @@
-#include <stdint.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+#include<stdint.h>
+#include<stdio.h>
+#include<stdlib.h>
+#include<string.h>
 #include<stdbool.h>
+#include<stddef.h>
 
 #include<Memory/memory.h>
+#include<Memory/bios_rom.h>
+#include<Memory/framebuffer.h>
+#include<Memory/RAM.h>
 #include<CPU/CPU.h>
-#include<VM/BIOS.h>
 #include<utils/strbuilder/strbuilder.h>
 #include<utils/helpers.h>
 #include<VM/vm_events.h>
@@ -14,127 +17,102 @@
 
 memory mem_init(int sizeB) {
   memory m = {0};
-  if (sizeB > BIT32_MAX_SIZE) {
-    m.size = -1;
-    m.mem = NULL;
+
+  if (sizeB > 0xffffffff) {
     return m;
   }
-  m.size = sizeB;
-  m.mem = (uint8_t*) calloc(sizeB, sizeof(uint8_t));
+  m.ram = ram_init(sizeB);
+  m.bios_rom = bios_rom_init(BIOS_SIZE);
+  m.fb = framebuffer_init(FRAMEBUFFER_SIZE);
   return m;
 }
 
 void mem_reset(memory* mem) {
-  free(mem->mem);
-  mem->mem = calloc(mem->size, sizeof(uint8_t));
+  uint32_t size = mem->ram->size;
+  ram_destroy(mem->ram);
+  bios_rom_destroy(mem->bios_rom);
+  framebuffer_destroy(mem->fb);
+
+  mem->ram = ram_init(size);
+  mem->bios_rom = bios_rom_init(BIOS_SIZE);
+  mem->fb = framebuffer_init(FRAMEBUFFER_SIZE);
 }
 
 bool is_addr_ROM(uint32_t addr) {
-  return (addr >= ROM_START_ADDR && addr <= 0xffffffffu);
+  return (addr >= BIOS_START && addr <= BIOS_END);
+}
+bool is_addr_fb(uint32_t addr) {
+  return (addr >= FRAMEBUFFER_START && addr <= FRAMEBUFFER_END);
 }
 
-int is_valid_addr(memory* mem, uint32_t addr) {
-  if (addr < 0 || addr >= mem->size)
-    return 0;
-  else
-    return 1;
+int mem_dispatch_read(memory* m, uint32_t addr, size_t count, uint8_t* result) {
+
+  if (is_addr_ROM(addr)) return bios_rom_read_bytes(m->bios_rom, addr, count, result);
+  else if (is_addr_fb(addr)) return framebuffer_read_bytes(m->fb, addr, count, result);
+  else return ram_read_bytes(m->ram, addr, count, result);
 }
 
-int mem_size(const memory *m) { return m->size; }
+int mem_dispatch_write(memory* m, uint32_t addr, size_t count, uint8_t* val) {
+  // BIOS IS RDONLY
+  if (is_addr_fb(addr)) return framebuffer_write_bytes(m->fb, addr, count, val);
+  else return ram_write_bytes(m->ram, addr, count, val);
+}
+
+int mem_size(const memory *m) { return m->ram->size; }
 
 int mem_write_byte(memory *m, uint32_t addr, uint8_t val) {
-
-  if (!is_valid_addr(m, addr))
-    return MEM_WRITE_FAILURE;
-  else
-    m->mem[addr] = val;
-  return val;
+  return mem_dispatch_write(m, addr, 1, &val);
 }
 
 int mem_write_word(memory *m, uint32_t addr, uint16_t val) {
-  if (!is_valid_addr(m, addr) || !is_valid_addr(m, addr + 1))
-    return MEM_WRITE_FAILURE;
-  else {
-    uint8_t low = 0, high = 0;
-    low = val & 0xff;
-    high = (val >> 8) & 0xff;
-    m->mem[addr] = high;
-    m->mem[addr + 1] = low;
-    return val;
-  }
+  uint8_t x[2] = {(val >> 8) & 0xff, val & 0xff};
+  return mem_dispatch_write(m, addr, 2, x);
 }
-unsigned int mem_write_dword(memory *m, uint32_t addr, uint32_t val) {
-  for (int i = 0; i < 4; i++)
-    if (!is_valid_addr(m, addr + i))
-      return MEM_WRITE_FAILURE;
-
-  uint8_t high, lhigh, hlow, low;
-
-  low = val & 0xff;
-  hlow = (val >> 8) & 0xff;
-  lhigh = (val >> 16) & 0xff;
-  high = (val >> 24) & 0xff;
-
-  m->mem[addr + 0] = high;
-  m->mem[addr + 1] = lhigh;
-  m->mem[addr + 2] = hlow;
-  m->mem[addr + 3] = low;
-  return val;
+int mem_write_dword(memory *m, uint32_t addr, uint32_t val) {
+  uint8_t x[4] = { 
+      (val >> 24) & 0xff,
+      (val >> 16) & 0xff,
+      (val >> 8) & 0xff,
+      val & 0xff
+   };
+   return mem_dispatch_write(m, addr, 4, x);
 }
 
 int mem_write_bytes(memory *m, uint32_t addr, int count, uint8_t *vals) {
 
-  for (int i = 0; i < count; i++) {
-    if (!is_valid_addr(m, addr + i))
-      return MEM_WRITE_FAILURE;
-    m->mem[addr + i] = vals[i];
-  }
-  return 0;
+  return mem_dispatch_write(m, addr, count, vals);
 }
 
 int mem_read_byte(memory *m, uint32_t addr, uint8_t* result) {
-  if (is_addr_ROM(addr)) return BIOS_read_byte(addr, result);
-
-  if (is_valid_addr(m, addr)){
-	  *result = m->mem[addr];
-	  return 0;
-  }
-  else return MEM_READ_FAILURE;
+  uint8_t* r = calloc(1, sizeof(uint8_t));
+  int s = mem_dispatch_read(m, addr, 1, r);
+  *result = r[0];
+  if(r) free(r);
+  return s;
 }
 int mem_read_word(memory *m, uint32_t addr, uint16_t* result) {
-  if (is_addr_ROM(addr)) return BIOS_read_word(addr, result);
-
-  if (is_valid_addr(m, addr) && is_valid_addr(m, addr + 1)) {
-    uint8_t high = m->mem[addr];
-    uint8_t low = m->mem[addr + 1];
-    *result = (high << 8) | low;
-    return 0;
-  }
-  else return MEM_READ_FAILURE;
+  uint8_t* r = calloc(2, sizeof(uint8_t));
+  int s = mem_dispatch_read(m, addr, 2, r);
+  uint8_t high = r[0];
+  uint8_t low = r[1];
+  *result = (high << 8) | low;
+  free(r);
+  return s;
 }
 int mem_read_dword(memory *m, uint32_t addr, uint32_t* result) {
-  if (is_addr_ROM(addr)) return BIOS_read_dword(addr, result);
-  for (int i = 0; i < 4; i++)
-    if (!is_valid_addr(m, addr + i))
-      return MEM_READ_FAILURE;
+  
+  uint8_t* r = calloc(4, sizeof(uint8_t));
+  int s = mem_dispatch_read(m, addr, 4, r);
 
-  uint16_t high = (m->mem[addr + 0] << 8) | m->mem[addr + 1];
-  uint16_t low = (m->mem[addr + 2] << 8) | m->mem[addr + 3];
+  uint16_t high = (r[0] << 8) | r[1];
+  uint16_t low = (r[2] << 8) | r[3];
 
   *result = (high << 16) | low;
-  return 0;
+  free(r);
+  return s;
 }
 int mem_read_bytes(memory *m, uint32_t addr, int count, uint8_t* result) {
-  uint8_t *vals = malloc(count * sizeof(uint8_t));
-  for (int i = 0; i < count; i++) {
-    if (!is_valid_addr(m, addr + i)){
-	    free(vals);
-      	    return MEM_READ_FAILURE;
-    }
-    vals[i] = m->mem[addr + i];
-  }
-  result = vals;
-  return 0;
+  return mem_dispatch_read(m, addr, count, result);
 }
 
 int mem_read_byte_e(memory* m, uint32_t addr, uint8_t* result, vm_func_event e, void** args) {
@@ -167,12 +145,16 @@ int mem_read_bytes_e(memory* m, uint32_t addr, int count, uint8_t* result, vm_fu
 }
 
 char* mem_display(memory* m, uint32_t start, int count, int chunk_size) {
-  if (!m || !m->mem) return NULL;
-  if (start >= m->size && start < ROM_START_ADDR) return NULL;
-  if (count == -1)
-    count = m->size;
-  if (start == -1)
+  if (!m || !m->ram) return NULL;
+  if (start >= m->ram->size && !is_addr_ROM(start) && !is_addr_fb(start)) return NULL;
+  if (start == -1) {
     start = 0;
+  }
+  if (count == -1){
+    if (is_addr_ROM(start)) count = m->bios_rom->size;
+    else if (is_addr_fb(start)) count = m->fb->size;
+    else count = m->ram->size;
+  }
   if (chunk_size == -1)
     chunk_size = DEFAULT_CHUNK_SIZE;
 
@@ -236,8 +218,9 @@ char* mem_display(memory* m, uint32_t start, int count, int chunk_size) {
 }
 
 void mem_destroy(memory* m) {
-  if (m || m->mem){
-    free(m->mem);
-    m->size = -1;
+  if (m) {
+    if (m->ram) ram_destroy(m->ram);
+    if (m->bios_rom) bios_rom_destroy(m->bios_rom);
+    if (m->fb) framebuffer_destroy(m->fb);
   }
 }
