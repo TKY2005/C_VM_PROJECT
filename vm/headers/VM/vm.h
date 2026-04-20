@@ -7,7 +7,7 @@
 
 #include<stdint.h>
 
-#define VM_VER "1.3.2b"
+#define VM_VER "1.3.3b"
 
 #define CONFIG_PATH "./config.vconf"
 
