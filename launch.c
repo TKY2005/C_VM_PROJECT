@@ -2,6 +2,7 @@
 #include<Memory/memory.h>
 #include<VM/vm.h>
 #include<VM/vm_settings.h>
+#include<VM/vm_shell.h>
 #include<CPU/registers.h>
 #include<utils/hashmap/hmap.h>
 
