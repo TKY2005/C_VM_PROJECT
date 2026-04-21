@@ -9,9 +9,9 @@
 #include<utils/hashmap/hmap.h>
 
 struct vm_config {
-    char* bios_path;
     uint64_t cycle_count;
     uint32_t mem_size;
+    char bios_path[1024];
 };
 
 extern struct vm_config vm_conf;

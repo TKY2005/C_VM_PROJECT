@@ -31,11 +31,10 @@ hmap* vm_get_settings(const char* filepath) {
 void vm_set_settings(hmap* source, struct vm_config* target) {
     target->mem_size = vm_parse_conf_field( (char*) hmap_get(source, SETTINGS_MEM_FIELD, strlen(SETTINGS_MEM_FIELD)) );
     target->cycle_count = vm_parse_conf_field( (char*) hmap_get(source, SETTINGS_SPEED_FIELD, strlen(SETTINGS_SPEED_FIELD)));
-    if (target->bios_path) {
-        free(target->bios_path);
-    }
-    target->bios_path = (char*) malloc(sizeof(char) * 1024);
-    target->bios_path = (char*) hmap_get( source, SETTINGS_BIOS_FIELD, strlen(SETTINGS_BIOS_FIELD) );
+    
+    strncpy(target->bios_path, 
+        (char*) hmap_get(source, SETTINGS_BIOS_FIELD, strlen(SETTINGS_BIOS_FIELD)), 
+        sizeof(target->bios_path));
 }
 
 uint32_t vm_parse_conf_field(const char* fieldval) {
