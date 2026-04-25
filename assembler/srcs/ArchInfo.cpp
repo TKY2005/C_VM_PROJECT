@@ -106,7 +106,9 @@ map<string, uint8_t> ArchInfo::insmap = {
     {"slo",  (ubyte)INS_SLO},
     {"slz",  (ubyte)INS_SLZ},
     {"sln",  (ubyte)INS_SLN},
-    {"sli",  (ubyte)INS_SLI}
+    {"sli",  (ubyte)INS_SLI},
+    {"jz",   (ubyte)INS_JZ},
+    {"jnz",  (ubyte)INS_JNZ}
 };
 
 map<string, uint8_t> ArchInfo::reg_select_map = {

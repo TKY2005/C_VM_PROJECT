@@ -6,10 +6,9 @@
 #include<utils/hashmap/hmap.h>
 
 #include<stdint.h>
+#include<stdbool.h>
 
-#define VM_VER "1.3.3b"
-
-#define CONFIG_PATH "./config.vconf"
+#define VM_VER "1.4.0b"
 
 // ERRORS: < 0
 #define FILE_NOT_OPEN -1
@@ -27,6 +26,7 @@
 
 extern CPU* vm_cpu;
 extern memory vm_memory;
+extern bool ui_mode;
 
 void vm_init(int memsize);
 void vm_init_nomem();

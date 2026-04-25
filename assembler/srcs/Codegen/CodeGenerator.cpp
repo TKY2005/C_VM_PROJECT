@@ -185,7 +185,20 @@ bin_form* CodeGenerator::dataToBin(ProgData* data) {
     }
     else if (data->parts[1].subtype == SubType::DIR_RESB || data->parts[1].subtype == SubType::DIR_RESW || data->parts[1].subtype == SubType::DIR_RESDW) {
 
-        f->size = (uint8_t) std::stoi(data->parts[2].tokenstr);
+        f->size = (uint8_t) std::stoll(data->parts[2].tokenstr);
+        int scale = 0;
+        switch(data->parts[1].subtype) {
+            case SubType::DIR_RESB:
+            scale = 1;
+            break;
+            case SubType::DIR_RESW:
+            scale = 2;
+            break;
+            case SubType::DIR_RESDW:
+            scale = 4;
+            break;
+        }
+        f->size *= scale;
         f->bindata = (uint8_t*) calloc(f->size, sizeof(uint8_t));
     }
     else{
@@ -194,7 +207,7 @@ bin_form* CodeGenerator::dataToBin(ProgData* data) {
             switch(data->parts[i].maintype) {
 
                 case MainType::NUM: {
-                        uint32_t val = (uint32_t) std::stoi(data->parts[i].tokenstr);
+                        uint32_t val = (uint32_t) std::stoll(data->parts[i].tokenstr);
                         if (mode == MODE_BYTE) f->bindata[index++] = (uint8_t) val;
                         else if (mode == MODE_WORD) {
                             std::vector<uint8_t> d = wordToBytes(val);

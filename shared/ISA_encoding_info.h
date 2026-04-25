@@ -84,7 +84,9 @@
     X(SLO,   0x44, _slo) \
     X(SLZ,   0x45, _slz) \
     X(SLN,   0x46, _sln) \
-    X(SLI,   0x47, _sli)
+    X(SLI,   0x47, _sli) \
+    X(JZ ,   0x48, _jz)  \
+    X(JNZ,   0x49, _jnz)  \
 
 
 #define X(mnemonic, opcode, funcname) INS_##mnemonic = opcode,

@@ -1,5 +1,6 @@
 #include<stdlib.h>
 #include<stdint.h>
+#include<stdbool.h>
 #include<string.h>
 #include<ctype.h>
 
@@ -21,6 +22,7 @@
 
 CPU* vm_cpu;
 memory vm_memory;
+bool ui_mode;
 
 void vm_init(int memsize) {
     if (vm_memory.ram != NULL && vm_memory.bios_rom != NULL && vm_memory.fb != NULL) mem_destroy(&vm_memory);

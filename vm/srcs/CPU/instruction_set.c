@@ -13,7 +13,7 @@
 
 
 instruction* create_ins_table() {
-    instruction* ins_table = (instruction*) calloc(0x100, sizeof(void*));
+    instruction* ins_table = (instruction*) calloc(0x100, sizeof(instruction*));
     return ins_table;
 }
 
@@ -691,4 +691,17 @@ void _sln(CPU* cpu, memory* mem) {
 }
 void _sli(CPU* cpu, memory* mem) {
     reg_set_flags(cpu->registers, FLG_I);
+}
+
+void _jz(CPU* cpu, memory* mem) {
+    if (reg_check_flag(cpu->registers, FLG_Z)) {
+        _jmp(cpu, mem);
+    }
+    else {
+        cpu->registers->PC += 4;
+    }
+}
+void _jnz(CPU* cpu, memory* mem) {
+    if (!reg_check_flag(cpu->registers, FLG_Z)) _jmp(cpu, mem);
+    else cpu->registers->PC += 4;
 }
