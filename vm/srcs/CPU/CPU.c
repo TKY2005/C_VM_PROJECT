@@ -53,7 +53,7 @@ int CPU_run(CPU* cpu, memory* mem) {
             // error handling
         }
         else {
-            //printf("Executing instruction 0x%02X at address: 0x%08X\n", opcode, cpu->registers->PC);
+            printd("Executing instruction 0x%02X at address: 0x%08X\n", opcode, cpu->registers->PC);
             if (reg_check_flag(cpu->registers, FLG_T)) vm_debug_shell();
             CPU_exec_ins(cpu, mem, opcode);
         }
@@ -552,7 +552,10 @@ void CPU_write_out(CPU* cpu, memory* mem, const char* txt, ...) {
 
 void CPU_fail(CPU* cpu, const char* msg, ...) {
     
-    printd("\n0x%08X: ", cpu->registers->PC);
+    printd("0x%08X: \n", cpu->registers->PC);
     printd(msg);
+    
+    printf("0x%08X: ", cpu->registers->PC);
+    printf(msg);
     cpu->state->CPU_RUNNING = 0;
 }

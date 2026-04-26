@@ -5,13 +5,16 @@
 #include<VM/vm_shell.h>
 #include<CPU/registers.h>
 #include<utils/hashmap/hmap.h>
+#include<debuglogger.h>
 
 int main(int argc, char** argv) {
-    
+    log_init();
     if (argc < 2) {
+        printd("Starting from shell.\n");
         vm_shell();
     }
     else {
+        printd("Starting from file '%s'\n", argv[1]);
         hmap* all = vm_get_settings(CONFIG_PATH);
         vm_set_settings(all, &vm_conf);
         vm_init(vm_conf.mem_size);
@@ -20,5 +23,6 @@ int main(int argc, char** argv) {
         vm_boot_sequence(vm_cpu, &vm_memory);
         vm_shutdown();
     }
+    log_close();
     return 0;
 }

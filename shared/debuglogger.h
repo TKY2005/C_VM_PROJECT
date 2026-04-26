@@ -1,15 +1,18 @@
+#ifndef DEBUGLOGGER_H
+#define DEBUGLOGGER_H
+
 #include<stdio.h>
 #include<stdarg.h>
+#include<time.h>
 
-void printd(char* log, ...) {
-    
-    char buff[4096] = {0};
-    va_list args;
-    va_start(args, log);
+#define LOGS_PATH "./logs"
 
-    vsnprintf(buff, sizeof(buff), log, args);
-    
-    va_end(args);
+extern FILE* log_file;
 
-    printf("%s", buff);
-}
+void log_init();
+
+void log_close();
+
+void printd(char* log, ...);
+
+#endif

@@ -34,6 +34,7 @@ ifeq ($(OS),Windows_NT)
     shortcut_check_asm = .\tkyc.exe
 
     outputcheck = .\bin
+    logcheck = .\logs
     output_target_os = .\bin\windows
 else
     # --- Raylib Linux Configuration ---
@@ -54,6 +55,7 @@ else
     shortcut_check = ./emu
     shortcut_check_asm = ./tkyc
     outputcheck = ./bin
+    logcheck = ./logs
     output_target_os = ./bin/linux
     release = /release
 endif
@@ -74,6 +76,9 @@ endif
 ifeq ("$(wildcard $(shortcut_check_asm))","")
 	$(shortcut_asm)
 endif
+ifeq ("$(wildcard $(logcheck))","")
+	mkdir $(logcheck)
+endif
 
 build_emu:
 ifeq ("$(wildcard $(outputcheck))","")
@@ -85,6 +90,9 @@ endif
 	$(CC) $(SRCS) -o $(target)
 ifeq ("$(wildcard $(shortcut_check))","")
 	$(shortcut)
+endif
+ifeq ("$(wildcard $(logcheck))","")
+	mkdir $(logcheck)
 endif
 
 build_comp:
@@ -98,13 +106,25 @@ endif
 ifeq ("$(wildcard $(shortcut_check_asm))","")
 	$(shortcut_asm)
 endif
+ifeq ("$(wildcard $(logcheck))","")
+	mkdir $(logcheck)
+endif
 
 build_comp_dbg:
+ifeq ("$(wildcard $(logcheck))","")
+	mkdir $(logcheck)
+endif
 	$(CCCOMP) $(dbg_flags) $(ASM_FILES) -o $(target_asm_dbg)
 
 build_emu_dbg:
+ifeq ("$(wildcard $(logcheck))","")
+	mkdir $(logcheck)
+endif
 	$(CC) $(dbg_flags) $(SRCS) -o $(target_dbg)
 
 build_dbg:
+ifeq ("$(wildcard $(logcheck))","")
+	mkdir $(logcheck)
+endif
 	$(CC) $(dbg_flags) $(SRCS) -o $(target_dbg)
 	$(CCCOMP) $(dbg_flags) $(ASM_FILES) -o $(target_asm_dbg)
