@@ -39,7 +39,8 @@ ifeq ($(OS),Windows_NT)
 else
     # --- Raylib Linux Configuration ---
     RAYLIB_DIR = ./vm/raylib5_linux
-    RAYLIB_FLAGS = -I $(RAYLIB_DIR)/include -L $(RAYLIB_DIR)/lib -lraylib -lm -lpthread -ldl -lrt -lX11 -Wl,-rpath,'$$ORIGIN/$(RAYLIB_DIR)'
+    RAYLIB_ORIGIN = ../../../vm/raylib5_linux/lib
+    RAYLIB_FLAGS = -I $(RAYLIB_DIR)/include -L $(RAYLIB_DIR)/lib -lraylib -lm -lpthread -ldl -lrt -lX11 -Wl,-rpath,'$$ORIGIN/$(RAYLIB_ORIGIN)'
     SRCS += -DPLT_LINUX $(RAYLIB_FLAGS)
     # ----------------------------------
 
