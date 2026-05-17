@@ -7,6 +7,8 @@
 #include<utils/hashmap/hmap.h>
 #include<debuglogger.h>
 
+#include<stdlib.h>
+
 int main(int argc, char** argv) {
     log_init();
     if (argc < 2) {
@@ -19,7 +21,7 @@ int main(int argc, char** argv) {
         vm_set_settings(all, &vm_conf);
         vm_init(vm_conf.mem_size);
         
-        vm_load_binary_file(vm_memory.ram, argv[1], 0x800);
+        vm_load_binary_file(vm_memory.ram, argv[1], strtoul(argv[2], NULL, 0));
         vm_boot_sequence(vm_cpu, &vm_memory);
         vm_shutdown();
     }

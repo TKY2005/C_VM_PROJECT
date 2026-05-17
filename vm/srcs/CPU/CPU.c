@@ -13,7 +13,7 @@
 #include<stdint.h>
 #include<stdbool.h>
 
-CPU* mkCPU(union registerfile* regfile, instruction* ins_set) {
+CPU* CPU_init(union registerfile* regfile, instruction* ins_set) {
     CPU* cpu = malloc(sizeof(CPU));
 
     cpu->arch = 32;

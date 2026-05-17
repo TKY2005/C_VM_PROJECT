@@ -23,6 +23,7 @@
 CPU* vm_cpu;
 memory vm_memory;
 bool ui_mode;
+uint32_t vm_entry = 0;
 
 void vm_init(int memsize) {
     if (vm_memory.ram != NULL && vm_memory.bios_rom != NULL && vm_memory.fb != NULL) mem_destroy(&vm_memory);
@@ -30,11 +31,12 @@ void vm_init(int memsize) {
     else {
         union registerfile* regfile = calloc(1, sizeof(union registerfile));    
         instruction* ins_set = setup_instruction_set();
-        vm_cpu = mkCPU(regfile, ins_set);
+        vm_cpu = CPU_init(regfile, ins_set);
     }
     vm_memory = mem_init(memsize);
     vm_memory.bios_rom->mem = load_BIOS_img(vm_conf.bios_path);
     vm_cpu->clock_delay_ms = vm_calculate_delay_ms(vm_conf.cycle_count);
+    vm_entry = vm_conf.entrypoint;
 }
 
 uint64_t vm_calculate_delay_ms(uint64_t cycles) {
@@ -45,7 +47,7 @@ void vm_init_nomem() {
     union registerfile* regfile = calloc(1, sizeof(union registerfile));
     
     instruction* ins_set = setup_instruction_set();
-    vm_cpu = mkCPU(regfile, ins_set);
+    vm_cpu = CPU_init(regfile, ins_set);
 }
 
 void vm_shutdown() {
@@ -55,7 +57,7 @@ void vm_shutdown() {
 }
 
 int vm_boot_sequence(CPU* cpu, memory* mem) {
-    cpu->registers->PC = BIOS_ENTRY;
+    cpu->registers->PC = vm_entry;
     cpu->state->CPU_RUNNING = 1;
     reg_set_flags(cpu->registers, FLG_I);
     CPU_run(cpu, mem);

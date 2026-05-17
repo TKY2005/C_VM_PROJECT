@@ -43,6 +43,8 @@ void vm_set_settings(hmap* source, struct vm_config* target) {
         sizeof(target->bios_path));
 
     vm_set_display_settings((char*) hmap_get(source, SETTINGS_DISPLAY_FIELD, strlen(SETTINGS_DISPLAY_FIELD)), target);
+
+    target->entrypoint = strtoul((char*) hmap_get(source, SETTINGS_ENTRY_FIELD, strlen(SETTINGS_ENTRY_FIELD)), NULL, 0);
 }
 
 uint32_t vm_parse_conf_field(const char* fieldval) {

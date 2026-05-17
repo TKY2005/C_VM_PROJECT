@@ -35,7 +35,7 @@ typedef struct CPU {
 } CPU;
 
 
-CPU* mkCPU(union registerfile* regfile, instruction* ins_set);
+CPU* CPU_init(union registerfile* regfile, instruction* ins_set);
 void CPU_reset_state(CPU* cpu);
 int CPU_run(CPU* cpu, memory* mem);
 void CPU_exec_ins(CPU* cpu, memory* mem, uint8_t opcode);
