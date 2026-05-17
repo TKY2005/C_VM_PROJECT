@@ -6,10 +6,9 @@
 #include<utils/hashmap/hmap.h>
 
 #include<stdint.h>
+#include<stdbool.h>
 
-#define VM_VER "1.3.0b"
-
-#define CONFIG_PATH "./config.vconf"
+#define VM_VER "1.4.1b"
 
 // ERRORS: < 0
 #define FILE_NOT_OPEN -1
@@ -25,28 +24,21 @@
 
 #define METADATA_SIZE 33
 
-struct vm_config {
-    char* bios_path;
-    uint64_t cycle_count;
-    uint32_t mem_size;
-};
-
-extern struct vm_config vm_conf;
 extern CPU* vm_cpu;
 extern memory vm_memory;
-extern uint8_t* bios_memory;
-
-hmap* vm_get_settings(const char* filepath);
-void vm_set_settings(hmap* source, struct vm_config* target);
+extern bool ui_mode;
+extern uint32_t vm_entry;
 
 void vm_init(int memsize);
 void vm_init_nomem();
-int vm_load_code_file(memory* target, const char* filepath, uint32_t* entry_dest);
-int vm_load_binary_file(memory* target, const char* filepath, uint32_t load_addr);
+int vm_load_code_file(RAM* target, const char* filepath, uint32_t* entry_dest);
+int vm_load_binary_file(RAM* target, const char* filepath, uint32_t load_addr);
 int vm_interrupt(CPU* cpu, memory* mem, uint8_t icode);
 int vm_runp(CPU* cpu, memory* mem, uint32_t entry);
 int vm_runf(CPU* cpu, memory* mem, const char* filepath);
 int vm_boot_sequence(CPU* cpu, memory* mem);
+
+uint64_t vm_calculate_delay_ms(uint64_t cycles);
 
 void vm_shutdown();
 

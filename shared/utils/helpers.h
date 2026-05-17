@@ -2,8 +2,10 @@
 #define HELPERS_H
 
 #define DS_INIT_SIZE 50
+#include<stdint.h>
 
 int vptoint(void* d);
+uint32_t vptouint(void* d);
 float vptofloat(void* d);
 char vptochar(void* d);
 char* vptostr(void* d);

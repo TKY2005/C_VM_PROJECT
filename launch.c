@@ -1,23 +1,30 @@
 #include<CPU/CPU.h>
 #include<Memory/memory.h>
 #include<VM/vm.h>
+#include<VM/vm_settings.h>
+#include<VM/vm_shell.h>
 #include<CPU/registers.h>
 #include<utils/hashmap/hmap.h>
+#include<debuglogger.h>
+
+#include<stdlib.h>
 
 int main(int argc, char** argv) {
-    
+    log_init();
     if (argc < 2) {
+        printd("Starting from shell.\n");
         vm_shell();
     }
     else {
+        printd("Starting from file '%s'\n", argv[1]);
         hmap* all = vm_get_settings(CONFIG_PATH);
         vm_set_settings(all, &vm_conf);
         vm_init(vm_conf.mem_size);
         
-        //vm_runf(vm_cpu, &vm_memory, argv[1]);
-        vm_load_code_file(&vm_memory, "./asm_programs/executables/cipher.tky", &vm_cpu->registers->PC);
+        vm_load_binary_file(vm_memory.ram, argv[1], strtoul(argv[2], NULL, 0));
         vm_boot_sequence(vm_cpu, &vm_memory);
         vm_shutdown();
     }
+    log_close();
     return 0;
 }

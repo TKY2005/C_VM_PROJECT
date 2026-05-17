@@ -2,6 +2,7 @@
 #include<CPU/CPU.h>
 #include<Memory/memory.h>
 #include<VM/vm_input.h>
+#include<Timing/clock.h>
 
 #include<stdint.h>
 
@@ -50,6 +51,7 @@ int vm_software_interrupt(CPU* cpu, memory* mem) {
                 else if (mode == READ_MODE_DWORD) mem_write_dword(mem, buffaddr + index, chr);
                 else mem_write_byte(mem, buffaddr + index, (uint8_t) chr);
                 printf("%c", vmchr_to_platform(chr));
+                clock_simulate_delay(cpu->clock_delay_ms);
                 if(chr == VM_KEY_DEL) index -= inc;
                 else index += inc;
             }

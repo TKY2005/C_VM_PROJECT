@@ -6,13 +6,14 @@
 #include<debuglogger.h>
 #include<VM/vm.h>
 #include<VM/vm_interrupts.h>
+#include<Timing/clock.h>
 
 #include<stdarg.h>
 #include<stdlib.h>
 #include<stdint.h>
 #include<stdbool.h>
 
-CPU* mkCPU(union registerfile* regfile, instruction* ins_set) {
+CPU* CPU_init(union registerfile* regfile, instruction* ins_set) {
     CPU* cpu = malloc(sizeof(CPU));
 
     cpu->arch = 32;
@@ -52,7 +53,7 @@ int CPU_run(CPU* cpu, memory* mem) {
             // error handling
         }
         else {
-            //printf("Executing instruction 0x%02X at address: 0x%08X\n", opcode, cpu->registers->PC);
+            printd("Executing instruction 0x%02X at address: 0x%08X\n", opcode, cpu->registers->PC);
             if (reg_check_flag(cpu->registers, FLG_T)) vm_debug_shell();
             CPU_exec_ins(cpu, mem, opcode);
         }
@@ -77,14 +78,14 @@ void CPU_exec_ins(CPU* cpu, memory* mem, uint8_t opcode) {
 
 uint32_t CPU_step(CPU* cpu) {
     cpu->registers->PC++;
-    // Simulate delay...
+    clock_simulate_delay(cpu->clock_delay_ms);
     return cpu->registers->PC;
 }
 void CPU_step_e(void** arg) {
     CPU* cpu = (CPU*) arg[0];
 
     cpu->registers->PC++;
-    // Simulate delay
+    clock_simulate_delay(cpu->clock_delay_ms);
     return;
 }
 
@@ -225,7 +226,7 @@ void CPU_update_flags32(CPU* cpu, uint32_t dest, uint32_t src, uint32_t val) {
 void CPU_update_flags(CPU* cpu, ins_encoding* ins, uint32_t dest, uint32_t src, uint32_t val) {
 
     if (ins->flg_mod) {
-        //reg_reset_arithmetic_flags(cpu->registers);
+        reg_reset_arithmetic_flags(cpu->registers);
         if (CPU_destsize_8(ins->opertype.dest_type)) CPU_update_flags8(cpu, dest, src, val);
         else if (CPU_destsize_16(ins->opertype.dest_type)) CPU_update_flags16(cpu, dest, src, val);
         else if (CPU_destsize_32(ins->opertype.dest_type)) CPU_update_flags32(cpu, dest, src, val);
@@ -551,7 +552,10 @@ void CPU_write_out(CPU* cpu, memory* mem, const char* txt, ...) {
 
 void CPU_fail(CPU* cpu, const char* msg, ...) {
     
-    printd("\n0x%08X: ", cpu->registers->PC);
+    printd("0x%08X: \n", cpu->registers->PC);
     printd(msg);
+    
+    printf("0x%08X: ", cpu->registers->PC);
+    printf(msg);
     cpu->state->CPU_RUNNING = 0;
 }

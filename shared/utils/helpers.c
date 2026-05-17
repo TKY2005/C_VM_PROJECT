@@ -5,11 +5,17 @@
 #include<stdint.h>
 
 #include "./helpers.h"
+#include<stdint.h>
 
 int vptoint(void* d) {
     int i;
     memcpy(&i, d, sizeof(int));
 	return i;
+}
+uint32_t vptouint(void* d) {
+    uint32_t i;
+    memcpy(&i, d, sizeof(uint32_t));
+    return i;
 }
 float vptofloat(void* d){
 	float f;

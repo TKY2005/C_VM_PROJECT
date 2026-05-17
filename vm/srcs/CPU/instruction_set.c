@@ -7,12 +7,13 @@
 #include<VM/vm.h>
 #include<VM/vm_input.h>
 #include<ISA_encoding_info.h>
+#include<Timing/clock.h>
 #include<math.h>
 #include<time.h>
 
 
 instruction* create_ins_table() {
-    instruction* ins_table = (instruction*) calloc(0x100, sizeof(void*));
+    instruction* ins_table = (instruction*) calloc(0x100, sizeof(instruction*));
     return ins_table;
 }
 
@@ -254,6 +255,7 @@ void _outs(CPU* cpu, memory* mem) {
     while ( (read = mem_read_byte(mem, straddr + offset, &chr)) != MEM_READ_FAILURE ) {
         if (chr == '\0') break;
         printf("%c", chr);
+        clock_simulate_delay(cpu->clock_delay_ms);
         offset++;
     }
 }
@@ -607,6 +609,7 @@ void _outsw(CPU* cpu, memory* mem) {
     while ( (read = mem_read_word(mem, straddr + offset, &chr)) != MEM_READ_FAILURE ) {
         if (chr == '\0') break;
         printf("%c", chr);
+        clock_simulate_delay(cpu->clock_delay_ms);
         offset += 2;
     }
 }
@@ -688,4 +691,17 @@ void _sln(CPU* cpu, memory* mem) {
 }
 void _sli(CPU* cpu, memory* mem) {
     reg_set_flags(cpu->registers, FLG_I);
+}
+
+void _jz(CPU* cpu, memory* mem) {
+    if (reg_check_flag(cpu->registers, FLG_Z)) {
+        _jmp(cpu, mem);
+    }
+    else {
+        cpu->registers->PC += 4;
+    }
+}
+void _jnz(CPU* cpu, memory* mem) {
+    if (!reg_check_flag(cpu->registers, FLG_Z)) _jmp(cpu, mem);
+    else cpu->registers->PC += 4;
 }
