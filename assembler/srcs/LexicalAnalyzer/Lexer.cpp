@@ -255,6 +255,10 @@ string Lexer::subTypeToStr(SubType t) {
         return "RESW DIRECTIVE";
         break;
 
+        case SubType::DIR_DWORD:
+        return "DWORD DIRECTIVE";
+        break;
+
         case SubType::DIR_SECTION:
         return "SECTION DIRECTIVE";
         break;      

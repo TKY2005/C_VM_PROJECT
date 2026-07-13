@@ -341,6 +341,8 @@ void Parser::evaluateDestinationOperand(vector<Token> operand, ProgIns& result, 
             case SubType::DIR_WORD:
             result.encoding_info->opertype.dest_type = MEM16;
             break;
+            case SubType::DIR_DWORD:
+            result.encoding_info->opertype.dest_type = MEM32;
             default:
             result.encoding_info->opertype.dest_type = MEM32;
             break;
@@ -418,6 +420,9 @@ void Parser::evaluateSourceOperand(vector<Token> operand, ProgIns& result, int& 
             result.encoding_info->opertype.src_type = MEM16;
             break;
             default:
+            case SubType::DIR_DWORD:
+            result.encoding_info->opertype.src_type = MEM32;
+            break;
             result.encoding_info->opertype.src_type = MEM32;
             break;
         }
@@ -539,7 +544,7 @@ bool Parser::matchSubTypes(SubType t, std::initializer_list<SubType> a) {
 
 bool Parser::isMemoryOperand(vector<Token> operand) {
     return (operand[0].maintype == MainType::OPEN_BRACE || 
-        ( matchSubTypes(operand[0].subtype, {SubType::DIR_BYTE, SubType::DIR_WORD}) 
+        ( matchSubTypes(operand[0].subtype, {SubType::DIR_BYTE, SubType::DIR_WORD, SubType::DIR_DWORD}) 
         && operand[1].maintype == MainType::OPEN_BRACE ));
 }
 
