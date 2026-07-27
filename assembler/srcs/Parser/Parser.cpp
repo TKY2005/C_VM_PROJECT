@@ -1,4 +1,5 @@
 #include<Parser/Parser.hpp>
+#include<Parser/Visitors/Visitors.hpp>
 #include<LexicalAnalyzer/Tokenizer.hpp>
 #include<ArchInfo.hpp>
 
@@ -6,6 +7,56 @@
 #include<string>
 #include<vector>
 #include<cstdint>
+
+void Binary::accept(NodeVisitor& v) {
+    v.visit(*this);
+}
+void Unary::accept(NodeVisitor& v) {
+    v.visit(*this);
+}
+void Literal::accept(NodeVisitor& v) {
+    v.visit(*this);
+}
+void Grouping::accept(NodeVisitor& v) {
+    v.visit(*this);
+}
+void Register::accept(NodeVisitor& v) {
+    v.visit(*this);
+}
+void Symbol::accept(NodeVisitor& v) {
+    v.visit(*this);
+}
+void Declaration::accept(NodeVisitor& v) {
+    v.visit(*this);
+}
+void Special::accept(NodeVisitor& v) {
+    v.visit(*this);
+}
+void Instruction::accept(NodeVisitor& v) {
+    v.visit(*this);
+}
+void DirORG::accept(NodeVisitor& v) {
+    v.visit(*this);
+}
+void DirSection::accept(NodeVisitor& v) {
+    v.visit(*this);
+}
+void DirTimes::accept(NodeVisitor& v) {
+    v.visit(*this);
+}
+void DataNode::accept(NodeVisitor& v) {
+    v.visit(*this);
+}
+void ResNode::accept(NodeVisitor& v) {
+    v.visit(*this);
+}
+void StringNode::accept(NodeVisitor& v) {
+    v.visit(*this);
+}
+void MemExpr::accept(NodeVisitor& v) {
+    v.visit(*this);
+}
+
 
 std::unique_ptr<ParseObject> Parser::line() {
     
@@ -70,6 +121,7 @@ std::unique_ptr<ParseObject> Parser::parseOrg() {
 
 std::unique_ptr<ParseObject> Parser::parseSection() {
     Token name = advance();
+    if (name.maintype != MainType::STR) // TODO: throw a parse error.
     return std::unique_ptr<ParseObject>(new DirSection(name.tokenstr));
 }
 
@@ -183,7 +235,7 @@ std::unique_ptr<ParseObject> Parser::unary() {
 std::unique_ptr<ParseObject> Parser::primary() {
     if (matchAndAdvance({MainType::NUM})) return std::unique_ptr<ParseObject>(new Literal(std::stoul(previous().tokenstr)));
     else if (matchAndAdvance( {MainType::SYM} )) return std::unique_ptr<ParseObject>(new Symbol(previous().tokenstr));
-    else if (matchAndAdvance( {MainType::SPECIAL} )) return std::unique_ptr<ParseObject>(new Special());
+    else if (matchAndAdvance( {MainType::SPECIAL} )) return std::unique_ptr<ParseObject>(new Special(previous().subtype));
     else if (matchAndAdvance({MainType::REG})) {
         return std::unique_ptr<ParseObject>(new Register(
             previous().tokenstr,

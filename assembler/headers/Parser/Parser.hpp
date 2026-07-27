@@ -199,6 +199,7 @@ class Parser {
     Token current() {
         return tokens[currentToken];
     }
+    
 };
 
 class ParseObject {
@@ -206,7 +207,8 @@ class ParseObject {
     virtual ~ParseObject() = default;
 
     ParseObject() = default;
-
+    
+    virtual void accept(NodeVisitor& v) = 0;
 };
 
 class Binary : public ParseObject {
@@ -220,6 +222,7 @@ class Binary : public ParseObject {
         this->left = std::move(left);
         this->right = std::move(right);
     }
+    void accept(NodeVisitor& v) override;
 };
 
 class Unary : public ParseObject {
@@ -231,6 +234,8 @@ class Unary : public ParseObject {
         this->oper = oper;
         this->right = std::move(right);
     }
+
+    void accept(NodeVisitor& v) override;
 };
 
 class Literal : public ParseObject {
@@ -238,6 +243,8 @@ class Literal : public ParseObject {
     uint32_t value;
 
     Literal(uint32_t value) {this->value = value;}
+
+    void accept(NodeVisitor& v) override;
 };
 
 class Grouping : public ParseObject {
@@ -247,6 +254,8 @@ class Grouping : public ParseObject {
     Grouping(std::unique_ptr<ParseObject> expr) {
         this->expr = std::move(expr);
     }
+
+    void accept(NodeVisitor& v) override;
 };
 
 class Register : public ParseObject {
@@ -260,6 +269,8 @@ class Register : public ParseObject {
         this->size = size;
         this->regcode = regcode;
     }
+
+    void accept(NodeVisitor& v) override;
 };
 
 class Symbol : public ParseObject {
@@ -270,15 +281,25 @@ class Symbol : public ParseObject {
     {
         this->name = name;
     }
+
+    void accept(NodeVisitor& v) override;
 };
 
 class Declaration : public ParseObject {
     public:
     std::string name;
     Declaration(std::string name) {this->name = name;}
+
+    void accept(NodeVisitor& v) override;
 };
 
-class Special : public ParseObject {};
+class Special : public ParseObject {
+    public:
+    SubType type;
+
+    Special(SubType type) {this->type = type;}
+    void accept(NodeVisitor& v) override;
+};
 
 class Instruction : public ParseObject {
     public:
@@ -289,6 +310,8 @@ class Instruction : public ParseObject {
         this->opcode = opcode;
         this->operands = std::move(operands);
     }
+
+    void accept(NodeVisitor& v) override;
 };
 
 class DirORG : public ParseObject {
@@ -298,6 +321,8 @@ class DirORG : public ParseObject {
     DirORG(std::unique_ptr<ParseObject> expr) {
         this->expr = std::move(expr);
     }
+
+    void accept(NodeVisitor& v) override;
 };
 
 class DirSection : public ParseObject {
@@ -306,6 +331,8 @@ class DirSection : public ParseObject {
     DirSection(std::string name) {
         this->name = name;
     }
+
+    void accept(NodeVisitor& v) override;
 };
 
 class DirTimes : public ParseObject {
@@ -319,6 +346,8 @@ class DirTimes : public ParseObject {
         this->expr = std::move(expr);
         this->repeated = std::move(repeated);
     }
+
+    void accept(NodeVisitor& v) override;
 };
 
 class DataNode : public ParseObject {
@@ -331,6 +360,8 @@ class DataNode : public ParseObject {
         this->data = std::move(data);
         this->size = size;
     }
+
+    void accept(NodeVisitor& v) override;
 };
 
 class ResNode : public ParseObject {
@@ -344,6 +375,8 @@ class ResNode : public ParseObject {
         this->expr = std::move(expr);
         this->size = size;
     }
+
+    void accept(NodeVisitor& v) override;
 };
 
 class StringNode : public ParseObject {
@@ -353,6 +386,8 @@ class StringNode : public ParseObject {
     StringNode(std::string str) {
         this->str = str;
     }
+
+    void accept(NodeVisitor& v) override;
 };
 
 class MemExpr : public ParseObject {
@@ -364,6 +399,8 @@ class MemExpr : public ParseObject {
         this->size = size;
         this->expr = std::move(expr);
     }
+
+    void accept(NodeVisitor& v) override;
 };
 
 #endif
