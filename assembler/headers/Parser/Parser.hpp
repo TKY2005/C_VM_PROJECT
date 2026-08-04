@@ -26,6 +26,9 @@ class Parser {
     std::unique_ptr<ParseObject> data();
     std::unique_ptr<ParseObject> operand();
     std::unique_ptr<ParseObject> memexpr();
+    std::unique_ptr<ParseObject> memoryaddr();
+    void indexexpr(MemExpr* expr);
+
     std::unique_ptr<ParseObject> expression();
     std::unique_ptr<ParseObject> addition();
     std::unique_ptr<ParseObject> multiplication();
@@ -59,6 +62,25 @@ class Parser {
             return 0;
         }
         return 0;
+    }
+
+    bool isBaseReg(std::string regname) {
+        try {
+            ArchInfo::base_select_map.at(regname);
+            return true;
+        }
+        catch(std::exception& e) {
+            return false;
+        }
+    }
+    bool isIdxReg(std::string regname) {
+        try {
+            ArchInfo::index_select_map.at(regname);
+            return true;
+        }
+        catch(std::exception& e) {
+            return false;
+        }
     }
 
     bool matchAndAdvance(std::initializer_list<MainType> types) {
@@ -297,6 +319,8 @@ class Special : public ParseObject {
     public:
     SubType type;
 
+    uint32_t value = 0;
+
     Special(SubType type) {this->type = type;}
     void accept(NodeVisitor& v) override;
 };
@@ -393,11 +417,24 @@ class StringNode : public ParseObject {
 class MemExpr : public ParseObject {
     public:
     uint8_t size;
-    std::unique_ptr<ParseObject> expr;
+    uint8_t scale = 1;
+    std::unique_ptr<Register> indexreg = nullptr;
+    std::unique_ptr<Register> basereg = nullptr;
+    std::unique_ptr<ParseObject> displacement = nullptr;
 
-    MemExpr(uint8_t size, std::unique_ptr<ParseObject> expr) {
+    MemExpr(uint8_t size, std::string index, std::string base, std::unique_ptr<ParseObject> displacement) {
         this->size = size;
-        this->expr = std::move(expr);
+        this->displacement = std::move(displacement);
+        if (!index.empty()) {
+            indexreg = std::move(
+                std::unique_ptr<Register>(new Register(index, SubType::REG32, ArchInfo::index_select_map[index]))
+            );
+        }
+        if (!base.empty()) {
+            basereg = std::move(
+                std::unique_ptr<Register>(new Register(base, SubType::REG32, ArchInfo::base_select_map[index]))
+            );
+        } 
     }
 
     void accept(NodeVisitor& v) override;

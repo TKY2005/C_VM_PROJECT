@@ -5,6 +5,8 @@
 #include<map>
 #include<string>
 
+#include<LexicalAnalyzer/Tokenizer.hpp>
+
 // base class for every node
 class ParseObject;
 
@@ -126,13 +128,14 @@ class SymbolCollectorVisitor : public StatementVisitor, public ExpressionEvalVis
     uint32_t section_begin = 0x0;
     int currentsize = 0;
 
-    MainType prevType;
-    SubType prevSubType;
+    bool collectingInstruction = false;
+    bool collectingMemory = false;
+    bool collectingData = false;
+    bool collectingOperand = false;
 
-    bool addRegCode = false;
-    bool addDispInfo = false;
-    bool parsingMemory = false;
-    bool addDisplacement = false;
+    MainType prevType;
+    SubType prevSubtype;
+
 
     void evalSize(ParseObject& a);
 

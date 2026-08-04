@@ -190,12 +190,57 @@ std::unique_ptr<ParseObject> Parser::memexpr() {
     std::unique_ptr<ParseObject> expr;
     if (matchSubTypeAndAdvance({SubType::DIR_BYTE, SubType::DIR_WORD, SubType::DIR_DWORD})) {
         size = getDirectiveSize(previous().subtype);
+        ((MemExpr*) expr.get())->size = size;
     }
     if (matchAndAdvance({MainType::OPEN_BRACE})) {
-        expr = expression();
-        consume(MainType::CLOSE_BRACE, "Expected a ']' at the end of expression.");
+        expr = memoryaddr();
     }
-    return std::unique_ptr<ParseObject>(new MemExpr(size, std::move(expr)));
+    consume(MainType::CLOSE_BRACE, "Expected a ']' at the end of expression.");
+    return expr;
+}
+
+std::unique_ptr<ParseObject> Parser::memoryaddr() {
+    std::unique_ptr<MemExpr> memexpr = std::unique_ptr<MemExpr>(new MemExpr(0, "", "", nullptr));
+
+    if (matchAndAdvance({MainType::REG})) {
+        std::string name = previous().tokenstr;
+
+        if (isBaseReg(name)) { // rule 1: BASEREG (("+" | "-") indexexpr)? (("+" | "-") expression)?
+            memexpr.get()->basereg = std::unique_ptr<Register>(new Register(
+                name, SubType::REG32, ArchInfo::base_select_map[name])
+            );
+            if (matchSubTypeAndAdvance({SubType::OPER_ADD, SubType::OPER_SUB})) {
+                indexexpr(memexpr.get());
+            }
+            if (matchSubTypeAndAdvance({SubType::OPER_ADD, SubType::OPER_SUB})) {
+                memexpr.get()->displacement = expression();
+            }
+        }
+
+        else if (isIdxReg(name)) { // rule 2: indexexpr (("+" | "-") expression)?
+            memexpr.get()->indexreg = std::unique_ptr<Register>(new Register(
+                name, SubType::REG32, ArchInfo::index_select_map[name]
+            ));
+            if (matchSubTypeAndAdvance({SubType::OPER_ADD, SubType::OPER_SUB})) {
+                memexpr.get()->displacement = expression();
+            }
+        }
+    }
+    else { // rule 3: expression
+        memexpr.get()->displacement = expression();
+    }
+    return memexpr;
+}
+
+void Parser::indexexpr(MemExpr* expr) {
+
+    if (matchSubTypeAndAdvance({SubType::OPER_MUL})){
+        std::string n = current().tokenstr;
+        if (n != "1" && n != "2" && n != "4") // TODO: throw error.
+
+        expr->scale = std::stoi(n);
+    }
+    else expr->scale = 1;
 }
 
 std::unique_ptr<ParseObject> Parser::expression() {
