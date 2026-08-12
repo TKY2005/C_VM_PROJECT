@@ -20,19 +20,10 @@ void Literal::accept(NodeVisitor& v) {
 void Grouping::accept(NodeVisitor& v) {
     v.visit(*this);
 }
-void Register::accept(NodeVisitor& v) {
-    v.visit(*this);
-}
-void Symbol::accept(NodeVisitor& v) {
-    v.visit(*this);
-}
-void Declaration::accept(NodeVisitor& v) {
-    v.visit(*this);
-}
-void Special::accept(NodeVisitor& v) {
-    v.visit(*this);
-}
 void Instruction::accept(NodeVisitor& v) {
+    v.visit(*this);
+}
+void DataNode::accept(NodeVisitor& v) {
     v.visit(*this);
 }
 void DirORG::accept(NodeVisitor& v) {
@@ -44,43 +35,64 @@ void DirSection::accept(NodeVisitor& v) {
 void DirTimes::accept(NodeVisitor& v) {
     v.visit(*this);
 }
-void DataNode::accept(NodeVisitor& v) {
-    v.visit(*this);
-}
-void ResNode::accept(NodeVisitor& v) {
+void MemExpr::accept(NodeVisitor& v) {
     v.visit(*this);
 }
 void StringNode::accept(NodeVisitor& v) {
     v.visit(*this);
 }
-void MemExpr::accept(NodeVisitor& v) {
+void Register::accept(NodeVisitor& v) {
+    v.visit(*this);
+}
+void Symbol::accept(NodeVisitor& v) {
+    v.visit(*this);
+}
+void ResNode::accept(NodeVisitor& v) {
+    v.visit(*this);
+}
+void Special::accept(NodeVisitor& v) {
+    v.visit(*this);
+}
+void Declaration::accept(NodeVisitor& v) {
     v.visit(*this);
 }
 
 
+std::unique_ptr<ParseResult> Parser::parse() {
+    std::vector<std::vector<Token>> lines = extractLines();
+
+    std::unique_ptr<ParseResult> result = std::unique_ptr<ParseResult>(new ParseResult());
+
+    for(int i = 0; i < lines.size(); i++) {
+        std::unique_ptr<ParseObject> l = line();
+        result.get()->parsedLines.push_back(std::move(l));
+        nextLine();
+    }
+
+    return result;
+}
+
 std::unique_ptr<ParseObject> Parser::line() {
     
-    skipNewLineUntilNextToken();
-
     if (check(MainType::INS)) return instruction();
 
     else if (
         compareSubTypes({SubType::DIR_ORG, SubType::DIR_SECTION, SubType::DIR_TIMES})
     ) {return directive();}
 
-    else if (check(MainType::DECL)) return std::unique_ptr<ParseObject>(new Declaration(current().tokenstr));
+    else if (check(MainType::DECL)) return std::unique_ptr<ParseObject>(new Declaration(advance().tokenstr));
 
-    else return dataEmmiter();
+    else return dataDelcaration();
 }
 
 std::unique_ptr<ParseObject> Parser::instruction() {
 
     uint8_t opcode = ArchInfo::insmap[advance().tokenstr];
-    std::vector<std::unique_ptr<ParseObject>> operands;
 
-    if (matchAndAdvance({MainType::NEWLINE})) return std::unique_ptr<ParseObject>(new Instruction(opcode, std::move(operands)));
+    if (isAtEndOfLine()) return std::unique_ptr<ParseObject>(new Instruction(opcode));
 
     else {
+        std::vector<std::unique_ptr<ParseObject>> operands;
         operands.push_back(operand());
         while (matchAndAdvance({MainType::COMMA})) {
             operands.push_back(operand());
@@ -121,7 +133,7 @@ std::unique_ptr<ParseObject> Parser::parseOrg() {
 
 std::unique_ptr<ParseObject> Parser::parseSection() {
     Token name = advance();
-    if (name.maintype != MainType::STR) // TODO: throw a parse error.
+    if (name.maintype != MainType::STR) return nullptr; // TODO: throw a parse error.
     return std::unique_ptr<ParseObject>(new DirSection(name.tokenstr));
 }
 
@@ -134,7 +146,7 @@ std::unique_ptr<ParseObject> Parser::parseTimes() {
     return std::unique_ptr<ParseObject>(new DirTimes(sym, std::move(expr), std::move(l)));
 }
 
-std::unique_ptr<ParseObject> Parser::dataEmmiter() {
+std::unique_ptr<ParseObject> Parser::dataDelcaration() {
     
     std::string sym;
     uint8_t size = 0;
@@ -227,7 +239,7 @@ std::unique_ptr<ParseObject> Parser::memoryaddr() {
         }
     }
     else { // rule 3: expression
-        memexpr.get()->displacement = expression();
+        memexpr->displacement = expression();
     }
     return memexpr;
 }

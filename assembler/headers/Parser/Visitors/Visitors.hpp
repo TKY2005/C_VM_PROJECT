@@ -4,6 +4,7 @@
 #include<cstdint>
 #include<map>
 #include<string>
+#include<initializer_list>
 
 #include<LexicalAnalyzer/Tokenizer.hpp>
 
@@ -16,6 +17,7 @@ class ParseObject;
 class Binary; // NT
 class Unary; // NT
 class Grouping; // NT
+
 class Literal; // T
 
 
@@ -32,177 +34,161 @@ class ResNode; // NT
 class StringNode; // T
 class MemExpr; // NT
 
+
 class NodeVisitor {
     public:
     virtual ~NodeVisitor() = default;
 
-    virtual void visit(Binary& a) = 0;
-    virtual void visit(Unary& a) = 0;
-    virtual void visit(Grouping& a) = 0;
-    virtual void visit(Literal& a) = 0;
+    virtual void visit(Binary& a) {};
+    virtual void visit(Unary& a) {};
+    virtual void visit(Grouping& a) {};
+    virtual void visit(Literal& a) {};
 
-    virtual void visit(Register& a) = 0;
-    virtual void visit(Symbol& a) = 0;
-    virtual void visit(Declaration& a) = 0;
-    virtual void visit(Special& a) = 0;
-    virtual void visit(Instruction& a) = 0;
-    virtual void visit(DirORG& a) = 0;
-    virtual void visit(DirSection& a) = 0;
-    virtual void visit(DirTimes& a) = 0;
-    virtual void visit(DataNode& a) = 0;
-    virtual void visit(ResNode& a) = 0;
-    virtual void visit(StringNode& a) = 0;
-    virtual void visit(MemExpr& a) = 0;
+    virtual void visit(Register& a) {};
+    virtual void visit(Symbol& a) {};
+    virtual void visit(Declaration& a) {};
+    virtual void visit(Special& a) {};
+    virtual void visit(Instruction& a) {};
+    virtual void visit(DirORG& a) {};
+    virtual void visit(DirSection& a) {};
+    virtual void visit(DirTimes& a) {};
+    virtual void visit(DataNode& a) {};
+    virtual void visit(ResNode& a) {};
+    virtual void visit(StringNode& a) {};
+    virtual void visit(MemExpr& a) {};
 
-    int typeToSize(SubType t) {
-        switch(t) {
-            case SubType::REG8 : case SubType::DIR_BYTE : case SubType::DIR_DEFB : case SubType::DIR_RESB : 
-            {
-                return 1;
-            }
-            case SubType::REG16 : case SubType::DIR_WORD : case SubType::DIR_DEFW : case SubType::DIR_RESW : 
-            {
-                return 2;
-            }
-            case SubType::REG32 : case SubType::DIR_DWORD : case SubType::DIR_DEFDW : case SubType::DIR_RESDW :
-            {
-                return 4;
-            }
-            default:
-            return -1;
-        }
-        return -1;
-    }
+    std::initializer_list<MainType> allowedExprTypes = {MainType::NUM, MainType::SYM, MainType::SPECIAL};
+
+    int typeToSize(SubType t);
+
+    bool isExprNode(ParseObject* p);
+
+    bool compareTypes(MainType t, std::initializer_list<MainType> types);
+
+    bool isBaseReg(Register* a);
+    bool isIdxReg(Register* a);
 };
 
-class ExpressionEvalVisitor : virtual public NodeVisitor {
+class ExpressionEvalVisitor : public NodeVisitor {
     public:
-    uint32_t exprResult;
 
-    virtual ~ExpressionEvalVisitor() = default;
-
-    void evalExpr(ParseObject& o);
-
-    virtual void visit(Binary& a) = 0;
-    virtual void visit(Unary& a) = 0;
-    virtual void visit(Grouping& a) = 0;
-    virtual void visit(Literal& a) = 0;
-};
-
-class StatementVisitor : virtual public NodeVisitor {
-    public:
-    virtual ~StatementVisitor() = default;
-
-    void evalStmt(ParseObject& a);
-
-    std::map<std::string, uint32_t> symMap;
-
-    virtual void visit(Register& a) = 0;
-    virtual void visit(Symbol& a) = 0;
-    virtual void visit(Declaration& a) = 0;
-    virtual void visit(Special& a) = 0;
-    virtual void visit(Instruction& a) = 0;
-    virtual void visit(DirORG& a) = 0;
-    virtual void visit(DirSection& a) = 0;
-    virtual void visit(DirTimes& a) = 0;
-    virtual void visit(DataNode& a) = 0;
-    virtual void visit(ResNode& a) = 0;
-    virtual void visit(StringNode& a) = 0;
-    virtual void visit(MemExpr& a) = 0;
-};
-
-class ExpressionVisitor : public ExpressionEvalVisitor {
-    public:
-    void visit(Binary& a) override;
-    void visit(Unary& a) override;
-    void visit(Grouping& a) override;
-    void visit(Literal& a) override;
+    uint32_t exprVal = 0;
 
     void evalExpr(ParseObject& a);
+
+    void visit(Binary& a) override;
+    void visit(Unary& a) override;
+    void visit(Grouping& a) override;
+    void visit(Literal& a) override;
+    void visit(Symbol& a) override;
 };
 
-class SymbolCollectorVisitor : public StatementVisitor, public ExpressionEvalVisitor {
-    public:
-    uint32_t program_offset = 0x0;
-    uint32_t section_offset = 0x0;
-    uint32_t section_begin = 0x0;
-    int currentsize = 0;
+class InstructionVisitor : public NodeVisitor {
 
-    bool collectingInstruction = false;
-    bool collectingMemory = false;
-    bool collectingData = false;
-    bool collectingOperand = false;
+    public:
+
+    ExpressionEvalVisitor expressionEvaluator;
+
+    virtual void visit(Instruction& a) override {};
+    virtual void visit(Register& a) override {};
+    virtual void visit(MemExpr& a) override {};
+    virtual void visit(Special& a) override {};
+};
+
+class DataVisitor : public NodeVisitor {
+    public:
+    ExpressionEvalVisitor exprEvaluator;
+
+
+    virtual void visit(DataNode& a) override {};
+    virtual void visit(StringNode& a) override {};
+    virtual void visit(ResNode& a) override {};
+};
+
+class DirectiveVisitor : public NodeVisitor {
+    public:
+    ExpressionEvalVisitor exprEvaluator;
+
+    virtual void visit(DirTimes& a) override {};
+    virtual void visit(DirSection& a) override {};
+    virtual void visit(DirORG& a) override {};
+};
+
+
+class ExpressionAnalyzer : public NodeVisitor {
+    public:
+    void analyze(ParseObject& a);
+
+    void visit(Binary& a) override;
+    void visit(Unary& a) override;
+    void visit(Grouping& a) override;
+    void visit(Literal& a) override;
+    void visit(Special& a) override;
+    void visit(Symbol& a) override;
+};
+
+class InstructionAnalyzer : public InstructionVisitor {
+    public:
 
     MainType prevType;
-    SubType prevSubtype;
+    SubType prevSubType;
 
+    bool prevWasMemory = false;
 
-    void evalSize(ParseObject& a);
-
-    void setProgramAndSectionsOffsets(uint32_t new_val) {
-        program_offset = new_val;
-        section_begin = program_offset;
-        section_offset = 0;
-    }
-    void setProgramOffset(uint32_t new_val) {
-        program_offset = new_val;
-        section_offset = program_offset - section_begin;
-    }
-
-    void incProgramAndSetSectionOffsets(uint32_t inc_val) {
-        program_offset += inc_val;
-        section_begin = program_offset;
-        section_offset = 0;
-    }
-
-    void incProgramOffset(uint32_t inc_val) {
-        program_offset += inc_val;
-        section_offset = program_offset - section_begin;
-    }
+    void visit(Instruction& a) override;
+    void visit(Register& a) override;
+    void visit(MemExpr& a) override;
+    void visit(Special& a) override;
 
     void visit(Binary& a) override;
     void visit(Unary& a) override;
     void visit(Grouping& a) override;
     void visit(Literal& a) override;
-    void visit(Register& a) override;
     void visit(Symbol& a) override;
-    void visit(Declaration& a) override;
-    void visit(Special& a) override;
-    void visit(Instruction& a) override;
-    void visit(DirORG& a) override;
-    void visit(DirSection& a) override;
-    void visit(DirTimes& a) override;
-    void visit(DataNode& a) override;
-    void visit(ResNode& a) override;
-    void visit(StringNode& a) override;
-    void visit(MemExpr& a) override;
+
+    void analyze(ParseObject& a);
 };
 
-class SemanticAnalyzerVisitor : public ExpressionEvalVisitor, public StatementVisitor {
+class DataAnalyzer : public DataVisitor {
     public:
-    MainType maintype;
-    SubType subtype;
 
-    void evalStmt(ParseObject& a);
+    MainType prevtype;
+    SubType prevsub;
+
+    void analyze(ParseObject& a);
+
+    void visit(DataNode& a) override;
+    void visit(StringNode& a) override;
+    void visit(ResNode& a) override;
+
+    void visit(Binary& a) override;
+    void visit(Unary& a) override;
+    void visit(Grouping& a) override;
+
+    void visit(Literal& a) override;
+    void visit(Special& a) override;
+    void visit(Symbol& a) override;
+};
+
+class DirectiveAnalyzer : public DirectiveVisitor {
+
+    public:
+
+    MainType prevtype;
+    SubType prevsub;
+    
+    void analyze(ParseObject& a);
+
+    void visit(DirTimes& a) override;
+    void visit(DirORG& a) override;
+    void visit(DirSection& a) override;
 
     void visit(Binary& a) override;
     void visit(Unary& a) override;
     void visit(Grouping& a) override;
     void visit(Literal& a) override;
-    void visit(Register& a) override;
-    void visit(Symbol& a) override;
-    void visit(Declaration& a) override;
     void visit(Special& a) override;
-    void visit(Instruction& a) override;
-    void visit(DirORG& a) override;
-    void visit(DirSection& a) override;
-    void visit(DirTimes& a) override;
-    void visit(DataNode& a) override;
-    void visit(ResNode& a) override;
-    void visit(StringNode& a) override;
-    void visit(MemExpr& a) override;
+    void visit(Symbol& a) override;
 };
-
-
 
 #endif

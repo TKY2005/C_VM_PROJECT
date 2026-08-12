@@ -13,15 +13,30 @@
 class ParseObject;
 class NodeVisitor;
 
+class MemExpr;
+
+class ParseResult {
+    public:
+
+    std::vector<std::unique_ptr<ParseObject>> parsedLines;
+
+    private:
+
+    uint32_t program_counter = 0x00;
+    uint32_t section_offset = 0x00;
+    uint32_t section_begin = 0x00;
+
+};
+
 class Parser {
     public:
 
-    std::unique_ptr<ParseObject> parse();
+    std::unique_ptr<ParseResult> parse();
 
     std::unique_ptr<ParseObject> line();
     std::unique_ptr<ParseObject> instruction();
     std::unique_ptr<ParseObject> directive();
-    std::unique_ptr<ParseObject> dataEmmiter();
+    std::unique_ptr<ParseObject> dataDelcaration();
     std::vector<std::unique_ptr<ParseObject>> dataList();
     std::unique_ptr<ParseObject> data();
     std::unique_ptr<ParseObject> operand();
@@ -41,11 +56,28 @@ class Parser {
 
     private:
 
-    int currentToken = 0;
+    int numLine = 0;
+    int numToken = 0;
     std::vector<Token> tokens;
 
-    uint32_t programOffset = 0;
-    uint32_t sectionOffset = 0;
+    std::vector<Token> operationLine;
+    std::vector<std::vector<Token>> programLines;
+
+    std::vector<std::vector<Token>> extractLines() {
+
+        std::vector<std::vector<Token>> lines;
+        std::vector<Token> currentLine;
+
+        for(int i = 0; i < tokens.size(); i++) {
+            if (currentLine[i].maintype == MainType::ENOF) break;
+            if (currentLine[i].maintype == MainType::NEWLINE) {
+                lines.push_back(currentLine);
+                currentLine.clear();
+            }
+            else currentLine.push_back(currentLine[i]);
+        }
+        return lines;
+    }
 
     uint8_t getDirectiveSize(SubType t) {
         switch(t){
@@ -81,6 +113,11 @@ class Parser {
         catch(std::exception& e) {
             return false;
         }
+    }
+
+    void nextLine() {
+        operationLine = programLines[++numLine];
+        numToken = 0;
     }
 
     bool matchAndAdvance(std::initializer_list<MainType> types) {
@@ -121,51 +158,55 @@ class Parser {
         return false;
     }
 
-    bool isAtEnd() {
-        return currentToken >= tokens.size() || tokens[currentToken].maintype == MainType::ENOF;
+    bool isAtEndOfLine() {
+        return numToken >= operationLine.size();
+    }
+
+    bool isAtEndOfProgram() {
+        return numLine >= programLines.size();
     }
 
     Token advance() {
-        if(!isAtEnd()) return tokens[currentToken++];
+        if(!isAtEndOfLine()) return operationLine[numToken++];
         return Token{};
     }
 
     Token previous() {
-        return tokens[currentToken - 1];
+        return operationLine[numToken - 1];
     }
 
     Token peek() {
-        if (!isAtEnd())
-            return tokens[currentToken + 1];
+        if (!isAtEndOfLine())
+            return operationLine[numToken + 1];
         return Token{};
     }
 
     Token peekForward(int lookahead) {
-        if (!isAtEndLookahead(lookahead)) return tokens[currentToken + lookahead];
+        if (!isAtEndLookahead(lookahead)) return operationLine[numToken + lookahead];
         return Token{};
     }
 
     bool check(MainType type) {
-        if (!isAtEnd())
-            return (tokens[currentToken].maintype == type);
+        if (!isAtEndOfLine())
+            return (operationLine[numToken].maintype == type);
         else return false;
     }
 
     bool checkSubType(SubType t) {
-        if (!isAtEnd()) {
-            return tokens[currentToken].subtype == t;
+        if (!isAtEndOfLine()) {
+            return operationLine[numToken].subtype == t;
         }
         else return false;
     }
 
     bool isAtEndLookahead(int lookahead) {
-        return (currentToken + lookahead <= tokens.size());
+        return (numToken + lookahead <= operationLine.size());
     }
 
     bool checkNext(MainType type, int lookahead) {
         if (!isAtEndLookahead(lookahead)) {
             for(int i = 0; i < lookahead; i++) {
-                if (tokens[currentToken + i].maintype == type) return true;
+                if (operationLine[numToken + i].maintype == type) return true;
             }
         }
         return false;
@@ -173,7 +214,7 @@ class Parser {
     bool checkNextSubType(SubType t, int lookahead) {
         if (!isAtEndLookahead(lookahead)) {
             for(int i = 0; i < lookahead; i++) {
-                if (tokens[currentToken + i].subtype == t) return true;
+                if (operationLine[numToken + i].subtype == t) return true;
             }
         }
         return false;
@@ -187,7 +228,7 @@ class Parser {
     }
     bool compareTypes(std::initializer_list<MainType> types) {
         for(MainType type : types) {
-            if (tokens[currentToken].maintype == type) return true;
+            if (operationLine[numToken].maintype == type) return true;
         }
         return false;
     }
@@ -200,7 +241,7 @@ class Parser {
     }
     bool compareSubTypes(std::initializer_list<SubType> types) {
         for(SubType type : types) {
-            if (tokens[currentToken].subtype == type) return true;
+            if (operationLine[numToken].subtype == type) return true;
         }
         return false;
     }
@@ -219,9 +260,12 @@ class Parser {
     }
 
     Token current() {
-        return tokens[currentToken];
+        return operationLine[numToken];
     }
-    
+
+    std::vector<Token> currentLine() {
+        return programLines[numLine];
+    }
 };
 
 class ParseObject {
@@ -244,7 +288,7 @@ class Binary : public ParseObject {
         this->left = std::move(left);
         this->right = std::move(right);
     }
-    void accept(NodeVisitor& v) override;
+    void accept(NodeVisitor& override);
 };
 
 class Unary : public ParseObject {
@@ -319,10 +363,11 @@ class Special : public ParseObject {
     public:
     SubType type;
 
-    uint32_t value = 0;
-
     Special(SubType type) {this->type = type;}
+
     void accept(NodeVisitor& v) override;
+
+    uint32_t value;
 };
 
 class Instruction : public ParseObject {
@@ -333,9 +378,29 @@ class Instruction : public ParseObject {
     Instruction(uint8_t opcode, std::vector<std::unique_ptr<ParseObject>> operands) {
         this->opcode = opcode;
         this->operands = std::move(operands);
+        hasOperands = true;
+        numOperands = operands.size();
+    }
+
+    Instruction(uint8_t opcode) {
+        this->opcode = opcode;
+        hasOperands = false;
+        numOperands = 0;
     }
 
     void accept(NodeVisitor& v) override;
+
+    bool hasOperands = false;
+    bool hasRegister = false;
+    bool hasMemExpr = false;
+    bool hasLiteral = false;
+    bool hasSpecial = false;
+    bool hasSymbol = false;
+
+    uint8_t numOperands;
+
+    uint32_t address;
+    uint32_t len;
 };
 
 class DirORG : public ParseObject {
@@ -383,9 +448,21 @@ class DataNode : public ParseObject {
         this->symbol = symbol;
         this->data = std::move(data);
         this->size = size;
+        hasSymbol = true;
+    }
+
+    DataNode(std::vector<std::unique_ptr<ParseObject>> data, uint8_t size) {
+        this->data = std::move(data);
+        this->size = size;
+        hasSymbol = false;
     }
 
     void accept(NodeVisitor& v) override;
+
+    bool hasSymbol;
+
+    uint32_t address;
+    uint32_t len;
 };
 
 class ResNode : public ParseObject {
@@ -398,7 +475,19 @@ class ResNode : public ParseObject {
         this->symbol = symbol;
         this->expr = std::move(expr);
         this->size = size;
+        hasSymbol = true;
     }
+
+    ResNode(std::unique_ptr<ParseObject> expr, uint8_t size) {
+        this->expr = std::move(expr);
+        this->size = size;
+
+        hasSymbol = false;
+    }
+
+    bool hasSymbol;
+
+    uint32_t address;
 
     void accept(NodeVisitor& v) override;
 };
