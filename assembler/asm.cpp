@@ -5,6 +5,7 @@
 #include<string>
 #include<sstream>
 
+#include<Parser/Parser.hpp>
 
 int main(int argc, char** argv) {
 	if (argv[1] == NULL) {
@@ -17,6 +18,20 @@ int main(int argc, char** argv) {
 	}
 	else outputFileName = argv[2];
 
+	std::ifstream file(argv[1]);
+	
+	std::stringstream buff;
+	buff << file.rdbuf();
+
+	std::string s = buff.str();
+	
+	Tokenizer* t = new Tokenizer();
+
+	std::vector<Token> tokens = t->tokenize(s);
+
+	Parser* x = new Parser(tokens);
+	
+	std::unique_ptr<ParseResult> pr = x->parse();
 
 	/*int result = x.assembleSource(argv[1], argv[2]);
 

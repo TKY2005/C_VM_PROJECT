@@ -3,68 +3,87 @@
 
 #include<LexicalAnalyzer/Tokenizer.hpp>
 
-void ExpressionEvalVisitor::evalExpr(ParseObject& o) {
-    o.accept(*this);
+std::unique_ptr<Value> ExpressionVisitor::eval(ParseObject& a, AsmContext& c) {
+    return a.accept(*this, c);
 }
 
-void ExpressionEvalVisitor::visit(Literal& a) {
-    exprVal = a.value;
+std::unique_ptr<Value> ExpressionVisitor::visit(Special& a, AsmContext& c) {
+    return std::unique_ptr<Value>(new Value{.val = (void*) a.value});
 }
 
-void ExpressionEvalVisitor::visit(Symbol& a) {
-    // TODO: get value from symbol map.
+std::unique_ptr<Value> ExpressionVisitor::visit(Symbol& a, AsmContext& c) {
+    return std::unique_ptr<Value>(new Value{.val = (void*) c.symMap[a.name]});
 }
 
-void ExpressionEvalVisitor::visit(Unary& a) {
-    evalExpr(*a.right);
-    uint32_t right = exprVal;
+std::unique_ptr<Value> ExpressionVisitor::visit(Number& a, AsmContext& c) {
+    return std::unique_ptr<Value>(new Value{.val = (void*) a.value});
+}
 
-    switch (a.oper.subtype) {
+std::unique_ptr<Value> ExpressionVisitor::visit(Binary& a, AsmContext& c) {
+    
+    uint32_t left = vptouint(eval(*a.left, c).get()->val);
+    uint32_t right = vptouint(eval(*a.right, c).get()->val);
+
+    std::unique_ptr<Value> result = std::unique_ptr<Value>(new Value());
+
+    uint32_t res;
+
+    switch(a.oper.subtype) {
 
         case SubType::OPER_ADD:
-        exprVal = +right;
+        res = left + right;
         break;
 
         case SubType::OPER_SUB:
-        exprVal = -right;
-        break;
-
-        default:
-        exprVal = right;
-        break;
-    }
-}
-
-void ExpressionEvalVisitor::visit(Binary& a) {
-    evalExpr(*a.left);
-    uint32_t left = exprVal;
-
-    evalExpr(*a.right);
-    uint32_t right = exprVal;
-
-    switch (a.oper.subtype) {
-
-        case SubType::OPER_ADD:
-        exprVal = left + right;
-        break;
-
-        case SubType::OPER_SUB:
-        exprVal = left - right;
+        res = left - right;
         break;
 
         case SubType::OPER_MUL:
-        exprVal = left * right;
+        res = left * right;
         break;
 
         case SubType::OPER_DIV:
-        exprVal = left / right;
+        res = left / right;
         break;
 
         default:
+        res = 0;
         break;
     }
+
+    result.get()->val = (void*) res;
+
+    return result;
 }
 
-void ExpressionEvalVisitor::visit(Grouping& a) {
-    evalExpr(*a.expr);
+std::unique_ptr<Value> ExpressionVisitor::visit(Unary& a, AsmContext& c) {
+    
+    uint32_t right = vptouint(eval(*a.right, c).get()->val);
+
+    std::unique_ptr<Value> result = std::unique_ptr<Value>(new Value());
+
+    uint32_t res;
+
+    switch(a.oper.subtype) {
+
+        case SubType::OPER_ADD:
+        res = right;
+        break;
+
+        case SubType::OPER_SUB:
+        res = -right;
+        break;
+
+        default:
+        res = 0;
+        break;
+    }
+
+    result.get()->val = (void*) res;
+
+    return result;
+}
+
+std::unique_ptr<Value> ExpressionVisitor::visit(Grouping& a, AsmContext& c) {
+    return eval(*a.expr, c);
 }

@@ -8,53 +8,53 @@
 #include<vector>
 #include<cstdint>
 
-void Binary::accept(NodeVisitor& v) {
-    v.visit(*this);
+std::unique_ptr<Value> Binary::accept(NodeVisitor& v, AsmContext& c) {
+    return v.visit(*this, c);
 }
-void Unary::accept(NodeVisitor& v) {
-    v.visit(*this);
+std::unique_ptr<Value> Unary::accept(NodeVisitor& v, AsmContext& c) {
+    return v.visit(*this, c);
 }
-void Literal::accept(NodeVisitor& v) {
-    v.visit(*this);
+std::unique_ptr<Value> Number::accept(NodeVisitor& v, AsmContext& c) {
+    return v.visit(*this, c);
 }
-void Grouping::accept(NodeVisitor& v) {
-    v.visit(*this);
+std::unique_ptr<Value> Grouping::accept(NodeVisitor& v, AsmContext& c) {
+    return v.visit(*this, c);
 }
-void Instruction::accept(NodeVisitor& v) {
-    v.visit(*this);
+std::unique_ptr<Value> Instruction::accept(NodeVisitor& v, AsmContext& c) {
+    return v.visit(*this, c);
 }
-void DataNode::accept(NodeVisitor& v) {
-    v.visit(*this);
+std::unique_ptr<Value> DataNode::accept(NodeVisitor& v, AsmContext& c) {
+    return v.visit(*this, c);
 }
-void DirORG::accept(NodeVisitor& v) {
-    v.visit(*this);
+std::unique_ptr<Value> DirORG::accept(NodeVisitor& v, AsmContext& c) {
+    return v.visit(*this, c);
 }
-void DirSection::accept(NodeVisitor& v) {
-    v.visit(*this);
+std::unique_ptr<Value> DirSection::accept(NodeVisitor& v, AsmContext& c) {
+    return v.visit(*this, c);
 }
-void DirTimes::accept(NodeVisitor& v) {
-    v.visit(*this);
+std::unique_ptr<Value> DirTimes::accept(NodeVisitor& v, AsmContext& c) {
+    return v.visit(*this, c);
 }
-void MemExpr::accept(NodeVisitor& v) {
-    v.visit(*this);
+std::unique_ptr<Value> MemExpr::accept(NodeVisitor& v, AsmContext& c) {
+    return v.visit(*this, c);
 }
-void StringNode::accept(NodeVisitor& v) {
-    v.visit(*this);
+std::unique_ptr<Value> StringNode::accept(NodeVisitor& v, AsmContext& c) {
+    return v.visit(*this, c);
 }
-void Register::accept(NodeVisitor& v) {
-    v.visit(*this);
+std::unique_ptr<Value> Register::accept(NodeVisitor& v, AsmContext& c) {
+    return v.visit(*this, c);
 }
-void Symbol::accept(NodeVisitor& v) {
-    v.visit(*this);
+std::unique_ptr<Value> Symbol::accept(NodeVisitor& v, AsmContext& c) {
+    return v.visit(*this, c);
 }
-void ResNode::accept(NodeVisitor& v) {
-    v.visit(*this);
+std::unique_ptr<Value> ResNode::accept(NodeVisitor& v, AsmContext& c) {
+    return v.visit(*this, c);
 }
-void Special::accept(NodeVisitor& v) {
-    v.visit(*this);
+std::unique_ptr<Value> Special::accept(NodeVisitor& v, AsmContext& c) {
+    return v.visit(*this, c);
 }
-void Declaration::accept(NodeVisitor& v) {
-    v.visit(*this);
+std::unique_ptr<Value> Declaration::accept(NodeVisitor& v, AsmContext& c) {
+    return v.visit(*this, c);
 }
 
 
@@ -290,7 +290,7 @@ std::unique_ptr<ParseObject> Parser::unary() {
 }
 
 std::unique_ptr<ParseObject> Parser::primary() {
-    if (matchAndAdvance({MainType::NUM})) return std::unique_ptr<ParseObject>(new Literal(std::stoul(previous().tokenstr)));
+    if (matchAndAdvance({MainType::NUM})) return std::unique_ptr<ParseObject>(new Number(std::stoul(previous().tokenstr)));
     else if (matchAndAdvance( {MainType::SYM} )) return std::unique_ptr<ParseObject>(new Symbol(previous().tokenstr));
     else if (matchAndAdvance( {MainType::SPECIAL} )) return std::unique_ptr<ParseObject>(new Special(previous().subtype));
     else if (matchAndAdvance({MainType::REG})) {

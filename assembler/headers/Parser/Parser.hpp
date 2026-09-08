@@ -12,6 +12,8 @@
 
 class ParseObject;
 class NodeVisitor;
+class AsmContext;
+struct Value;
 
 class MemExpr;
 
@@ -30,6 +32,10 @@ class ParseResult {
 
 class Parser {
     public:
+
+    Parser(std::vector<Token> tokens) {
+        this->tokens = tokens;
+    }
 
     std::unique_ptr<ParseResult> parse();
 
@@ -274,7 +280,7 @@ class ParseObject {
 
     ParseObject() = default;
     
-    virtual void accept(NodeVisitor& v) = 0;
+    virtual std::unique_ptr<Value> accept(NodeVisitor& v, AsmContext& c) = 0;
 };
 
 class Binary : public ParseObject {
@@ -288,7 +294,7 @@ class Binary : public ParseObject {
         this->left = std::move(left);
         this->right = std::move(right);
     }
-    void accept(NodeVisitor& override);
+    std::unique_ptr<Value> accept(NodeVisitor& a, AsmContext& c) override;
 };
 
 class Unary : public ParseObject {
@@ -301,16 +307,16 @@ class Unary : public ParseObject {
         this->right = std::move(right);
     }
 
-    void accept(NodeVisitor& v) override;
+    std::unique_ptr<Value> accept(NodeVisitor& v, AsmContext& c) override;
 };
 
-class Literal : public ParseObject {
+class Number : public ParseObject {
     public:
     uint32_t value;
 
-    Literal(uint32_t value) {this->value = value;}
+    Number(uint32_t value) {this->value = value;}
 
-    void accept(NodeVisitor& v) override;
+    std::unique_ptr<Value> accept(NodeVisitor& v, AsmContext& c) override;
 };
 
 class Grouping : public ParseObject {
@@ -321,7 +327,7 @@ class Grouping : public ParseObject {
         this->expr = std::move(expr);
     }
 
-    void accept(NodeVisitor& v) override;
+    std::unique_ptr<Value> accept(NodeVisitor& v, AsmContext& c) override;
 };
 
 class Register : public ParseObject {
@@ -336,7 +342,7 @@ class Register : public ParseObject {
         this->regcode = regcode;
     }
 
-    void accept(NodeVisitor& v) override;
+    std::unique_ptr<Value> accept(NodeVisitor& v, AsmContext& c) override;
 };
 
 class Symbol : public ParseObject {
@@ -348,7 +354,9 @@ class Symbol : public ParseObject {
         this->name = name;
     }
 
-    void accept(NodeVisitor& v) override;
+    uint32_t value;
+
+    std::unique_ptr<Value> accept(NodeVisitor& v, AsmContext& c) override;
 };
 
 class Declaration : public ParseObject {
@@ -356,7 +364,7 @@ class Declaration : public ParseObject {
     std::string name;
     Declaration(std::string name) {this->name = name;}
 
-    void accept(NodeVisitor& v) override;
+    std::unique_ptr<Value> accept(NodeVisitor& v, AsmContext& c) override;
 };
 
 class Special : public ParseObject {
@@ -365,7 +373,7 @@ class Special : public ParseObject {
 
     Special(SubType type) {this->type = type;}
 
-    void accept(NodeVisitor& v) override;
+    std::unique_ptr<Value> accept(NodeVisitor& v, AsmContext& c) override;
 
     uint32_t value;
 };
@@ -378,24 +386,15 @@ class Instruction : public ParseObject {
     Instruction(uint8_t opcode, std::vector<std::unique_ptr<ParseObject>> operands) {
         this->opcode = opcode;
         this->operands = std::move(operands);
-        hasOperands = true;
         numOperands = operands.size();
     }
 
     Instruction(uint8_t opcode) {
         this->opcode = opcode;
-        hasOperands = false;
         numOperands = 0;
     }
 
-    void accept(NodeVisitor& v) override;
-
-    bool hasOperands = false;
-    bool hasRegister = false;
-    bool hasMemExpr = false;
-    bool hasLiteral = false;
-    bool hasSpecial = false;
-    bool hasSymbol = false;
+    std::unique_ptr<Value> accept(NodeVisitor& v, AsmContext& c) override;
 
     uint8_t numOperands;
 
@@ -411,7 +410,9 @@ class DirORG : public ParseObject {
         this->expr = std::move(expr);
     }
 
-    void accept(NodeVisitor& v) override;
+    uint32_t val = 0;
+
+    std::unique_ptr<Value> accept(NodeVisitor& v, AsmContext& c) override;
 };
 
 class DirSection : public ParseObject {
@@ -421,7 +422,7 @@ class DirSection : public ParseObject {
         this->name = name;
     }
 
-    void accept(NodeVisitor& v) override;
+    std::unique_ptr<Value> accept(NodeVisitor& v, AsmContext& c) override;
 };
 
 class DirTimes : public ParseObject {
@@ -436,7 +437,8 @@ class DirTimes : public ParseObject {
         this->repeated = std::move(repeated);
     }
 
-    void accept(NodeVisitor& v) override;
+    uint32_t exprVal = 0;
+    std::unique_ptr<Value> accept(NodeVisitor& v, AsmContext& c) override;
 };
 
 class DataNode : public ParseObject {
@@ -457,7 +459,7 @@ class DataNode : public ParseObject {
         hasSymbol = false;
     }
 
-    void accept(NodeVisitor& v) override;
+    std::unique_ptr<Value> accept(NodeVisitor& v, AsmContext& c) override;
 
     bool hasSymbol;
 
@@ -487,9 +489,12 @@ class ResNode : public ParseObject {
 
     bool hasSymbol;
 
-    uint32_t address;
+    uint32_t exprVal;
 
-    void accept(NodeVisitor& v) override;
+    uint32_t address;
+    uint32_t len;
+
+    std::unique_ptr<Value> accept(NodeVisitor& v, AsmContext& c) override;
 };
 
 class StringNode : public ParseObject {
@@ -500,7 +505,7 @@ class StringNode : public ParseObject {
         this->str = str;
     }
 
-    void accept(NodeVisitor& v) override;
+    std::unique_ptr<Value> accept(NodeVisitor& v, AsmContext& c) override;
 };
 
 class MemExpr : public ParseObject {
@@ -526,7 +531,7 @@ class MemExpr : public ParseObject {
         } 
     }
 
-    void accept(NodeVisitor& v) override;
+    std::unique_ptr<Value> accept(NodeVisitor& v, AsmContext& c) override;
 };
 
 #endif

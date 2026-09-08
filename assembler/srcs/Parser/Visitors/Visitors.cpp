@@ -2,6 +2,7 @@
 #include<map>
 #include<string>
 #include<initializer_list>
+#include<typeindex>
 
 #include<Parser/Visitors/Visitors.hpp>
 #include<Parser/Parser.hpp>
@@ -13,7 +14,7 @@ bool NodeVisitor::isExprNode(ParseObject* p) {
             typeid(*p) == typeid(Binary) || 
             typeid(*p) == typeid(Unary) ||
             typeid(*p) == typeid(Grouping) ||
-            typeid(*p) == typeid(Literal) || 
+            typeid(*p) == typeid(Number) || 
             typeid(*p) == typeid(Symbol) ||
             typeid(*p) == typeid(Special)
         );
@@ -24,6 +25,13 @@ bool NodeVisitor::compareTypes(MainType t, std::initializer_list<MainType> types
             if (type == t) return true;
         }
         return false;
+}
+
+bool NodeVisitor::compareNodeTypes(std::type_index t, std::initializer_list<std::type_index> types) {
+    for(std::type_index type : types) {
+        if (t == type) return true;
+    }
+    return false;
 }
 
 bool NodeVisitor::isBaseReg(Register* a) {
@@ -70,4 +78,28 @@ int NodeVisitor::typeToSize(SubType t) {
             return -1;
         }
         return -1;
+}
+
+std::vector<uint8_t> NodeVisitor::sliceVal(uint32_t v, int bits) {
+    std::vector<uint8_t> b;
+
+    for(int i = bits - 8; i >= 0; i -= 8) {
+        b.push_back(v >> i);
+    }
+    return b;
+}
+
+uint32_t NodeVisitor::vptouint(void* v) {
+
+    if (!v) return 0;
+    uint32_t i;
+    memcpy(&i, v, sizeof(uint32_t));
+    return i;
+}
+
+int NodeVisitor::findOperandType(ParseObject& a) 
+{
+    if (typeid(a) == typeid(MemExpr)) return OPERAND_TYPE_MEM;
+                else if (typeid(a) == typeid(Register)) return OPERAND_TYPE_REG;
+                else return OPERAND_TYPE_EXPR;
 }
