@@ -7,6 +7,7 @@
 #include<initializer_list>
 #include<memory>
 #include<typeindex>
+#include<any>
 
 #include<LexicalAnalyzer/Tokenizer.hpp>
 #include<ISA_encoding_info.h>
@@ -141,22 +142,22 @@ class NodeVisitor {
 
     virtual ~NodeVisitor() = default;
 
-    virtual std::unique_ptr<Value> visit(Binary& a, AsmContext& c) {return nullptr;};
-    virtual std::unique_ptr<Value> visit(Unary& a, AsmContext& c) {return nullptr;};
-    virtual std::unique_ptr<Value> visit(Grouping& a, AsmContext& c) {return nullptr;};
-    virtual std::unique_ptr<Value> visit(Number& a, AsmContext& c) {return nullptr;};
-    virtual std::unique_ptr<Value> visit(Special& a, AsmContext& c) {return nullptr;};
-    virtual std::unique_ptr<Value> visit(StringNode& a, AsmContext& c) {return nullptr;};
-    virtual std::unique_ptr<Value> visit(Symbol& a, AsmContext& c) {return nullptr;};
-    virtual std::unique_ptr<Value> visit(DataNode& a, AsmContext& c) {return nullptr;};
-    virtual std::unique_ptr<Value> visit(ResNode& a, AsmContext& c) {return nullptr;};
-    virtual std::unique_ptr<Value> visit(DirSection& a, AsmContext& c) {return nullptr;};
-    virtual std::unique_ptr<Value> visit(DirORG& a, AsmContext& c) {return nullptr;};
-    virtual std::unique_ptr<Value> visit(DirTimes& a, AsmContext& c) {return nullptr;};
-    virtual std::unique_ptr<Value> visit(Instruction& a, AsmContext& c) {return nullptr;};
-    virtual std::unique_ptr<Value> visit(MemExpr& a, AsmContext& c) {return nullptr;};
-    virtual std::unique_ptr<Value> visit(Register& a, AsmContext& c) {return nullptr;};
-    virtual std::unique_ptr<Value> visit(Declaration& a, AsmContext& c) {return nullptr;};
+    virtual std::any visit(Binary& a, AsmContext& c) {undefinedNode();return nullptr;};
+    virtual std::any visit(Unary& a, AsmContext& c) {undefinedNode();return nullptr;};
+    virtual std::any visit(Grouping& a, AsmContext& c) {undefinedNode(); return nullptr;};
+    virtual std::any visit(Number& a, AsmContext& c) {undefinedNode(); return nullptr;};
+    virtual std::any visit(Special& a, AsmContext& c) {undefinedNode(); return nullptr;};
+    virtual std::any visit(StringNode& a, AsmContext& c) {undefinedNode(); return nullptr;};
+    virtual std::any visit(Symbol& a, AsmContext& c) {undefinedNode(); return nullptr;};
+    virtual std::any visit(DataNode& a, AsmContext& c) {undefinedNode(); return nullptr;};
+    virtual std::any visit(ResNode& a, AsmContext& c) {undefinedNode(); return nullptr;};
+    virtual std::any visit(DirSection& a, AsmContext& c) {undefinedNode(); return nullptr;};
+    virtual std::any visit(DirORG& a, AsmContext& c) {undefinedNode(); return nullptr;};
+    virtual std::any visit(DirTimes& a, AsmContext& c) {undefinedNode(); return nullptr;};
+    virtual std::any visit(Instruction& a, AsmContext& c) {undefinedNode(); return nullptr;};
+    virtual std::any visit(MemExpr& a, AsmContext& c) {undefinedNode(); return nullptr;};
+    virtual std::any visit(Register& a, AsmContext& c) {undefinedNode(); return nullptr;};
+    virtual std::any visit(Declaration& a, AsmContext& c) {undefinedNode(); return nullptr;};
 
     std::initializer_list<MainType> allowedExprTypes = {
         MainType::NUM,
@@ -185,80 +186,114 @@ class NodeVisitor {
 
     uint32_t vptouint(void* v);
 
+    void undefinedNode();
+
+    MainType extractType(Value& v) {
+        return *static_cast<MainType*>(v.val);
+    }
+    SubType extractSubType(Value& v) {
+        return *static_cast<SubType*>(v.val);
+    }
+
+};
+
+class PrintVisitor : public NodeVisitor {
+    public:
+
+    int indentLevel = 0;
+
+    std::any traverse(ParseObject& a, AsmContext& c);
+
+    std::any visit(Binary& a, AsmContext& c) override;
+    std::any visit(Unary& a, AsmContext& c) override;
+    std::any visit(Grouping& a, AsmContext& c) override;
+    std::any visit(Number& a, AsmContext& c) override;
+    std::any visit(Special& a, AsmContext& c) override;
+    std::any visit(StringNode& a, AsmContext& c) override;
+    std::any visit(Symbol& a, AsmContext& c) override;
+    std::any visit(DataNode& a, AsmContext& c) override;
+    std::any visit(ResNode& a, AsmContext& c) override;
+    std::any visit(DirSection& a, AsmContext& c) override;
+    std::any visit(DirORG& a, AsmContext& c) override;
+    std::any visit(DirTimes& a, AsmContext& c) override;
+    std::any visit(Instruction& a, AsmContext& c) override;
+    std::any visit(MemExpr& a, AsmContext& c) override;
+    std::any visit(Register& a, AsmContext& c) override;
+    std::any visit(Declaration& a, AsmContext& c) override;
+
 };
 
 class ExpressionVisitor : public NodeVisitor {
     public:
 
-    std::unique_ptr<Value> visit(Binary& a, AsmContext& c) override;
-    std::unique_ptr<Value> visit(Unary& a, AsmContext& c) override;
-    std::unique_ptr<Value> visit(Grouping& a, AsmContext& c) override;
-    std::unique_ptr<Value> visit(Number& a, AsmContext& c) override;
-    std::unique_ptr<Value> visit(Special& a, AsmContext& c) override;
-    std::unique_ptr<Value> visit(Symbol& a, AsmContext& c) override;
+    std::any visit(Binary& a, AsmContext& c) override;
+    std::any visit(Unary& a, AsmContext& c) override;
+    std::any visit(Grouping& a, AsmContext& c) override;
+    std::any visit(Number& a, AsmContext& c) override;
+    std::any visit(Special& a, AsmContext& c) override;
+    std::any visit(Symbol& a, AsmContext& c) override;
 
-    std::unique_ptr<Value> visit(StringNode& a, AsmContext& c) override;
+    std::any visit(StringNode& a, AsmContext& c) override;
 };
 
 class ExpressionAnalyzerVisitor : public ExpressionVisitor {
 
     public:
-    std::unique_ptr<Value> analyze(ParseObject& a, AsmContext& c);
+    std::any analyze(ParseObject& a, AsmContext& c);
 
-    std::unique_ptr<Value> visit(Binary& a, AsmContext& c) override;
-    std::unique_ptr<Value> visit(Unary& a, AsmContext& c) override;
-    std::unique_ptr<Value> visit(Grouping& a, AsmContext& c) override;
-    std::unique_ptr<Value> visit(Number& a, AsmContext& c) override;
-    std::unique_ptr<Value> visit(Special& a, AsmContext& c) override;
-    std::unique_ptr<Value> visit(Symbol& a, AsmContext& c) override;
+    std::any visit(Binary& a, AsmContext& c) override;
+    std::any visit(Unary& a, AsmContext& c) override;
+    std::any visit(Grouping& a, AsmContext& c) override;
+    std::any visit(Number& a, AsmContext& c) override;
+    std::any visit(Special& a, AsmContext& c) override;
+    std::any visit(Symbol& a, AsmContext& c) override;
 
-    std::unique_ptr<Value> visit(StringNode& a, AsmContext& c) override;
 };
 
 class ExpressionEvalVisitor : public ExpressionVisitor {
 
     public:
-    std::unique_ptr<Value> eval(ParseObject& a, AsmContext& c);
+    std::any eval(ParseObject& a, AsmContext& c);
 
-    std::unique_ptr<Value> visit(Binary& a, AsmContext& c) override;
-    std::unique_ptr<Value> visit(Unary& a, AsmContext& c) override;
-    std::unique_ptr<Value> visit(Grouping& a, AsmContext& c) override;
-    std::unique_ptr<Value> visit(Number& a, AsmContext& c) override;
-    std::unique_ptr<Value> visit(Special& a, AsmContext& c) override;
-    std::unique_ptr<Value> visit(Symbol& a, AsmContext& c) override;
+    std::any visit(Binary& a, AsmContext& c) override;
+    std::any visit(Unary& a, AsmContext& c) override;
+    std::any visit(Grouping& a, AsmContext& c) override;
+    std::any visit(Number& a, AsmContext& c) override;
+    std::any visit(Special& a, AsmContext& c) override;
+    std::any visit(Symbol& a, AsmContext& c) override;
 };
 
 class InstructionVisitor : public NodeVisitor {
     public:
 
-    std::unique_ptr<Value> visit(Instruction& a, AsmContext& c) override;
-    std::unique_ptr<Value> visit(MemExpr& a, AsmContext& c) override;
-    std::unique_ptr<Value> visit(Register& a, AsmContext& c) override;
+    std::any visit(Instruction& a, AsmContext& c) override;
+    std::any visit(MemExpr& a, AsmContext& c) override;
+    std::any visit(Register& a, AsmContext& c) override;
 
-    std::unique_ptr<Value> visit(Symbol& a, AsmContext& c) override;
-    std::unique_ptr<Value> visit(Special& a, AsmContext& c) override;
+    std::any visit(Symbol& a, AsmContext& c) override;
+    std::any visit(Special& a, AsmContext& c) override;
 
-    std::unique_ptr<Value> visit(Binary& a, AsmContext& c) override;
-    std::unique_ptr<Value> visit(Unary& a, AsmContext& c) override;
-    std::unique_ptr<Value> visit(Grouping& a, AsmContext& c) override;
-    std::unique_ptr<Value> visit(Number& a, AsmContext& c) override;
+    std::any visit(Binary& a, AsmContext& c) override;
+    std::any visit(Unary& a, AsmContext& c) override;
+    std::any visit(Grouping& a, AsmContext& c) override;
+    std::any visit(Number& a, AsmContext& c) override;
 };
 
 class DataVisitor : public NodeVisitor {
     public:
 
-    std::unique_ptr<Value> visit(DataNode& a, AsmContext& c) override;
-    std::unique_ptr<Value> visit(ResNode& a, AsmContext& c) override;
-    std::unique_ptr<Value> visit(StringNode& a, AsmContext& c) override;
+    std::any visit(DataNode& a, AsmContext& c) override;
+    std::any visit(ResNode& a, AsmContext& c) override;
+    std::any visit(StringNode& a, AsmContext& c) override;
 };
 
 class DirectiveVisitor : public NodeVisitor {
     public:
 
-    std::unique_ptr<Value> visit(DirORG& a, AsmContext& c) override;
-    std::unique_ptr<Value> visit(DirSection& a, AsmContext& c) override;
-    std::unique_ptr<Value> visit(DirTimes& a, AsmContext& c) override;
-    std::unique_ptr<Value> visit(Declaration& a, AsmContext& c) override;
+    std::any visit(DirORG& a, AsmContext& c) override;
+    std::any visit(DirSection& a, AsmContext& c) override;
+    std::any visit(DirTimes& a, AsmContext& c) override;
+    std::any visit(Declaration& a, AsmContext& c) override;
 };
 
 class InstructionAnalyzerVisitor : public InstructionVisitor {
@@ -269,29 +304,29 @@ class InstructionAnalyzerVisitor : public InstructionVisitor {
         new ExpressionAnalyzerVisitor()
     );
 
-    std::unique_ptr<Value> analyze(ParseObject& a, AsmContext& c);
+    std::any analyze(ParseObject& a, AsmContext& c);
 
-    std::unique_ptr<Value> visit(Instruction& a, AsmContext& c) override;
-    std::unique_ptr<Value> visit(MemExpr& a, AsmContext& c) override;
-    std::unique_ptr<Value> visit(Register& a, AsmContext& c) override;
+    std::any visit(Instruction& a, AsmContext& c) override;
+    std::any visit(MemExpr& a, AsmContext& c) override;
+    std::any visit(Register& a, AsmContext& c) override;
 
-    std::unique_ptr<Value> visit(Symbol& a, AsmContext& c) override;
-    std::unique_ptr<Value> visit(Special& a, AsmContext& c) override;
+    std::any visit(Symbol& a, AsmContext& c) override;
+    std::any visit(Special& a, AsmContext& c) override;
 
-    std::unique_ptr<Value> visit(Binary& a, AsmContext& c) override;
-    std::unique_ptr<Value> visit(Unary& a, AsmContext& c) override;
-    std::unique_ptr<Value> visit(Grouping& a, AsmContext& c) override;
-    std::unique_ptr<Value> visit(Number& a, AsmContext& c) override;
+    std::any visit(Binary& a, AsmContext& c) override;
+    std::any visit(Unary& a, AsmContext& c) override;
+    std::any visit(Grouping& a, AsmContext& c) override;
+    std::any visit(Number& a, AsmContext& c) override;
 };
 
 class DataAnalyzerVisitor : public DataVisitor {
     public:
 
-    std::unique_ptr<Value> analyze(ParseObject& a, AsmContext& c);
+    std::any analyze(ParseObject& a, AsmContext& c);
 
-    std::unique_ptr<Value> visit(DataNode& a, AsmContext& c) override;
-    std::unique_ptr<Value> visit(ResNode& a, AsmContext& c) override;
-    std::unique_ptr<Value> visit(StringNode& a, AsmContext& c) override;
+    std::any visit(DataNode& a, AsmContext& c) override;
+    std::any visit(ResNode& a, AsmContext& c) override;
+    std::any visit(StringNode& a, AsmContext& c) override;
 };
 
 #endif

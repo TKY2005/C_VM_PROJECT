@@ -14,7 +14,7 @@ LIBS = -lm
 SRCS = $(wildcard ./*.c) -std=c11 $(VM_FILES) $(PLATFORM_FILES) $(SHARED_FILES) -I $(INCLUDE_EMU) -I $(INCLUDE_PLATFORM) -I $(INCLUDE_PLATFORM_SRC) -I $(INCLUDE_SHARED) $(LIBS)
 
 
-ASM_FILES = $(call rwildcard,./assembler,*.cpp) -std=c++11 $(SHARED_FILES) -I $(INCLUDE_ASM) -I $(INCLUDE_SHARED)
+ASM_FILES = $(call rwildcard,./assembler,*.cpp) -std=c++17 $(SHARED_FILES) -I $(INCLUDE_ASM) -I $(INCLUDE_SHARED)
 
 dbg_flags = -g -fno-omit-frame-pointer
 make_output = mkdir bin

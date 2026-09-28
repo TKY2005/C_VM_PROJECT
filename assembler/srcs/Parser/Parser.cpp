@@ -8,52 +8,52 @@
 #include<vector>
 #include<cstdint>
 
-std::unique_ptr<Value> Binary::accept(NodeVisitor& v, AsmContext& c) {
+std::any Binary::accept(NodeVisitor& v, AsmContext& c) {
     return v.visit(*this, c);
 }
-std::unique_ptr<Value> Unary::accept(NodeVisitor& v, AsmContext& c) {
+std::any Unary::accept(NodeVisitor& v, AsmContext& c) {
     return v.visit(*this, c);
 }
-std::unique_ptr<Value> Number::accept(NodeVisitor& v, AsmContext& c) {
+std::any Number::accept(NodeVisitor& v, AsmContext& c) {
     return v.visit(*this, c);
 }
-std::unique_ptr<Value> Grouping::accept(NodeVisitor& v, AsmContext& c) {
+std::any Grouping::accept(NodeVisitor& v, AsmContext& c) {
     return v.visit(*this, c);
 }
-std::unique_ptr<Value> Instruction::accept(NodeVisitor& v, AsmContext& c) {
+std::any Instruction::accept(NodeVisitor& v, AsmContext& c) {
     return v.visit(*this, c);
 }
-std::unique_ptr<Value> DataNode::accept(NodeVisitor& v, AsmContext& c) {
+std::any DataNode::accept(NodeVisitor& v, AsmContext& c) {
     return v.visit(*this, c);
 }
-std::unique_ptr<Value> DirORG::accept(NodeVisitor& v, AsmContext& c) {
+std::any DirORG::accept(NodeVisitor& v, AsmContext& c) {
     return v.visit(*this, c);
 }
-std::unique_ptr<Value> DirSection::accept(NodeVisitor& v, AsmContext& c) {
+std::any DirSection::accept(NodeVisitor& v, AsmContext& c) {
     return v.visit(*this, c);
 }
-std::unique_ptr<Value> DirTimes::accept(NodeVisitor& v, AsmContext& c) {
+std::any DirTimes::accept(NodeVisitor& v, AsmContext& c) {
     return v.visit(*this, c);
 }
-std::unique_ptr<Value> MemExpr::accept(NodeVisitor& v, AsmContext& c) {
+std::any MemExpr::accept(NodeVisitor& v, AsmContext& c) {
     return v.visit(*this, c);
 }
-std::unique_ptr<Value> StringNode::accept(NodeVisitor& v, AsmContext& c) {
+std::any StringNode::accept(NodeVisitor& v, AsmContext& c) {
     return v.visit(*this, c);
 }
-std::unique_ptr<Value> Register::accept(NodeVisitor& v, AsmContext& c) {
+std::any Register::accept(NodeVisitor& v, AsmContext& c) {
     return v.visit(*this, c);
 }
-std::unique_ptr<Value> Symbol::accept(NodeVisitor& v, AsmContext& c) {
+std::any Symbol::accept(NodeVisitor& v, AsmContext& c) {
     return v.visit(*this, c);
 }
-std::unique_ptr<Value> ResNode::accept(NodeVisitor& v, AsmContext& c) {
+std::any ResNode::accept(NodeVisitor& v, AsmContext& c) {
     return v.visit(*this, c);
 }
-std::unique_ptr<Value> Special::accept(NodeVisitor& v, AsmContext& c) {
+std::any Special::accept(NodeVisitor& v, AsmContext& c) {
     return v.visit(*this, c);
 }
-std::unique_ptr<Value> Declaration::accept(NodeVisitor& v, AsmContext& c) {
+std::any Declaration::accept(NodeVisitor& v, AsmContext& c) {
     return v.visit(*this, c);
 }
 

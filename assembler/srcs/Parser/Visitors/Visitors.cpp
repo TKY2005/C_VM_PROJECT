@@ -1,13 +1,18 @@
 #include<cstdint>
 #include<map>
-#include<string>
 #include<initializer_list>
 #include<typeindex>
+#include<iostream>
+#include<cstring>
 
 #include<Parser/Visitors/Visitors.hpp>
 #include<Parser/Parser.hpp>
 
 #include<LexicalAnalyzer/Tokenizer.hpp>
+
+void NodeVisitor::undefinedNode() {
+    std::cout << "This type is not allowed here." << std::endl;
+}
 
 bool NodeVisitor::isExprNode(ParseObject* p) {
         return (
