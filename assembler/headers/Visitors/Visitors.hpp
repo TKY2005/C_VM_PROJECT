@@ -70,7 +70,7 @@ typedef struct instruction_semantics {
             uint8_t add_meminfo : 1;
         };
     };
-};
+} instruction_semantics;
 
 typedef struct TypeInfo {
     MainType main;
@@ -129,6 +129,7 @@ class AsmContext {
 
     ~AsmContext() {
         delete current_context;
+        delete current_encoding;
     }
 };
 
@@ -163,15 +164,6 @@ class NodeVisitor {
         MainType::NUM,
         MainType::SYM,
         MainType::SPECIAL
-    };
-
-    std::initializer_list<std::type_index> expressionNodes {
-        typeid(Binary),
-        typeid(Unary),
-        typeid(Grouping),
-        typeid(Number),
-        typeid(Special),
-        typeid(Symbol)
     };
 
     bool isExprNode(ParseObject* p);

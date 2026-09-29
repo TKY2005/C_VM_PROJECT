@@ -5,7 +5,7 @@
 #include<iostream>
 #include<cstring>
 
-#include<Parser/Visitors/Visitors.hpp>
+#include<Visitors/Visitors.hpp>
 #include<Parser/Parser.hpp>
 
 #include<LexicalAnalyzer/Tokenizer.hpp>

@@ -1,5 +1,5 @@
 #include<Parser/Parser.hpp>
-#include<Parser/Visitors/Visitors.hpp>
+#include<Visitors/Visitors.hpp>
 #include<LexicalAnalyzer/Tokenizer.hpp>
 #include<ArchInfo.hpp>
 
@@ -59,14 +59,16 @@ std::any Declaration::accept(NodeVisitor& v, AsmContext& c) {
 
 
 std::unique_ptr<ParseResult> Parser::parse() {
-    std::vector<std::vector<Token>> lines = extractLines();
+
+    setProgramLines(extractLines());
 
     std::unique_ptr<ParseResult> result = std::unique_ptr<ParseResult>(new ParseResult());
 
-    for(int i = 0; i < lines.size(); i++) {
+    setStartLine();
+    for(int i = 0; i < numLines(); i++) {
         std::unique_ptr<ParseObject> l = line();
         result.get()->parsedLines.push_back(std::move(l));
-        nextLine();
+        if (i < numLines() - 1) nextLine();
     }
 
     return result;
@@ -133,7 +135,7 @@ std::unique_ptr<ParseObject> Parser::parseOrg() {
 
 std::unique_ptr<ParseObject> Parser::parseSection() {
     Token name = advance();
-    if (name.maintype != MainType::STR) return nullptr; // TODO: throw a parse error.
+    if (name.maintype != MainType::SYM) return nullptr; // TODO: throw a parse error.
     return std::unique_ptr<ParseObject>(new DirSection(name.tokenstr));
 }
 
@@ -202,10 +204,10 @@ std::unique_ptr<ParseObject> Parser::memexpr() {
     std::unique_ptr<ParseObject> expr;
     if (matchSubTypeAndAdvance({SubType::DIR_BYTE, SubType::DIR_WORD, SubType::DIR_DWORD})) {
         size = getDirectiveSize(previous().subtype);
-        ((MemExpr*) expr.get())->size = size;
     }
     if (matchAndAdvance({MainType::OPEN_BRACE})) {
         expr = memoryaddr();
+        ((MemExpr*) expr.get())->size = size;
     }
     consume(MainType::CLOSE_BRACE, "Expected a ']' at the end of expression.");
     return expr;

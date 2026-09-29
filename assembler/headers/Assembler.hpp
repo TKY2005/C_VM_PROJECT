@@ -6,7 +6,6 @@
 
 #include<LexicalAnalyzer/Tokenizer.hpp>
 #include<Parser/Parser.hpp>
-#include<Codegen/CodeGenerator.hpp>
 
 #define ERR_FILE_NOT_OPEN -1
 #define ERR_ASM_FAIL -2
@@ -18,7 +17,6 @@ class Assembler {
     private:
     Tokenizer tokenizer;
     Parser parser;
-    CodeGenerator codegen;
 
     public:
     static std::string filename;

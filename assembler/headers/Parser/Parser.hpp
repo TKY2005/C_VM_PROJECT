@@ -6,6 +6,7 @@
 #include<cstdint>
 #include<string>
 #include<initializer_list>
+#include<any>
 
 #include<LexicalAnalyzer/Tokenizer.hpp>
 #include<ErrorHandler/ErrorHandler.hpp>
@@ -75,12 +76,14 @@ class Parser {
         std::vector<Token> currentLine;
 
         for(int i = 0; i < tokens.size(); i++) {
-            if (currentLine[i].maintype == MainType::ENOF) break;
-            if (currentLine[i].maintype == MainType::NEWLINE) {
-                lines.push_back(currentLine);
-                currentLine.clear();
+            if (tokens[i].maintype == MainType::ENOF) break;
+            if (tokens[i].maintype == MainType::NEWLINE) {
+                if (currentLine.size() > 0) {
+                    lines.push_back(currentLine);
+                    currentLine.clear();
+                }
             }
-            else currentLine.push_back(currentLine[i]);
+            else currentLine.push_back(tokens[i]);
         }
         return lines;
     }
@@ -121,9 +124,26 @@ class Parser {
         }
     }
 
+    void setProgramLines(std::vector<std::vector<Token>> lines) {
+        programLines = lines;
+    }
+
+    void setStartLine() {
+        numLine = 0;
+        numToken = 0;
+        operationLine = programLines[numLine];
+    }
+
+    void setStartCurrentLine() {
+        numToken = 0;
+    }
     void nextLine() {
         operationLine = programLines[++numLine];
         numToken = 0;
+    }
+
+    int numLines() {
+        return programLines.size();
     }
 
     bool matchAndAdvance(std::initializer_list<MainType> types) {

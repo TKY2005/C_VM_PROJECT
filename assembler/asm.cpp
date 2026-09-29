@@ -4,8 +4,11 @@
 #include<fstream>
 #include<string>
 #include<sstream>
+#include<any>
 
 #include<Parser/Parser.hpp>
+#include<LexicalAnalyzer/Tokenizer.hpp>
+#include<Visitors/Visitors.hpp>
 
 int main(int argc, char** argv) {
 	if (argv[1] == NULL) {
@@ -25,25 +28,21 @@ int main(int argc, char** argv) {
 
 	std::string s = buff.str();
 	
-	Tokenizer* t = new Tokenizer();
+	Tokenizer t = Tokenizer();
 
-	std::vector<Token> tokens = t->tokenize(s);
+	std::vector<Token> tokens = t.tokenize(t.preProcessCode(s));
 
-	Parser* x = new Parser(tokens);
+	Parser p = Parser(tokens);
 	
-	std::unique_ptr<ParseResult> pr = x->parse();
+	std::unique_ptr<ParseResult> pr = p.parse();
 
-	/*int result = x.assembleSource(argv[1], argv[2]);
+	PrintVisitor v;
 
-	if (result == ERR_ASM_FAIL) {
-		std::cout << "Assembler failed and no output file was written." << std::endl;
+	AsmContext& c = *(std::unique_ptr<AsmContext>(new AsmContext()));
+
+	for(int i = 0; i < pr.get()->parsedLines.size(); i++) {
+		std::cout << std::any_cast<std::string>(v.traverse(*(pr.get()->parsedLines[i]), c)) << "\n\n";
 	}
-	else if (result == ERR_ASM_WARN) {
-		std::cout << 
-		"The code has been successfully assembled with warnings." 
-		<< std::endl;
-	}*/
 
-	//std::cout << "Assembler returned with code: " << result << std::endl;
 	return 0;
 }
