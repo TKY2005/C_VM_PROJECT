@@ -133,11 +133,6 @@ class AsmContext {
     }
 };
 
-
-typedef struct Value {
-    void* val;
-} Value;
-
 class NodeVisitor {
     public:
 
@@ -175,17 +170,7 @@ class NodeVisitor {
     std::vector<uint8_t> sliceVal(uint32_t v, int bits);
 
     int findOperandType(ParseObject& a);
-
-    uint32_t vptouint(void* v);
-
     void undefinedNode();
-
-    MainType extractType(Value& v) {
-        return *static_cast<MainType*>(v.val);
-    }
-    SubType extractSubType(Value& v) {
-        return *static_cast<SubType*>(v.val);
-    }
 
 };
 

@@ -94,14 +94,6 @@ std::vector<uint8_t> NodeVisitor::sliceVal(uint32_t v, int bits) {
     return b;
 }
 
-uint32_t NodeVisitor::vptouint(void* v) {
-
-    if (!v) return 0;
-    uint32_t i;
-    memcpy(&i, v, sizeof(uint32_t));
-    return i;
-}
-
 int NodeVisitor::findOperandType(ParseObject& a) 
 {
     if (typeid(a) == typeid(MemExpr)) return OPERAND_TYPE_MEM;

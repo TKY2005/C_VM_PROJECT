@@ -88,7 +88,7 @@ std::any PrintVisitor::visit(DataNode &a, AsmContext &c)
     std::string d;
     for(int i = 0; i < data.size(); i++) d.append(s).append("├── ").append(data[i]).append("\n");
 
-    return "Data: (size = " + std::to_string(a.size) + " byte(s))\n" + d;
+    return "Data: size = " + std::to_string(a.size) + " byte(s)\n" + d;
 }
 
 std::any PrintVisitor::visit(ResNode &a, AsmContext &c)
@@ -98,7 +98,7 @@ std::any PrintVisitor::visit(ResNode &a, AsmContext &c)
     std::string expr = std::any_cast<std::string>(traverse(*a.expr, c));
     indentLevel--;
 
-    return "ResNode: \n" + 
+    return "ResNode: " "size = " + std::to_string(a.size) + "byte(s)\n" +
             s + "└── " + expr;
 }
 

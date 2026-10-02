@@ -14,7 +14,6 @@
 class ParseObject;
 class NodeVisitor;
 class AsmContext;
-struct Value;
 
 class MemExpr;
 
