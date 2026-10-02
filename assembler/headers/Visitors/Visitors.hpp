@@ -276,10 +276,7 @@ class DirectiveVisitor : public NodeVisitor {
 class InstructionAnalyzerVisitor : public InstructionVisitor {
     public:
 
-    std::unique_ptr<ExpressionAnalyzerVisitor> exprAnalyzer = std::unique_ptr<ExpressionAnalyzerVisitor>
-    (
-        new ExpressionAnalyzerVisitor()
-    );
+    ExpressionAnalyzerVisitor exprAnalyzer = ExpressionAnalyzerVisitor();
 
     std::any analyze(ParseObject& a, AsmContext& c);
 
