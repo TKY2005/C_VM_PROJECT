@@ -7,6 +7,7 @@
 #include<string>
 #include<initializer_list>
 #include<any>
+#include<utility>
 
 #include<LexicalAnalyzer/Tokenizer.hpp>
 #include<ErrorHandler/ErrorHandler.hpp>
@@ -33,8 +34,11 @@ class ParseResult {
 class Parser {
     public:
 
-    Parser(std::vector<Token> tokens) {
+    Parser(std::vector<Token> tokens, std::vector<std::string> sourceLines = {},
+           std::string sourceFile = "") {
         this->tokens = tokens;
+        this->sourceLines = std::move(sourceLines);
+        this->sourceFile = std::move(sourceFile);
     }
 
     std::unique_ptr<ParseResult> parse();
@@ -42,19 +46,18 @@ class Parser {
     std::unique_ptr<ParseObject> line();
     std::unique_ptr<ParseObject> instruction();
     std::unique_ptr<ParseObject> directive();
-    std::unique_ptr<ParseObject> dataDelcaration();
+    std::unique_ptr<ParseObject> dataDelcaration(std::string symbol = "");
     std::vector<std::unique_ptr<ParseObject>> dataList();
     std::unique_ptr<ParseObject> data();
     std::unique_ptr<ParseObject> operand();
     std::unique_ptr<ParseObject> memexpr();
-    std::unique_ptr<ParseObject> memoryaddr();
-    void indexexpr(MemExpr* expr);
 
     std::unique_ptr<ParseObject> expression();
     std::unique_ptr<ParseObject> addition();
     std::unique_ptr<ParseObject> multiplication();
     std::unique_ptr<ParseObject> unary();
     std::unique_ptr<ParseObject> primary();
+    [[noreturn]] void parseError(const std::string& message);
 
     std::unique_ptr<ParseObject> parseOrg();
     std::unique_ptr<ParseObject> parseSection();
@@ -65,6 +68,8 @@ class Parser {
     int numLine = 0;
     int numToken = 0;
     std::vector<Token> tokens;
+    std::vector<std::string> sourceLines;
+    std::string sourceFile;
 
     std::vector<Token> operationLine;
     std::vector<std::vector<Token>> programLines;
@@ -252,6 +257,7 @@ class Parser {
         return false;
     }
     bool compareTypes(std::initializer_list<MainType> types) {
+        if (isAtEndOfLine()) return false;
         for(MainType type : types) {
             if (operationLine[numToken].maintype == type) return true;
         }
@@ -265,6 +271,7 @@ class Parser {
         return false;
     }
     bool compareSubTypes(std::initializer_list<SubType> types) {
+        if (isAtEndOfLine()) return false;
         for(SubType type : types) {
             if (operationLine[numToken].subtype == type) return true;
         }
@@ -280,12 +287,23 @@ class Parser {
 
     Token consume(MainType type, std::string failMsg) {
         if (check(type)) return advance();
-        std::cout << failMsg << std::endl;
-        return Token{};
+        Token errorToken = current();
+        ErrorBucket::addError(
+            currentLine(), errorToken, sourceFile, failMsg,
+            errorToken.row >= 0 && static_cast<size_t>(errorToken.row) < sourceLines.size()
+                ? sourceLines[errorToken.row] : ""
+        );
+        throw std::runtime_error(failMsg);
     }
 
     Token current() {
-        return operationLine[numToken];
+        if (!isAtEndOfLine()) return operationLine[numToken];
+        if (!operationLine.empty()) {
+            return Token("", MainType::ENOF, SubType::NONE,
+                         operationLine.back().row,
+                         operationLine.back().column + static_cast<int>(operationLine.back().tokenstr.size()));
+        }
+        return Token("", MainType::ENOF, SubType::NONE, 0, 0);
     }
 
     std::vector<Token> currentLine() {
@@ -298,6 +316,8 @@ class ParseObject {
     virtual ~ParseObject() = default;
 
     ParseObject() = default;
+    Token location;
+    std::string sourceLine;
     
     virtual std::any accept(NodeVisitor& v, AsmContext& c) = 0;
 };
@@ -386,6 +406,20 @@ class Declaration : public ParseObject {
     std::any accept(NodeVisitor& v, AsmContext& c) override;
 };
 
+class EquNode : public ParseObject {
+    public:
+    std::string symbol;
+    std::unique_ptr<ParseObject> expr;
+    uint32_t value = 0;
+
+    EquNode(std::string symbol, std::unique_ptr<ParseObject> expr) {
+        this->symbol = std::move(symbol);
+        this->expr = std::move(expr);
+    }
+
+    std::any accept(NodeVisitor& v, AsmContext& c) override;
+};
+
 class Special : public ParseObject {
     public:
     SubType type;
@@ -404,8 +438,8 @@ class Instruction : public ParseObject {
 
     Instruction(uint8_t opcode, std::vector<std::unique_ptr<ParseObject>> operands) {
         this->opcode = opcode;
+        numOperands = static_cast<uint8_t>(operands.size());
         this->operands = std::move(operands);
-        numOperands = operands.size();
     }
 
     Instruction(uint8_t opcode) {
@@ -469,7 +503,7 @@ class DataNode : public ParseObject {
         this->symbol = symbol;
         this->data = std::move(data);
         this->size = size;
-        hasSymbol = true;
+        hasSymbol = !symbol.empty();
     }
 
     DataNode(std::vector<std::unique_ptr<ParseObject>> data, uint8_t size) {
@@ -496,7 +530,7 @@ class ResNode : public ParseObject {
         this->symbol = symbol;
         this->expr = std::move(expr);
         this->size = size;
-        hasSymbol = true;
+        hasSymbol = !symbol.empty();
     }
 
     ResNode(std::unique_ptr<ParseObject> expr, uint8_t size) {
@@ -530,25 +564,17 @@ class StringNode : public ParseObject {
 class MemExpr : public ParseObject {
     public:
     uint8_t size;
-    uint8_t scale = 1;
-    std::unique_ptr<Register> indexreg = nullptr;
-    std::unique_ptr<Register> basereg = nullptr;
-    std::unique_ptr<ParseObject> displacement = nullptr;
+    std::unique_ptr<ParseObject> memexpr;
 
-    MemExpr(uint8_t size, std::string index, std::string base, std::unique_ptr<ParseObject> displacement) {
+    MemExpr(std::unique_ptr<ParseObject> memexpr, uint8_t size) {
+        this->memexpr = std::move(memexpr);
         this->size = size;
-        this->displacement = std::move(displacement);
-        if (!index.empty()) {
-            indexreg = std::move(
-                std::unique_ptr<Register>(new Register(index, SubType::REG32, ArchInfo::index_select_map[index]))
-            );
-        }
-        if (!base.empty()) {
-            basereg = std::move(
-                std::unique_ptr<Register>(new Register(base, SubType::REG32, ArchInfo::base_select_map[index]))
-            );
-        } 
     }
+
+    std::unique_ptr<Register> indexReg = nullptr, baseReg = nullptr;
+    uint8_t scale = 1;
+    bool scaleSpecified = false;
+    bool displacementEnabled = false;
 
     std::any accept(NodeVisitor& v, AsmContext& c) override;
 };

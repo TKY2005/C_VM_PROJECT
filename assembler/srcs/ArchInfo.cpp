@@ -107,8 +107,14 @@ map<string, uint8_t> ArchInfo::insmap = {
     {"slz",  (ubyte)INS_SLZ},
     {"sln",  (ubyte)INS_SLN},
     {"sli",  (ubyte)INS_SLI},
-    {"jz",   (ubyte)INS_JZ},
-    {"jnz",  (ubyte)INS_JNZ}
+    {"ja",   0x48},
+    {"jae",  0x49},
+    {"jbe",  0x4A},
+    {"cala", 0x4B},
+    {"calae",0x4C},
+    {"calbe",0x4D},
+    {"iret", 0x4E},
+    {"livt", 0x4F}
 };
 
 map<string, uint8_t> ArchInfo::reg_select_map = {
@@ -142,7 +148,7 @@ map<string, uint8_t> ArchInfo::reg_select_map = {
     {"si", (ubyte) REG_SI},
     {"ss", (ubyte) REG_SS},
     {"ds", (ubyte) REG_DS},
-    {"ss", (ubyte) REG_SS}
+    {"cs", (ubyte) REG_CS}
 };
 
 map<string, uint8_t> ArchInfo::index_select_map = {
@@ -169,7 +175,7 @@ map<string, uint8_t> ArchInfo::index_select_map = {
     {"fl", (ubyte) EFX},
     {"fh", (ubyte) EFX},
     {"fx", (ubyte) EFX},
-    {"efx", (ubyte) EFX},
+    {"efx", (ubyte) EFX}
 };
 
 map<string, uint8_t> ArchInfo::base_select_map = {

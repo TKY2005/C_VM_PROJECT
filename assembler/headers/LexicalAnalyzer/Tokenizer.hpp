@@ -18,9 +18,9 @@ class Token {
 
     public:
         std::string tokenstr;
-        MainType maintype;
-        SubType subtype;
-        int row, column;
+        MainType maintype = MainType::UNDEFINED;
+        SubType subtype = SubType::NONE;
+        int row = 0, column = 0;
         std::string toStringDebug() {
             std::ostringstream oss;
             oss << 

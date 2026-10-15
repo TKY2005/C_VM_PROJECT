@@ -3,25 +3,19 @@
 
 #include<cstdint>
 #include<map>
+#include<set>
 #include<string>
-#include<initializer_list>
-#include<memory>
-#include<typeindex>
 #include<any>
+#include<cstddef>
+#include<limits>
+#include<stdexcept>
 
 #include<LexicalAnalyzer/Tokenizer.hpp>
 #include<ISA_encoding_info.h>
 
-#define CURRENT_OPERAND_DEST 0b0
-#define CURRENT_OPERAND_SRC 0b1
-
-#define OPERAND_TYPE_UNDEF 0b00
-#define OPERAND_TYPE_EXPR 0b01
-#define OPERAND_TYPE_MEM 0b10
-#define OPERAND_TYPE_REG 0b11
-
 // base class for every node
 class ParseObject;
+class ParseResult;
 
 // T = terminal node, NT = non-terminal node
 
@@ -35,6 +29,7 @@ class Number; // T
 
 class Register; // T
 class Symbol; // T
+class EquNode; // T
 class Declaration; // T
 class Special; // T
 class Instruction; // NT
@@ -46,54 +41,27 @@ class ResNode; // NT
 class StringNode; // T
 class MemExpr; // NT
 
-typedef union instruction_context {
-    struct {
-        uint8_t has_operands : 1;
-        uint8_t single_operand : 1;
-        uint8_t is_jmp_or_int : 1;
-        uint8_t current_operand : 1;
-        uint8_t dest_type : 2;
-        uint8_t src_type : 2;
-        uint8_t parsing_expr : 1;
-        uint8_t parsing_mem : 1;
-    };
-    uint16_t ctxt;
-} instruction_context;
-
-typedef struct instruction_semantics {
-    uint8_t opcode;
-    union {
-        struct {
-            uint8_t num_operands : 2;
-            uint8_t add_opertypes : 1;
-            uint8_t add_reginfo : 1;
-            uint8_t add_meminfo : 1;
-        };
-    };
-} instruction_semantics;
-
-typedef struct TypeInfo {
-    MainType main;
-    SubType sub;
-} TypeInfo;
-
 class AsmContext {
     public:
 
     uint32_t program_counter = 0x00;
     uint32_t section_offset = 0x00;
     uint32_t section_begin = 0x00;
-
-    instruction_context* current_context;
-    ins_encoding* current_encoding;
-
-    std::map<Instruction*, std::unique_ptr<instruction_context>> instructionSemantics;
-;
-    std::map<Instruction*, std::unique_ptr<ins_encoding>> analyzedInstructions;
+    std::string sourceFile;
+    bool allowUnresolvedSymbols = false;
+    bool generatedBaseSet = false;
+    uint32_t generatedBaseAddress = 0;
 
     std::map<std::string, uint32_t> symMap;
+    std::map<std::string, uint32_t> sectionAddresses;
+    std::map<const ParseObject*, std::vector<uint32_t>> nodeAddresses;
+    std::map<const ParseObject*, std::vector<uint32_t>> nodeLengths;
+    std::vector<uint8_t> generatedBytes;
 
     void incProgramOffset(uint32_t val) {
+        if (val > std::numeric_limits<uint32_t>::max() - program_counter) {
+            throw std::runtime_error("assembled address space exceeds 32 bits");
+        }
         program_counter += val;
         section_offset = program_counter - section_begin;
     }
@@ -110,27 +78,6 @@ class AsmContext {
         program_counter = val;
         updateSections();
     }
-
-    AsmContext() {
-        program_counter = 0x00;
-        section_offset = 0x00;
-        section_begin = 0x00;
-        current_context = new instruction_context();
-        current_context->dest_type = OPERAND_TYPE_UNDEF;
-        current_context->src_type = OPERAND_TYPE_UNDEF;
-
-        current_encoding = new ins_encoding();
-        current_encoding->operand_types = OPERTYPE_DEFAULT;
-        current_encoding->register_select = REGSELECT_DEFAULT;
-        current_encoding->displacement_info = DISP_DEFAULT;
-
-        current_context->ctxt = 0x00;
-    }
-
-    ~AsmContext() {
-        delete current_context;
-        delete current_encoding;
-    }
 };
 
 class NodeVisitor {
@@ -138,39 +85,26 @@ class NodeVisitor {
 
     virtual ~NodeVisitor() = default;
 
-    virtual std::any visit(Binary& a, AsmContext& c) {undefinedNode();return nullptr;};
-    virtual std::any visit(Unary& a, AsmContext& c) {undefinedNode();return nullptr;};
-    virtual std::any visit(Grouping& a, AsmContext& c) {undefinedNode(); return nullptr;};
-    virtual std::any visit(Number& a, AsmContext& c) {undefinedNode(); return nullptr;};
-    virtual std::any visit(Special& a, AsmContext& c) {undefinedNode(); return nullptr;};
-    virtual std::any visit(StringNode& a, AsmContext& c) {undefinedNode(); return nullptr;};
-    virtual std::any visit(Symbol& a, AsmContext& c) {undefinedNode(); return nullptr;};
-    virtual std::any visit(DataNode& a, AsmContext& c) {undefinedNode(); return nullptr;};
-    virtual std::any visit(ResNode& a, AsmContext& c) {undefinedNode(); return nullptr;};
-    virtual std::any visit(DirSection& a, AsmContext& c) {undefinedNode(); return nullptr;};
-    virtual std::any visit(DirORG& a, AsmContext& c) {undefinedNode(); return nullptr;};
-    virtual std::any visit(DirTimes& a, AsmContext& c) {undefinedNode(); return nullptr;};
-    virtual std::any visit(Instruction& a, AsmContext& c) {undefinedNode(); return nullptr;};
-    virtual std::any visit(MemExpr& a, AsmContext& c) {undefinedNode(); return nullptr;};
-    virtual std::any visit(Register& a, AsmContext& c) {undefinedNode(); return nullptr;};
-    virtual std::any visit(Declaration& a, AsmContext& c) {undefinedNode(); return nullptr;};
+    virtual std::any visit(Binary& a, AsmContext& c) {undefinedNode();};
+    virtual std::any visit(Unary& a, AsmContext& c) {undefinedNode();};
+    virtual std::any visit(Grouping& a, AsmContext& c) {undefinedNode();};
+    virtual std::any visit(Number& a, AsmContext& c) {undefinedNode();};
+    virtual std::any visit(Special& a, AsmContext& c) {undefinedNode();};
+    virtual std::any visit(StringNode& a, AsmContext& c) {undefinedNode();};
+    virtual std::any visit(Symbol& a, AsmContext& c) {undefinedNode();};
+    virtual std::any visit(DataNode& a, AsmContext& c) {undefinedNode();};
+    virtual std::any visit(ResNode& a, AsmContext& c) {undefinedNode();};
+    virtual std::any visit(DirSection& a, AsmContext& c) {undefinedNode();};
+    virtual std::any visit(DirORG& a, AsmContext& c) {undefinedNode();};
+    virtual std::any visit(DirTimes& a, AsmContext& c) {undefinedNode();};
+    virtual std::any visit(Instruction& a, AsmContext& c) {undefinedNode();};
+    virtual std::any visit(MemExpr& a, AsmContext& c) {undefinedNode();};
+    virtual std::any visit(Register& a, AsmContext& c) {undefinedNode();};
+    virtual std::any visit(Declaration& a, AsmContext& c) {undefinedNode();};
+    virtual std::any visit(EquNode& a, AsmContext& c) {undefinedNode();};
 
-    std::initializer_list<MainType> allowedExprTypes = {
-        MainType::NUM,
-        MainType::SYM,
-        MainType::SPECIAL
-    };
-
-    bool isExprNode(ParseObject* p);
-    bool compareTypes(MainType t, std::initializer_list<MainType> types);
-    bool compareNodeTypes(std::type_index t, std::initializer_list<std::type_index> types);
-    bool isBaseReg(Register* a);
-    bool isIdxReg(Register* a);
-    int typeToSize(SubType t);
-    std::vector<uint8_t> sliceVal(uint32_t v, int bits);
-
-    int findOperandType(ParseObject& a);
-    void undefinedNode();
+    protected:
+    [[noreturn]] void undefinedNode();
 
 };
 
@@ -197,20 +131,21 @@ class PrintVisitor : public NodeVisitor {
     std::any visit(MemExpr& a, AsmContext& c) override;
     std::any visit(Register& a, AsmContext& c) override;
     std::any visit(Declaration& a, AsmContext& c) override;
+    std::any visit(EquNode& a, AsmContext& c) override;
 
 };
 
 class ExpressionVisitor : public NodeVisitor {
     public:
 
-    std::any visit(Binary& a, AsmContext& c) override;
-    std::any visit(Unary& a, AsmContext& c) override;
-    std::any visit(Grouping& a, AsmContext& c) override;
-    std::any visit(Number& a, AsmContext& c) override;
-    std::any visit(Special& a, AsmContext& c) override;
-    std::any visit(Symbol& a, AsmContext& c) override;
+    virtual std::any visit(Binary& a, AsmContext& c) = 0;
+    virtual std::any visit(Unary& a, AsmContext& c) = 0;
+    virtual std::any visit(Grouping& a, AsmContext& c) = 0;
+    virtual std::any visit(Number& a, AsmContext& c) = 0;
+    virtual std::any visit(Special& a, AsmContext& c) = 0;
+    virtual std::any visit(Symbol& a, AsmContext& c) = 0;
 
-    std::any visit(StringNode& a, AsmContext& c) override;
+    virtual std::any visit(StringNode& a, AsmContext& c) = 0;
 };
 
 class ExpressionAnalyzerVisitor : public ExpressionVisitor {
@@ -224,13 +159,16 @@ class ExpressionAnalyzerVisitor : public ExpressionVisitor {
     std::any visit(Number& a, AsmContext& c) override;
     std::any visit(Special& a, AsmContext& c) override;
     std::any visit(Symbol& a, AsmContext& c) override;
+    std::any visit(StringNode& a, AsmContext& c) override;
+    std::any visit(Register& a, AsmContext& c) override;
 
 };
 
 class ExpressionEvalVisitor : public ExpressionVisitor {
-
     public:
+
     std::any eval(ParseObject& a, AsmContext& c);
+    std::any evalMemory(ParseObject& a, AsmContext& c);
 
     std::any visit(Binary& a, AsmContext& c) override;
     std::any visit(Unary& a, AsmContext& c) override;
@@ -238,69 +176,114 @@ class ExpressionEvalVisitor : public ExpressionVisitor {
     std::any visit(Number& a, AsmContext& c) override;
     std::any visit(Special& a, AsmContext& c) override;
     std::any visit(Symbol& a, AsmContext& c) override;
-};
 
-class InstructionVisitor : public NodeVisitor {
-    public:
-
-    std::any visit(Instruction& a, AsmContext& c) override;
-    std::any visit(MemExpr& a, AsmContext& c) override;
+    std::any visit(StringNode& a, AsmContext& c) override;
     std::any visit(Register& a, AsmContext& c) override;
 
-    std::any visit(Symbol& a, AsmContext& c) override;
-    std::any visit(Special& a, AsmContext& c) override;
+    private:
+    bool evaluatingMemory = false;
+};
+
+class SemanticAnalysisVisitor : public NodeVisitor {
+    public:
+    std::any analyze(ParseResult& result, AsmContext& c);
 
     std::any visit(Binary& a, AsmContext& c) override;
     std::any visit(Unary& a, AsmContext& c) override;
     std::any visit(Grouping& a, AsmContext& c) override;
     std::any visit(Number& a, AsmContext& c) override;
-};
-
-class DataVisitor : public NodeVisitor {
-    public:
-
+    std::any visit(Special& a, AsmContext& c) override;
+    std::any visit(StringNode& a, AsmContext& c) override;
+    std::any visit(Symbol& a, AsmContext& c) override;
     std::any visit(DataNode& a, AsmContext& c) override;
     std::any visit(ResNode& a, AsmContext& c) override;
-    std::any visit(StringNode& a, AsmContext& c) override;
-};
-
-class DirectiveVisitor : public NodeVisitor {
-    public:
-
-    std::any visit(DirORG& a, AsmContext& c) override;
     std::any visit(DirSection& a, AsmContext& c) override;
+    std::any visit(DirORG& a, AsmContext& c) override;
     std::any visit(DirTimes& a, AsmContext& c) override;
-    std::any visit(Declaration& a, AsmContext& c) override;
-};
-
-class InstructionAnalyzerVisitor : public InstructionVisitor {
-    public:
-
-    ExpressionAnalyzerVisitor exprAnalyzer = ExpressionAnalyzerVisitor();
-
-    std::any analyze(ParseObject& a, AsmContext& c);
-
     std::any visit(Instruction& a, AsmContext& c) override;
     std::any visit(MemExpr& a, AsmContext& c) override;
     std::any visit(Register& a, AsmContext& c) override;
+    std::any visit(Declaration& a, AsmContext& c) override;
+    std::any visit(EquNode& a, AsmContext& c) override;
 
-    std::any visit(Symbol& a, AsmContext& c) override;
-    std::any visit(Special& a, AsmContext& c) override;
+    private:
+    ExpressionAnalyzerVisitor exprAnalyzer;
+
+    void collectMemoryTerms(ParseObject& a, int sign, MemExpr& memory, AsmContext& c);
+    bool containsRegister(ParseObject& a);
+    int operandSize(ParseObject& a);
+};
+
+class SymbolLengthVisitor : public NodeVisitor {
+    public:
+    std::any calculate(ParseResult& result, AsmContext& c);
 
     std::any visit(Binary& a, AsmContext& c) override;
     std::any visit(Unary& a, AsmContext& c) override;
     std::any visit(Grouping& a, AsmContext& c) override;
     std::any visit(Number& a, AsmContext& c) override;
-};
-
-class DataAnalyzerVisitor : public DataVisitor {
-    public:
-
-    std::any analyze(ParseObject& a, AsmContext& c);
-
+    std::any visit(Special& a, AsmContext& c) override;
+    std::any visit(StringNode& a, AsmContext& c) override;
+    std::any visit(Symbol& a, AsmContext& c) override;
     std::any visit(DataNode& a, AsmContext& c) override;
     std::any visit(ResNode& a, AsmContext& c) override;
+    std::any visit(DirSection& a, AsmContext& c) override;
+    std::any visit(DirORG& a, AsmContext& c) override;
+    std::any visit(DirTimes& a, AsmContext& c) override;
+    std::any visit(Instruction& a, AsmContext& c) override;
+    std::any visit(MemExpr& a, AsmContext& c) override;
+    std::any visit(Register& a, AsmContext& c) override;
+    std::any visit(Declaration& a, AsmContext& c) override;
+    std::any visit(EquNode& a, AsmContext& c) override;
+
+    private:
+    ExpressionEvalVisitor evaluator;
+    std::set<std::string> definedSymbols;
+
+    void layout(ParseObject& a, AsmContext& c);
+    void record(ParseObject& a, AsmContext& c, uint32_t address, uint32_t length);
+    void defineSymbol(const std::string& name, uint32_t value, AsmContext& c);
+    uint32_t instructionLength(Instruction& a, AsmContext& c);
+    uint32_t currentValue(ParseObject& a, AsmContext& c);
+};
+
+class CodeGenerationVisitor : public NodeVisitor {
+    public:
+    std::any generate(ParseResult& result, AsmContext& c);
+
+    std::any visit(Binary& a, AsmContext& c) override;
+    std::any visit(Unary& a, AsmContext& c) override;
+    std::any visit(Grouping& a, AsmContext& c) override;
+    std::any visit(Number& a, AsmContext& c) override;
+    std::any visit(Special& a, AsmContext& c) override;
     std::any visit(StringNode& a, AsmContext& c) override;
+    std::any visit(Symbol& a, AsmContext& c) override;
+    std::any visit(DataNode& a, AsmContext& c) override;
+    std::any visit(ResNode& a, AsmContext& c) override;
+    std::any visit(DirSection& a, AsmContext& c) override;
+    std::any visit(DirORG& a, AsmContext& c) override;
+    std::any visit(DirTimes& a, AsmContext& c) override;
+    std::any visit(Instruction& a, AsmContext& c) override;
+    std::any visit(MemExpr& a, AsmContext& c) override;
+    std::any visit(Register& a, AsmContext& c) override;
+    std::any visit(Declaration& a, AsmContext& c) override;
+    std::any visit(EquNode& a, AsmContext& c) override;
+
+    private:
+    ExpressionEvalVisitor evaluator;
+    std::map<const ParseObject*, size_t> addressIndices;
+
+    uint32_t nextAddress(ParseObject& a, AsmContext& c);
+    uint32_t nextLength(ParseObject& a, AsmContext& c);
+    void emitByte(uint32_t& address, uint8_t value, AsmContext& c);
+    void emitValue(uint32_t& address, uint32_t value, uint8_t size, AsmContext& c);
+    void ensureOutputRange(uint32_t address, uint32_t length, AsmContext& c);
+    uint8_t valueSize(uint8_t operandType);
+};
+
+class AssemblerPipeline {
+    public:
+    std::any assemble(ParseResult& result, AsmContext& c);
 };
 
 #endif

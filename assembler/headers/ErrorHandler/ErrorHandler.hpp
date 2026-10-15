@@ -3,6 +3,8 @@
 
 #include<vector>
 #include<string>
+#include<iosfwd>
+#include<utility>
 
 #include<LexicalAnalyzer/Tokenizer.hpp>
 
@@ -14,34 +16,24 @@ class Error {
     std::vector<Token> line;
     Token errorToken;
     std::string sourceFile;
+    std::string sourceLine;
     std::string errorMsg;
     int severity = ERR_WARNING;
 
-    Error(std::vector<Token> line, Token t, std::string source, std::string errMsg, int severity) {
+    Error(std::vector<Token> line, Token t, std::string source, std::string errMsg, int severity,
+          std::string sourceLine = "") {
         this->line = line;
         this->errorToken = t;
         this->sourceFile = source;
         this->errorMsg = errMsg;
         this->severity = severity;
+        this->sourceLine = std::move(sourceLine);
     }
     Error(std::string source, std::string errMsg) {
         this->sourceFile = source;
         this->errorMsg = errMsg;
     }
-    std::string errmsg() {
-        std::string s;
-        std::string tokenstr;
-        for(int i = 0; i < line.size(); i++) tokenstr.append(line[i].toString()).append(" ");
-        s.append( (severity == ERR_WARNING) ? "Warning " : "Error " ).append("in file: ").append(sourceFile).append(" @ ")
-        .append(std::to_string(errorToken.row))
-        .append(":")
-        .append(std::to_string(errorToken.column))
-        .append("(").append(tokenstr).append(")").append(" ")
-        .append("{").append(errorToken.toString()).append("}").append(" ")
-        .append(": ").append(errorMsg);
-
-        return s;
-    }
+    std::string errmsg() const;
 };
 
 class ErrorBucket {
@@ -51,12 +43,17 @@ class ErrorBucket {
 
     ErrorBucket() = default;
 
-    static void addError(std::vector<Token> errline, Token t, std::string sourceFile, std::string errMsg);
-    static void addWarning(std::vector<Token> errline, Token t, std::string sourceFile, std::string errMsg);
+    static void addError(std::vector<Token> errline, Token t, std::string sourceFile,
+                         std::string errMsg, std::string sourceLine = "");
+    static void addWarning(std::vector<Token> errline, Token t, std::string sourceFile,
+                           std::string errMsg, std::string sourceLine = "");
     static void addWarning(std::string sourceFile, std::string errMsg);
     static std::vector<Error> getErrorList();
     static std::vector<Error> getCriticalErrors();
     static std::vector<Error> getWarnings();
+    static void reportErrors(std::ostream& output);
+    static void clear();
+    static bool hasErrorAt(const std::string& sourceFile, int row);
 };
 
 #endif

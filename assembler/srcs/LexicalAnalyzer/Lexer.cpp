@@ -44,16 +44,21 @@ SubType Lexer::decideSubType(string tok, MainType t) {
 
     tok = toLowerCase(tok);
     if (t == MainType::REG) {
-
-        if (tok[0] >= 'a' && tok[0] <= 'f') {
-            if (tok[1] == 'l' || tok[1] == 'h') return SubType::REG8;
-            else if (tok[1] == 'x') return SubType::REG16;
-            else return SubType::NONE;
-
-        } else {
-            for(int i = ArchInfo::dwrstart; i < ArchInfo::reglist.size(); i++) if (tok == ArchInfo::reglist[i]) return SubType::REG32;
-            return SubType::NONE;
+        if (tok.size() == 2 && (tok[1] == 'l' || tok[1] == 'h')) {
+            return SubType::REG8;
         }
+        if (tok.size() == 2 && tok[0] >= 'a' && tok[0] <= 'f' && tok[1] == 'x') {
+            return SubType::REG16;
+        }
+        for (const std::string& reg : ArchInfo::reglist) {
+            if (tok == reg) {
+                if (tok.size() == 3 || reg == "pc" || reg == "sp" || reg == "bp" ||
+                    reg == "di" || reg == "si" || reg == "cs" || reg == "ds" || reg == "ss") {
+                    return SubType::REG32;
+                }
+            }
+        }
+        return SubType::NONE;
     }
     else if (t == MainType::DIR) {
         

@@ -7,6 +7,8 @@
 #include<string>
 #include<vector>
 #include<cstdint>
+#include<stdexcept>
+#include<utility>
 
 std::any Binary::accept(NodeVisitor& v, AsmContext& c) {
     return v.visit(*this, c);
@@ -56,6 +58,9 @@ std::any Special::accept(NodeVisitor& v, AsmContext& c) {
 std::any Declaration::accept(NodeVisitor& v, AsmContext& c) {
     return v.visit(*this, c);
 }
+std::any EquNode::accept(NodeVisitor& v, AsmContext& c) {
+    return v.visit(*this, c);
+}
 
 
 std::unique_ptr<ParseResult> Parser::parse() {
@@ -64,10 +69,42 @@ std::unique_ptr<ParseResult> Parser::parse() {
 
     std::unique_ptr<ParseResult> result = std::unique_ptr<ParseResult>(new ParseResult());
 
+    if (numLines() == 0) return result;
     setStartLine();
     for(int i = 0; i < numLines(); i++) {
-        std::unique_ptr<ParseObject> l = line();
-        result.get()->parsedLines.push_back(std::move(l));
+        try {
+            std::unique_ptr<ParseObject> l = line();
+            if (!l) {
+                Token errorToken = isAtEndOfLine() ? current() : operationLine[numToken];
+                const std::string sourceLine =
+                    errorToken.row >= 0 && static_cast<size_t>(errorToken.row) < sourceLines.size()
+                        ? sourceLines[errorToken.row] : "";
+                if (!ErrorBucket::hasErrorAt(sourceFile, errorToken.row)) {
+                    ErrorBucket::addError(
+                        currentLine(), errorToken, sourceFile,
+                        "could not parse source line", sourceLine
+                    );
+                }
+            }
+            else {
+                if (!operationLine.empty()) l->location = operationLine.front();
+                if (l->location.row >= 0 && static_cast<size_t>(l->location.row) < sourceLines.size()) {
+                    l->sourceLine = sourceLines[l->location.row];
+                }
+                result->parsedLines.push_back(std::move(l));
+            }
+        }
+        catch (const std::exception& error) {
+            const Token errorToken = isAtEndOfLine() ? current() : operationLine[numToken];
+            const std::string sourceLine =
+                errorToken.row >= 0 && static_cast<size_t>(errorToken.row) < sourceLines.size()
+                    ? sourceLines[errorToken.row] : "";
+            if (!ErrorBucket::hasErrorAt(sourceFile, errorToken.row)) {
+                ErrorBucket::addError(
+                    currentLine(), errorToken, sourceFile, error.what(), sourceLine
+                );
+            }
+        }
         if (i < numLines() - 1) nextLine();
     }
 
@@ -82,7 +119,19 @@ std::unique_ptr<ParseObject> Parser::line() {
         compareSubTypes({SubType::DIR_ORG, SubType::DIR_SECTION, SubType::DIR_TIMES})
     ) {return directive();}
 
-    else if (check(MainType::DECL)) return std::unique_ptr<ParseObject>(new Declaration(advance().tokenstr));
+    else if (check(MainType::DECL)) {
+        std::string symbol = advance().tokenstr;
+        if (checkSubType(SubType::DIR_EQU) ||
+            checkSubType(SubType::DIR_DEFB) ||
+            checkSubType(SubType::DIR_DEFW) ||
+            checkSubType(SubType::DIR_DEFDW) ||
+            checkSubType(SubType::DIR_RESB) ||
+            checkSubType(SubType::DIR_RESW) ||
+            checkSubType(SubType::DIR_RESDW)) {
+            return dataDelcaration(symbol);
+        }
+        return std::unique_ptr<ParseObject>(new Declaration(symbol));
+    }
 
     else return dataDelcaration();
 }
@@ -95,9 +144,20 @@ std::unique_ptr<ParseObject> Parser::instruction() {
 
     else {
         std::vector<std::unique_ptr<ParseObject>> operands;
-        operands.push_back(operand());
+        auto parseLocatedOperand = [this]() {
+            const Token location = current();
+            std::unique_ptr<ParseObject> parsed = operand();
+            if (parsed) {
+                parsed->location = location;
+                if (location.row >= 0 && static_cast<size_t>(location.row) < sourceLines.size()) {
+                    parsed->sourceLine = sourceLines[location.row];
+                }
+            }
+            return parsed;
+        };
+        operands.push_back(parseLocatedOperand());
         while (matchAndAdvance({MainType::COMMA})) {
-            operands.push_back(operand());
+            operands.push_back(parseLocatedOperand());
         }
         return std::unique_ptr<ParseObject>(new Instruction(opcode, std::move(operands)));
     }
@@ -148,11 +208,15 @@ std::unique_ptr<ParseObject> Parser::parseTimes() {
     return std::unique_ptr<ParseObject>(new DirTimes(sym, std::move(expr), std::move(l)));
 }
 
-std::unique_ptr<ParseObject> Parser::dataDelcaration() {
+std::unique_ptr<ParseObject> Parser::dataDelcaration(std::string symbol) {
     
-    std::string sym;
+    std::string sym = std::move(symbol);
     uint8_t size = 0;
-    if (matchAndAdvance({MainType::SYM})) sym = previous().tokenstr;
+    if (sym.empty() && matchAndAdvance({MainType::SYM})) sym = previous().tokenstr;
+
+    if (!sym.empty() && matchSubTypeAndAdvance({SubType::DIR_EQU})) {
+        return std::unique_ptr<ParseObject>(new EquNode(sym, expression()));
+    }
 
     if (matchSubTypeAndAdvance({
         SubType::DIR_DEFB, SubType::DIR_DEFW, SubType::DIR_DEFDW})) {
@@ -186,7 +250,15 @@ std::vector<std::unique_ptr<ParseObject>> Parser::dataList() {
 
 std::unique_ptr<ParseObject> Parser::data() {
     
-    if (matchAndAdvance({MainType::STR})) return std::unique_ptr<ParseObject>(new StringNode(previous().tokenstr));
+    if (matchAndAdvance({MainType::STR})) {
+        Token token = previous();
+        std::unique_ptr<ParseObject> string(new StringNode(token.tokenstr));
+        string->location = token;
+        if (token.row >= 0 && static_cast<size_t>(token.row) < sourceLines.size()) {
+            string->sourceLine = sourceLines[token.row];
+        }
+        return string;
+    }
 
     else return expression();
 }
@@ -200,62 +272,18 @@ std::unique_ptr<ParseObject> Parser::operand() {
 
 std::unique_ptr<ParseObject> Parser::memexpr() {
 
-    uint8_t size = 0;
-    std::unique_ptr<ParseObject> expr;
+    uint8_t size = 4;
+    std::unique_ptr<ParseObject> expr = nullptr;
     if (matchSubTypeAndAdvance({SubType::DIR_BYTE, SubType::DIR_WORD, SubType::DIR_DWORD})) {
         size = getDirectiveSize(previous().subtype);
     }
-    if (matchAndAdvance({MainType::OPEN_BRACE})) {
-        expr = memoryaddr();
-        ((MemExpr*) expr.get())->size = size;
-    }
-    consume(MainType::CLOSE_BRACE, "Expected a ']' at the end of expression.");
-    return expr;
+
+    consume(MainType::OPEN_BRACE, "expected an opening bracket for a memory expression");
+    expr = expression();
+    consume(MainType::CLOSE_BRACE, "expected a closing bracket for a memory expression");
+    return std::unique_ptr<ParseObject>(new MemExpr(std::move(expr), size));
 }
 
-std::unique_ptr<ParseObject> Parser::memoryaddr() {
-    std::unique_ptr<MemExpr> memexpr = std::unique_ptr<MemExpr>(new MemExpr(0, "", "", nullptr));
-
-    if (matchAndAdvance({MainType::REG})) {
-        std::string name = previous().tokenstr;
-
-        if (isBaseReg(name)) { // rule 1: BASEREG (("+" | "-") indexexpr)? (("+" | "-") expression)?
-            memexpr.get()->basereg = std::unique_ptr<Register>(new Register(
-                name, SubType::REG32, ArchInfo::base_select_map[name])
-            );
-            if (matchSubTypeAndAdvance({SubType::OPER_ADD, SubType::OPER_SUB})) {
-                indexexpr(memexpr.get());
-            }
-            if (matchSubTypeAndAdvance({SubType::OPER_ADD, SubType::OPER_SUB})) {
-                memexpr.get()->displacement = expression();
-            }
-        }
-
-        else if (isIdxReg(name)) { // rule 2: indexexpr (("+" | "-") expression)?
-            memexpr.get()->indexreg = std::unique_ptr<Register>(new Register(
-                name, SubType::REG32, ArchInfo::index_select_map[name]
-            ));
-            if (matchSubTypeAndAdvance({SubType::OPER_ADD, SubType::OPER_SUB})) {
-                memexpr.get()->displacement = expression();
-            }
-        }
-    }
-    else { // rule 3: expression
-        memexpr->displacement = expression();
-    }
-    return memexpr;
-}
-
-void Parser::indexexpr(MemExpr* expr) {
-
-    if (matchSubTypeAndAdvance({SubType::OPER_MUL})){
-        std::string n = current().tokenstr;
-        if (n != "1" && n != "2" && n != "4") // TODO: throw error.
-
-        expr->scale = std::stoi(n);
-    }
-    else expr->scale = 1;
-}
 
 std::unique_ptr<ParseObject> Parser::expression() {
     return addition();
@@ -296,22 +324,37 @@ std::unique_ptr<ParseObject> Parser::primary() {
     else if (matchAndAdvance( {MainType::SYM} )) return std::unique_ptr<ParseObject>(new Symbol(previous().tokenstr));
     else if (matchAndAdvance( {MainType::SPECIAL} )) return std::unique_ptr<ParseObject>(new Special(previous().subtype));
     else if (matchAndAdvance({MainType::REG})) {
-        return std::unique_ptr<ParseObject>(new Register(
+        const Token token = previous();
+        std::unique_ptr<ParseObject> reg(new Register(
             previous().tokenstr,
             previous().subtype,
             ArchInfo::reg_select_map[previous().tokenstr]
         ));
+        reg->location = token;
+        if (token.row >= 0 && static_cast<size_t>(token.row) < sourceLines.size()) {
+            reg->sourceLine = sourceLines[token.row];
+        }
+        return reg;
     }
     
     else if (matchAndAdvance({MainType::OPEN_PAREN})) {
         std::unique_ptr<ParseObject> expr = expression();
-        consume(MainType::CLOSE_PAREN, "Expected a closing parenthises.");
+        consume(MainType::CLOSE_PAREN, "expected a closing parenthesis");
 
         return std::unique_ptr<ParseObject>(new Grouping(std::move(expr)));
     }
 
     else {
-        // throw a parse error.
-        return nullptr;
+        parseError("expected an expression");
     }
+}
+
+[[noreturn]] void Parser::parseError(const std::string& message)
+{
+    const Token errorToken = current();
+    const std::string sourceLine =
+        errorToken.row >= 0 && static_cast<size_t>(errorToken.row) < sourceLines.size()
+            ? sourceLines[errorToken.row] : "";
+    ErrorBucket::addError(currentLine(), errorToken, sourceFile, message, sourceLine);
+    throw std::runtime_error(message);
 }

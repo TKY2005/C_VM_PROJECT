@@ -5,4 +5,5 @@ tkyc
 *.tky
 *.asm
 *.vconf
+*.txt
 /logs

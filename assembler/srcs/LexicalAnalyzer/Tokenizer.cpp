@@ -20,6 +20,17 @@ vector<Token> Tokenizer::tokenize(string source) {
     resetGlobalState();
 
     src = source;
+    auto getSourceLine = [this](int targetRow) {
+        std::stringstream lines(src);
+        std::string line;
+        for (int rowNumber = 0; rowNumber <= targetRow && std::getline(lines, line); ++rowNumber) {
+            if (rowNumber == targetRow) {
+                if (!line.empty() && line.back() == '\r') line.pop_back();
+                return line;
+            }
+        }
+        return std::string();
+    };
 
     while (!isAtEnd()) {
         // single char tokens
@@ -89,13 +100,28 @@ vector<Token> Tokenizer::tokenize(string source) {
         }
 
         else if (cur == '"') {
+            const int stringRow = row;
+            const int stringColumn = colstart;
             skip();
-            do {
+            bool terminated = false;
+            while (!isAtEnd() && getCurChar() != '\n') {
                 consume();
-                if (getCurChar() == '"') break;
-            } while (getCurChar() != '"' && !isAtEnd());
-            skip();
+                if (current.back() == '"') {
+                    current.pop_back();
+                    terminated = true;
+                    break;
+                }
+            }
             toklist.emplace_back(current, MainType::STR, SubType::NONE, row, colstart);
+            if (!terminated) {
+                const Token errorToken(current, MainType::STR, SubType::NONE, stringRow, stringColumn);
+                std::vector<Token> errorLine;
+                errorLine.push_back(errorToken);
+                ErrorBucket::addError(
+                    errorLine, errorToken, Assembler::filename,
+                    "unterminated string literal", getSourceLine(stringRow)
+                );
+            }
         }
 
         else if (cur == '.') {
@@ -117,7 +143,9 @@ vector<Token> Tokenizer::tokenize(string source) {
             toklist.emplace_back(current, MainType::UNDEFINED, SubType::NONE, row, colstart);
             vector<Token> x;
             x.emplace_back(toklist[toklist.size() - 1]);
-            ErrorBucket::addError(x, x[0], Assembler::filename, "Undefined token.");
+            ErrorBucket::addError(
+                x, x[0], Assembler::filename, "undefined token", getSourceLine(row)
+            );
         }
 
         current.clear();
@@ -256,11 +284,6 @@ std::string Tokenizer::preProcessCode(const std::string& input) {
                 continue;
             }
         }
-
-        // Remove leading whitespace
-        line.erase(line.begin(),
-                   std::find_if(line.begin(), line.end(),
-                                [](unsigned char c){ return !std::isspace(c); }));
 
         // Remove trailing whitespace
         line.erase(

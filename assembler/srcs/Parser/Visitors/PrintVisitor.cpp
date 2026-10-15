@@ -156,14 +156,11 @@ std::any PrintVisitor::visit(MemExpr &a, AsmContext &c)
     std::string s(4 * indentLevel, ' ');
 
     indentLevel++;
-    std::string disp = 
-        (a.displacement != nullptr) ? std::any_cast<std::string>(traverse(*a.displacement, c)) : "None";
+    std::string expr = std::any_cast<std::string>(traverse(*a.memexpr, c));
     indentLevel--;
 
-    std::string base = "base: " + ((a.basereg != nullptr) ? a.basereg.get()->name : "None");
-    std::string index = "index: " + ((a.indexreg != nullptr) ? a.indexreg.get()->name : "None");
-    return "MemExpr: " + base + ", " + index + "\n" +
-        s + "└── " + disp;
+    return "MemExpr: size = " + std::to_string(a.size) + " byte(s)\n" +
+        s + "└── " + expr;
 }
 
 std::any PrintVisitor::visit(Register &a, AsmContext &c)
@@ -174,4 +171,10 @@ std::any PrintVisitor::visit(Register &a, AsmContext &c)
 std::any PrintVisitor::visit(Declaration &a, AsmContext &c)
 {
     return "Declaration: " + a.name;
+}
+
+std::any PrintVisitor::visit(EquNode &a, AsmContext &c)
+{
+    std::string expression = std::any_cast<std::string>(traverse(*a.expr, c));
+    return "Equ: " + a.symbol + " = " + expression;
 }
