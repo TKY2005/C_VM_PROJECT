@@ -85,8 +85,14 @@
     X(SLZ,   0x45, _slz) \
     X(SLN,   0x46, _sln) \
     X(SLI,   0x47, _sli) \
-    X(JZ ,   0x48, _jz)  \
-    X(JNZ,   0x49, _jnz)  \
+    X(JA,    0x48, _ja)  \
+    X(JAE,   0x49, _jae)  \
+    X(JBE,  0x4A, _jbe)  \
+    X(CALA, 0x4B, _cala)  \
+    X(CALAE, 0x4C, _calae)  \
+    X(CALBE, 0x4D, _calbe)  \
+    X(IRET, 0x4E, _iret)  \
+    X(LIVT, 0x4F, _livt)  \
 
 
 #define X(mnemonic, opcode, funcname) INS_##mnemonic = opcode,

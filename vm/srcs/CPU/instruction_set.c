@@ -11,6 +11,11 @@
 #include<math.h>
 #include<time.h>
 
+/*TODO: 
+implement new instructions 0x49 through 0x4f
+update the branch instructions to read the opertype byte and correctly move to the next instruction
+add a new interrupt vector base register to the CPU
+*/
 
 instruction* create_ins_table() {
     instruction* ins_table = (instruction*) calloc(0x100, sizeof(instruction*));
@@ -691,17 +696,4 @@ void _sln(CPU* cpu, memory* mem) {
 }
 void _sli(CPU* cpu, memory* mem) {
     reg_set_flags(cpu->registers, FLG_I);
-}
-
-void _jz(CPU* cpu, memory* mem) {
-    if (reg_check_flag(cpu->registers, FLG_Z)) {
-        _jmp(cpu, mem);
-    }
-    else {
-        cpu->registers->PC += 4;
-    }
-}
-void _jnz(CPU* cpu, memory* mem) {
-    if (!reg_check_flag(cpu->registers, FLG_Z)) _jmp(cpu, mem);
-    else cpu->registers->PC += 4;
 }
