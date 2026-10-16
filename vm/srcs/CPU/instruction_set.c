@@ -311,56 +311,49 @@ void _call(CPU* cpu, memory* mem) {
 void _cale(CPU* cpu, memory* mem) {
     if (reg_check_flag(cpu->registers, FLG_Z)) _call(cpu, mem);
     else {
-        ins_encoding dummy = {0};
-        dummy.single_oper = 1;
+        ins_encoding dummy = {.single_oper = 1};
         CPU_read_operand_bytes(cpu, mem, &dummy);
     }
 }
 void _calne(CPU* cpu, memory* mem) {
     if (!reg_check_flag(cpu->registers, FLG_Z)) _call(cpu, mem);
     else {
-        ins_encoding dummy = {0};
-        dummy.single_oper = 1;
+        ins_encoding dummy = {.single_oper = 1};
         CPU_read_operand_bytes(cpu, mem, &dummy);
     }
 }
 void _cal(CPU* cpu, memory* mem) {
     if (reg_check_flag(cpu->registers, FLG_N)) _call(cpu, mem);
     else {
-        ins_encoding dummy = {0};
-        dummy.single_oper = 1;
+        ins_encoding dummy = {.single_oper = 1};
         CPU_read_operand_bytes(cpu, mem, &dummy);
     }
 }
 void _calle(CPU* cpu, memory* mem) {
     if (reg_check_flag(cpu->registers, FLG_N) || reg_check_flag(cpu->registers, FLG_Z)) _call(cpu, mem);
     else {
-        ins_encoding dummy = {0};
-        dummy.single_oper = 1;
+        ins_encoding dummy = {.single_oper = 1};
         CPU_read_operand_bytes(cpu, mem, &dummy);
     }
 }
 void _calg(CPU* cpu, memory* mem) {
     if (!reg_check_flag(cpu->registers, FLG_N)) _call(cpu, mem);
     else {
-        ins_encoding dummy = {0};
-        dummy.single_oper = 1;
+        ins_encoding dummy = {.single_oper = 1};
         CPU_read_operand_bytes(cpu, mem, &dummy);
     }
 }
 void _calge(CPU* cpu, memory* mem) {
     if (!reg_check_flag(cpu->registers, FLG_N) || reg_check_flag(cpu->registers, FLG_Z)) _call(cpu, mem);
     else {
-        ins_encoding dummy = {0};
-        dummy.single_oper = 1;
+        ins_encoding dummy = {.single_oper = 1};
         CPU_read_operand_bytes(cpu, mem, &dummy);
     }
 }
 void _calb(CPU* cpu, memory* mem) {
     if (reg_check_flag(cpu->registers, FLG_O) && reg_check_flag(cpu->registers, FLG_N)) _call(cpu, mem);
     else {
-        ins_encoding dummy = {0};
-        dummy.single_oper = 1;
+        ins_encoding dummy = {.single_oper = 1};
         CPU_read_operand_bytes(cpu, mem, &dummy);
     }
 }
@@ -379,8 +372,7 @@ void _je(CPU* cpu, memory* mem) {
 
     if (reg_check_flag(cpu->registers, FLG_Z)) _jmp(cpu, mem);
     else {
-        ins_encoding dummy = {0};
-        dummy.single_oper = 1;
+        ins_encoding dummy = {.single_oper = 1};
         CPU_read_operand_bytes(cpu, mem, &dummy);
     }
 }
@@ -388,40 +380,35 @@ void _jne(CPU* cpu, memory* mem) {
 
     if (!reg_check_flag(cpu->registers, FLG_Z)) _jmp(cpu, mem);
     else {
-        ins_encoding dummy = {0};
-        dummy.single_oper = 1;
+        ins_encoding dummy = {.single_oper = 1};
         CPU_read_operand_bytes(cpu, mem, &dummy);
     }
 }
 void _jl(CPU* cpu, memory* mem) {
     if (reg_check_flag(cpu->registers, FLG_N)) _jmp(cpu, mem);
     else {
-        ins_encoding dummy = {0};
-        dummy.single_oper = 1;
+        ins_encoding dummy = {.single_oper = 1};
         CPU_read_operand_bytes(cpu, mem, &dummy);
     }
 }
 void _jle(CPU* cpu, memory* mem) {
     if (reg_check_flag(cpu->registers, FLG_Z) || reg_check_flag(cpu->registers, FLG_N)) _jmp(cpu, mem);
     else {
-        ins_encoding dummy = {0};
-        dummy.single_oper = 1;
+        ins_encoding dummy = {.single_oper = 1};
         CPU_read_operand_bytes(cpu, mem, &dummy);
     }
 }
 void _jg(CPU* cpu, memory* mem) {
     if ( !reg_check_flag(cpu->registers, FLG_N) && !reg_check_flag(cpu->registers, FLG_Z) ) _jmp(cpu, mem);
     else {
-        ins_encoding dummy = {0};
-        dummy.single_oper = 1;
+        ins_encoding dummy = {.single_oper = 1};
         CPU_read_operand_bytes(cpu, mem, &dummy);
     }
 }
 void _jge(CPU* cpu, memory* mem) {
     if ( !reg_check_flag(cpu->registers, FLG_N) || reg_check_flag(cpu->registers, FLG_Z) ) _jmp(cpu, mem);
     else {
-        ins_encoding dummy = {0};
-        dummy.single_oper = 1;
+        ins_encoding dummy = {.single_oper = 1};
         CPU_read_operand_bytes(cpu, mem, &dummy);
     }
 }
@@ -429,8 +416,7 @@ void _jge(CPU* cpu, memory* mem) {
 void _jb(CPU* cpu, memory* mem) {
     if ( reg_check_flag(cpu->registers, FLG_O) && reg_check_flag(cpu->registers, FLG_N) ) _jmp(cpu, mem);
     else {
-        ins_encoding dummy = {0};
-        dummy.single_oper = 1;
+        ins_encoding dummy = {.single_oper = 1};
         CPU_read_operand_bytes(cpu, mem, &dummy);
     }
 }
@@ -572,9 +558,7 @@ void _loop(CPU* cpu, memory* mem) {
         _jmp(cpu, mem);
     }
     else {
-        ins_encoding dummy = {0};
-        dummy.single_oper = 1;
-        CPU_read_operand_bytes(cpu, mem, &dummy);
+        CPU_read_operand_bytes(cpu, mem, &(ins_encoding){.single_oper = 1});
     }
 }
 
@@ -669,64 +653,56 @@ void _lenw(CPU* cpu, memory* mem) { }
 void _jc(CPU* cpu, memory* mem) {
     if (reg_check_flag(cpu->registers, FLG_C)) _jmp(cpu, mem);
     else {
-        ins_encoding dummy = {0};
-        dummy.single_oper = 1;
+        ins_encoding dummy = {.single_oper = 1};
         CPU_read_operand_bytes(cpu, mem, &dummy);
     }
 }
 void _jo(CPU* cpu, memory* mem) {
     if (reg_check_flag(cpu->registers, FLG_O)) _jmp(cpu, mem);
     else {
-        ins_encoding dummy = {0};
-        dummy.single_oper = 1;
+        ins_encoding dummy = {.single_oper = 1};
         CPU_read_operand_bytes(cpu, mem, &dummy);
     }
 }
 void _jnc(CPU* cpu, memory* mem) {
     if (!reg_check_flag(cpu->registers, FLG_C)) _jmp(cpu, mem);
     else {
-        ins_encoding dummy = {0};
-        dummy.single_oper = 1;
+        ins_encoding dummy = {.single_oper = 1};
         CPU_read_operand_bytes(cpu, mem, &dummy);
     }
 }
 void _jno(CPU* cpu, memory* mem) {
     if (!reg_check_flag(cpu->registers, FLG_O)) _jmp(cpu, mem);
     else {
-        ins_encoding dummy = {0};
-        dummy.single_oper = 1;
+        ins_encoding dummy = {.single_oper = 1};
         CPU_read_operand_bytes(cpu, mem, &dummy);
     }
 }
 void _calc(CPU* cpu, memory* mem) {
     if (reg_check_flag(cpu->registers, FLG_C)) _call(cpu, mem);
     else {
-        ins_encoding dummy = {0};
-        dummy.single_oper = 1;
+        ins_encoding dummy = {.single_oper = 1};
         CPU_read_operand_bytes(cpu, mem, &dummy);
     }
 }
 void _calo(CPU* cpu, memory* mem) {
     if (reg_check_flag(cpu->registers, FLG_O)) _call(cpu, mem);
     else {
-        ins_encoding dummy = {0};
-        dummy.single_oper = 1;
+        ins_encoding dummy = {.single_oper = 1};
         CPU_read_operand_bytes(cpu, mem, &dummy);
     }
 }
 void _calnc(CPU* cpu, memory* mem) {
     if (!reg_check_flag(cpu->registers, FLG_C)) _call(cpu, mem);
     else {
-        ins_encoding dummy = {0};
-        dummy.single_oper = 1;
+        ins_encoding dummy = {.single_oper = 1};
         CPU_read_operand_bytes(cpu, mem, &dummy);
     }
 }
 void _calno(CPU* cpu, memory* mem) {
     if (!reg_check_flag(cpu->registers, FLG_O)) _call(cpu, mem);
     else {
-        ins_encoding dummy = {0};
-        dummy.single_oper = 1;
+        ins_encoding dummy = {.single_oper = 1};
         CPU_read_operand_bytes(cpu, mem, &dummy);
     }
 }
@@ -762,27 +738,27 @@ void _sli(CPU* cpu, memory* mem) {
 }
 
 void _ja(CPU* cpu, memory* mem) {
-    CPU_read_operand_bytes(cpu, mem, &(ins_encoding){0});
+    CPU_read_operand_bytes(cpu, mem, &(ins_encoding){.single_oper = 1});
 }
 
 void _jae(CPU* cpu, memory* mem) {
-    CPU_read_operand_bytes(cpu, mem, &(ins_encoding){0});
+    CPU_read_operand_bytes(cpu, mem, &(ins_encoding){.single_oper = 1});
 }
 
 void _jbe(CPU* cpu, memory* mem) {
-    CPU_read_operand_bytes(cpu, mem, &(ins_encoding){0});
+    CPU_read_operand_bytes(cpu, mem, &(ins_encoding){.single_oper = 1});
 }
 
 void _cala(CPU* cpu, memory* mem) {
-    CPU_read_operand_bytes(cpu, mem, &(ins_encoding){0});
+    CPU_read_operand_bytes(cpu, mem, &(ins_encoding){.single_oper = 1});
 }
 
 void _calae(CPU* cpu, memory* mem) {
-    CPU_read_operand_bytes(cpu, mem, &(ins_encoding){0});
+    CPU_read_operand_bytes(cpu, mem, &(ins_encoding){.single_oper = 1});
 }
 
 void _calbe(CPU* cpu, memory* mem) {
-    CPU_read_operand_bytes(cpu, mem, &(ins_encoding){0});
+    CPU_read_operand_bytes(cpu, mem, &(ins_encoding){.single_oper = 1});
 }
 
 void _iret(CPU* cpu, memory* mem) {
@@ -790,5 +766,5 @@ void _iret(CPU* cpu, memory* mem) {
 }
 
 void _livt(CPU* cpu, memory* mem) {
-    CPU_read_operand_bytes(cpu, mem, &(ins_encoding){0});
+    CPU_read_operand_bytes(cpu, mem, &(ins_encoding){.single_oper = 1});
 }
