@@ -35,6 +35,10 @@ void vm_init(int memsize) {
     }
     vm_memory = mem_init(memsize);
     vm_memory.bios_rom->mem = load_BIOS_img(vm_conf.bios_path);
+    if (vm_memory.bios_rom->mem == NULL) {
+        printf("Couldn't load BIOS image from '%s'.\n", vm_conf.bios_path);
+        exit(1);
+    }
     vm_cpu->clock_delay_ms = vm_calculate_delay_ms(vm_conf.cycle_count);
     vm_entry = vm_conf.entrypoint;
 }

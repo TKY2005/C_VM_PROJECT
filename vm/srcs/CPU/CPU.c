@@ -149,6 +149,13 @@ int CPU_read_dispinfo(CPU* cpu, memory* mem, ins_encoding* ins) {
     return read;
 }
 
+int CPU_advance_next(CPU* cpu, memory* mem, ins_encoding* ins) {
+    CPU_read_operand_bytes(cpu, mem, ins);
+    if (ins->opertype.src_type != UNKNOWN) {
+        CPU_decode_src(cpu, mem, ins);
+    }
+}
+
 int CPU_read_imm8(CPU* cpu, memory* mem, ins_encoding* ins) {
     return mem_read_byte_e(mem, cpu->registers->PC, (uint8_t*) &ins->imm_val, CPU_step_e, (void*) &cpu);
 }
@@ -183,18 +190,20 @@ int CPU_stack_push(CPU* cpu, memory* mem, uint32_t val) {
     int wr = mem_write_dword(mem, cpu->registers->SP, val);
     return wr;
 }
+
 int CPU_stack_pop(CPU* cpu, memory* mem, uint32_t* result) {
     int rd = mem_read_dword(mem, cpu->registers->SP, result);
     cpu->registers->SP += 4;
     return rd;
 }
+
 void CPU_jump_addr(CPU* cpu, uint32_t jmpaddr) {
-    cpu->registers->PC = jmpaddr;
-    cpu->registers->PC--; // because the CPU auto increments PC after each instruction cycle.
+    cpu->registers->PC = jmpaddr - 1; // sub 1 because the PC is auto incremented after each instruction
 }
+
 void CPU_call_addr(CPU* cpu, memory* mem, uint32_t calladdr) {
 
-    CPU_stack_push(cpu, mem, cpu->registers->PC - 1);
+    CPU_stack_push(cpu, mem, cpu->registers->PC);
     CPU_jump_addr(cpu, calladdr);
 }
 
