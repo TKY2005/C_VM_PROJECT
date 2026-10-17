@@ -97,7 +97,7 @@ char* display_registers(union registerfile* regfile) {
 	((regfile->flags & FLG_O) != 0) ? 1 : 0,
 	((regfile->flags & FLG_I) != 0) ? 1 : 0,
 	((regfile->flags & FLG_T) != 0) ? 1 : 0);
-	char* result = malloc(strbuilder_size(regs) + 1);
+	char* result = (char*) malloc(strbuilder_size(regs) + 1);
 	if (result != NULL) memcpy(result, strbuilder_getstr(regs), strbuilder_size(regs) + 1);
 	strbuilder_free(regs);
 	return result;

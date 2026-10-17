@@ -11,10 +11,10 @@ typedef struct tky_stack {
 } tky_stack;
 
 tky_stack* stack_init() {
-    tky_stack* s = malloc(sizeof(tky_stack));
+    tky_stack* s = (tky_stack*) malloc(sizeof(tky_stack));
     s->sp = -1;
     s->capacity = DS_INIT_SIZE;
-    s->data = malloc(sizeof(void*) * DS_INIT_SIZE);
+    s->data = (void**) malloc(sizeof(void*) * DS_INIT_SIZE);
     return s;
 }
 
@@ -24,7 +24,7 @@ int stack_empty(tky_stack* s) {
 
 void stack_push(tky_stack* s, void* data) {
     if (s->sp + 1 > s->capacity) {
-        s->data = realloc(s->data, s->capacity * 2);
+        s->data = (void**) realloc(s->data, s->capacity * 2);
     }
     s->data[++s->sp] = data;
 }

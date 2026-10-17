@@ -15,11 +15,11 @@ typedef struct tky_strbuilder {
 
 static void strbuilder_resize(tky_strbuilder* s) {
     s->capacity *= 2;
-    s->str = realloc(s->str, s->capacity);
+    s->str = (char*) realloc(s->str, s->capacity);
 }
 
 tky_strbuilder* strbuilder_init() {
-    tky_strbuilder* s = malloc(sizeof(tky_strbuilder));
+    tky_strbuilder* s = (tky_strbuilder*) malloc(sizeof(tky_strbuilder));
     s->length = 0;
     s->capacity = SB_INIT_SIZE;
     s->str = (char*) calloc(s->capacity, sizeof(char));
