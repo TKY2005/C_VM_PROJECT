@@ -40,7 +40,7 @@ int ram_write_word(RAM* r, uint32_t addr, uint16_t val) {
     high = (val >> 8) & 0xff;
     r->mem[addr] = high;
     r->mem[addr + 1] = low;
-    return val;
+    return MEM_WRITE_SUCCESS;
   }
 }
 
@@ -60,7 +60,7 @@ int ram_write_dword(RAM* r, uint32_t addr, uint32_t val) {
   r->mem[addr + 1] = lhigh;
   r->mem[addr + 2] = hlow;
   r->mem[addr + 3] = low;
-  return val;
+  return MEM_WRITE_SUCCESS;
 }
 
 int ram_write_bytes(RAM* r, uint32_t addr, size_t count, uint8_t* vals) {
@@ -70,15 +70,15 @@ int ram_write_bytes(RAM* r, uint32_t addr, size_t count, uint8_t* vals) {
       return MEM_WRITE_FAILURE;
     r->mem[addr + i] = vals[i];
   }
-  return 0;
+  return MEM_WRITE_SUCCESS;
 }
 
 int ram_read_byte(RAM* r, uint32_t addr, uint8_t* result) {
     if (ram_is_valid_addr(r, addr)){
-	  *result = r->mem[addr];
-	  return 0;
+      *result = r->mem[addr];
+      return MEM_READ_SUCCESS;
     }
-  else return MEM_READ_FAILURE;
+    else return MEM_READ_FAILURE;
 }
 
 int ram_read_word(RAM* r, uint32_t addr, uint16_t* result) {
@@ -86,7 +86,7 @@ int ram_read_word(RAM* r, uint32_t addr, uint16_t* result) {
     uint8_t high = r->mem[addr];
     uint8_t low = r->mem[addr + 1];
     *result = (high << 8) | low;
-    return 0;
+    return MEM_READ_SUCCESS;
   }
   else return MEM_READ_FAILURE;
 }
@@ -100,7 +100,7 @@ int ram_read_dword(RAM* r, uint32_t addr, uint32_t* result) {
   uint16_t low = (r->mem[addr + 2] << 8) | r->mem[addr + 3];
 
   *result = (high << 16) | low;
-  return 0;
+  return MEM_READ_SUCCESS;
 }
 
 int ram_read_bytes(RAM* r, uint32_t addr, size_t count, uint8_t* result) {
@@ -111,7 +111,7 @@ int ram_read_bytes(RAM* r, uint32_t addr, size_t count, uint8_t* result) {
     }
     result[i] = r->mem[addr + i];
   }
-  return 0;
+  return MEM_READ_SUCCESS;
 }
 
 void ram_destroy(RAM* r) {

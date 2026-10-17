@@ -4,7 +4,7 @@
 #include<stdlib.h>
 
 #include<CPU/registers.h>
-#include<utils/strbuilder/strbuilder.h>
+#include<utils/tky_strbuilder.h>
 
 void reg_write_b(union registerfile* regfile, int regcode, uint8_t val) {
 	regfile->b[regcode] = val % (0xff + 1);
@@ -78,24 +78,27 @@ int reg_get_index(const char* reg) {
 
 char* display_registers(union registerfile* regfile) {
 	
-	strbuilder regs = strbuilder_init();
+	tky_strbuilder* regs = strbuilder_init();
 
 	int row_count = 3;
 	int reg_count = sizeof(reglist) / sizeof(reglist[0]);
 	for(int i = 0; i < reg_count; i++) {
-		if ( i % row_count == 0) strbuilder_append(&regs, "\n");
+		if ( i % row_count == 0) strbuilder_append(regs, "\n");
 		
 		if (i >= REG_PC_IDX){
-			strbuilder_appendf(&regs, "%s: 0x%08X  ", reglist[i], regfile->dw[i]);
+			strbuilder_appendf(regs, "%s: 0x%08X  ", reglist[i], regfile->dw[i]);
 		}
-		else strbuilder_appendf(&regs, "E%cX: 0x%08X  ", toupper(reglist[i][0]) ,regfile->dw[i]);
+		else strbuilder_appendf(regs, "E%cX: 0x%08X  ", toupper(reglist[i][0]) ,regfile->dw[i]);
 	}
-	strbuilder_appendf(&regs, "FLAGS: Z = %d N = %d C = %d O = %d I = %d T = %d", 
+	strbuilder_appendf(regs, "FLAGS: Z = %d N = %d C = %d O = %d I = %d T = %d",
 	((regfile->flags & FLG_Z) != 0) ? 1 : 0,
 	((regfile->flags & FLG_N) != 0) ? 1 : 0,
 	((regfile->flags & FLG_C) != 0) ? 1 : 0,
 	((regfile->flags & FLG_O) != 0) ? 1 : 0,
 	((regfile->flags & FLG_I) != 0) ? 1 : 0,
 	((regfile->flags & FLG_T) != 0) ? 1 : 0);
-	return strbuilder_getstr(&regs);
+	char* result = malloc(strbuilder_size(regs) + 1);
+	if (result != NULL) memcpy(result, strbuilder_getstr(regs), strbuilder_size(regs) + 1);
+	strbuilder_free(regs);
+	return result;
 }

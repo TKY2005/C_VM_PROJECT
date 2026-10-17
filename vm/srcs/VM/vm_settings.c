@@ -3,7 +3,7 @@
 #include<string.h>
 #include<stdlib.h>
 
-#include<utils/hashmap/hmap.h>
+#include<utils/tky_hashmap.h>
 #include<utils/helpers.h>
 #include<VM/vm_settings.h>
 
@@ -16,7 +16,7 @@ FILE* create_config_file() {
     return f;
 }
 
-hmap* vm_get_settings(const char* filepath) {
+tky_hashmap* vm_get_settings(const char* filepath) {
     FILE* f = fopen(filepath, "r+");
     if (!f) {
         printf("No config file was found. creating a new one with the default settings.\n");
@@ -24,27 +24,27 @@ hmap* vm_get_settings(const char* filepath) {
     }
 
     char buff[255];
-    hmap* h = hmap_create(fnv1_1a_hash);
+    tky_hashmap* h = hashmap_init(hf_fnv1a);
 
     while ( (fgets(buff, sizeof(buff), f)) ) {
         char** split = split_string(buff, '=');
         split[1][strcspn(split[1], "\r\n")] = '\0';
-        hmap_put(h, split[0], strlen(split[0]), (void*) split[1]);
+        hashmap_put(h, split[0], strlen(split[0]), (void*) split[1]);
     }
     fclose(f);
     return h;
 }
 
-void vm_set_settings(hmap* source, struct vm_config* target) {
-    target->mem_size = vm_parse_conf_field( (char*) hmap_get(source, SETTINGS_MEM_FIELD, strlen(SETTINGS_MEM_FIELD)) );
-    target->cycle_count = vm_parse_conf_field( (char*) hmap_get(source, SETTINGS_SPEED_FIELD, strlen(SETTINGS_SPEED_FIELD)));
+void vm_set_settings(tky_hashmap* source, struct vm_config* target) {
+    target->mem_size = vm_parse_conf_field( (char*) hashmap_get(source, SETTINGS_MEM_FIELD, strlen(SETTINGS_MEM_FIELD)) );
+    target->cycle_count = vm_parse_conf_field( (char*) hashmap_get(source, SETTINGS_SPEED_FIELD, strlen(SETTINGS_SPEED_FIELD)));
     strncpy(target->bios_path, 
-        (char*) hmap_get(source, SETTINGS_BIOS_FIELD, strlen(SETTINGS_BIOS_FIELD)), 
+        (char*) hashmap_get(source, SETTINGS_BIOS_FIELD, strlen(SETTINGS_BIOS_FIELD)),
         sizeof(target->bios_path));
 
-    vm_set_display_settings((char*) hmap_get(source, SETTINGS_DISPLAY_FIELD, strlen(SETTINGS_DISPLAY_FIELD)), target);
+    vm_set_display_settings((char*) hashmap_get(source, SETTINGS_DISPLAY_FIELD, strlen(SETTINGS_DISPLAY_FIELD)), target);
 
-    target->entrypoint = strtoul((char*) hmap_get(source, SETTINGS_ENTRY_FIELD, strlen(SETTINGS_ENTRY_FIELD)), NULL, 0);
+    target->entrypoint = strtoul((char*) hashmap_get(source, SETTINGS_ENTRY_FIELD, strlen(SETTINGS_ENTRY_FIELD)), NULL, 0);
 }
 
 uint32_t vm_parse_conf_field(const char* fieldval) {
@@ -71,4 +71,9 @@ void vm_set_display_settings(const char* fieldval, struct vm_config* target) {
     target->displayW = w;
     target->displayH = h;
     target->displayR = r;
+}
+
+
+void vm_free_settings(tky_hashmap* conf) {
+    hashmap_free(conf);
 }

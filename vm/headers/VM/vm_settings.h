@@ -13,7 +13,7 @@
 
 #include<stdint.h>
 #include<stdio.h>
-#include<utils/hashmap/hmap.h>
+#include<utils/tky_hashmap.h>
 
 struct vm_config {
     uint16_t displayW;
@@ -29,8 +29,10 @@ extern struct vm_config vm_conf;
 
 FILE* create_config_file();
 
-hmap* vm_get_settings(const char* filepath);
-void vm_set_settings(hmap* source, struct vm_config* target);
+tky_hashmap* vm_get_settings(const char* filepath);
+void vm_set_settings(tky_hashmap* source, struct vm_config* target);
 uint32_t vm_parse_conf_field(const char* fieldval);
 void vm_set_display_settings(const char* fieldval, struct vm_config* target);
+
+void vm_free_settings(tky_hashmap* conf);
 #endif

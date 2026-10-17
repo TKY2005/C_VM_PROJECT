@@ -21,7 +21,7 @@ make_output = mkdir bin
 
 ifeq ($(OS),Windows_NT)
     # --- Raylib Windows Configuration ---
-    RAYLIB_DIR = ./vm/raylib5_win
+    RAYLIB_DIR = ./vm/raylib6_win
     RAYLIB_FLAGS = -I $(RAYLIB_DIR)/include -L $(RAYLIB_DIR)/lib -lraylib -lgdi32 -lwinmm
     SRCS += -DPLT_WIN $(RAYLIB_FLAGS)
     # ------------------------------------
@@ -42,8 +42,8 @@ ifeq ($(OS),Windows_NT)
     output_target_os = .\bin\windows
 else
     # --- Raylib Linux Configuration ---
-    RAYLIB_DIR = ./vm/raylib5_linux
-    RAYLIB_ORIGIN = ../../../vm/raylib5_linux/lib
+    RAYLIB_DIR = ./vm/raylib6_linux
+    RAYLIB_ORIGIN = ../../../vm/raylib6_linux/lib
     RAYLIB_FLAGS = -I $(RAYLIB_DIR)/include -L $(RAYLIB_DIR)/lib -lraylib -lm -lpthread -ldl -lrt -lX11 -Wl,-rpath,'$$ORIGIN/$(RAYLIB_ORIGIN)'
     SRCS += -DPLT_LINUX $(RAYLIB_FLAGS)
     # ----------------------------------

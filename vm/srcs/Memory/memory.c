@@ -10,7 +10,7 @@
 #include<Memory/framebuffer.h>
 #include<Memory/RAM.h>
 #include<CPU/CPU.h>
-#include<utils/strbuilder/strbuilder.h>
+#include<utils/tky_strbuilder.h>
 #include<utils/helpers.h>
 #include<VM/vm_events.h>
 #include<VM/vm.h>
@@ -169,53 +169,56 @@ char* mem_display(memory* m, uint32_t start, int count, int chunk_size) {
   snprintf(val_dummy, sizeof(val_dummy), "%02X  ", 0x00);
   int val_size = strlen(val_dummy);
 
-  strbuilder charset = strbuilder_init();
-  strbuilder mem_str = strbuilder_init();
+  tky_strbuilder* charset = strbuilder_init();
+  tky_strbuilder* mem_str = strbuilder_init();
 
-  strbuilder offset = strbuilder_init();
+  tky_strbuilder* offset = strbuilder_init();
   for (int i = 0; i < chunk_size; i++) {
   
-    strbuilder_appendf(&offset, "%02X", i);
-    strbuilder_fill_chr(&offset, ' ', val_size);
+    strbuilder_appendf(offset, "%02X", i);
+    strbuilder_fill(offset, " ", val_size);
     if ((i + 1) % chunk_half == 0) {
-      strbuilder_append(&offset, "  ");
+      strbuilder_append(offset, "  ");
     }
   }
 
-  strbuilder_fill_chr(&mem_str, ' ', addr_size);
-  strbuilder_append(&mem_str, strbuilder_getstr(&offset));
-  strbuilder_append(&mem_str, "\n");
-  strbuilder_destroy(&offset);
+  strbuilder_fill(mem_str, " ", addr_size);
+  strbuilder_append(mem_str, strbuilder_getstr(offset));
+  strbuilder_append(mem_str, "\n");
+  strbuilder_free(offset);
   uint8_t c;
   for (int i = start; i < start + count; i++) {
     
     if (i % chunk_size == 0 || i - start == 0) {
-      strbuilder_appendf(&mem_str, "%08X:  ", i);
+      strbuilder_appendf(mem_str, "%08X:  ", i);
     }
     mem_read_byte(m, i, &c);
-    strbuilder_appendf(&mem_str, "0x%02X  ", c);
-    strbuilder_append_chr(&charset, (is_printable(c) == 0 ? (char) c : '.'));
+    strbuilder_appendf(mem_str, "0x%02X  ", c);
+    strbuilder_appendc(charset, (is_printable(c) == 0 ? (char) c : '.'));
 
     if ((i + 1) % chunk_half == 0 && (i + 1) % chunk_size != 0) {
-      strbuilder_append(&mem_str, "  ");
-      strbuilder_append(&charset, "  ");
+      strbuilder_append(mem_str, "  ");
+      strbuilder_append(charset, "  ");
     }
 
     if ((i + 1) % chunk_size == 0) {
-      strbuilder_append_chr(&charset, '\0');
-      strbuilder_append(&mem_str, "\t|");
-      strbuilder_append(&mem_str, strbuilder_getstr(&charset));
-      strbuilder_append(&mem_str, "|\n");
-      strbuilder_reset(&charset);
+      strbuilder_appendc(charset, '\0');
+      strbuilder_append(mem_str, "\t|");
+      strbuilder_append(mem_str, strbuilder_getstr(charset));
+      strbuilder_append(mem_str, "|\n");
+      strbuilder_reset(charset);
     }
   }
-  if (strbuilder_size(&charset) != 0){
-    strbuilder_append(&mem_str, "\t|");
-    strbuilder_append(&mem_str, strbuilder_getstr(&charset));
-    strbuilder_append(&mem_str, "|\n");
+  if (strbuilder_size(charset) != 0){
+    strbuilder_append(mem_str, "\t|");
+    strbuilder_append(mem_str, strbuilder_getstr(charset));
+    strbuilder_append(mem_str, "|\n");
   }
-  strbuilder_destroy(&charset);
-  return strbuilder_getstr(&mem_str);
+  strbuilder_free(charset);
+  char* result = malloc(strbuilder_size(mem_str) + 1);
+  if (result != NULL) memcpy(result, strbuilder_getstr(mem_str), strbuilder_size(mem_str) + 1);
+  strbuilder_free(mem_str);
+  return result;
 }
 
 void mem_destroy(memory* m) {

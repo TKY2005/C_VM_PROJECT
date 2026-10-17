@@ -10,6 +10,7 @@
 void vm_shell() {
     printf("======== TKY VIRTUAL MACHINE V%s ========\n", VM_VER);
     printf("The shell is still under construction. please run with the binary file path as argument for now.\n");
+
     while (1) {
         printf(">> ");
         char command[2048] = {0};
@@ -45,15 +46,15 @@ void vm_run_shell_command(char* command) {
     char** parts = split_string(command, ' ');
 
     if (strcmp(parts[0], "vm_init") == 0) {
-        hmap* conf = vm_get_settings(CONFIG_PATH);
-        vm_set_settings(conf, &vm_conf);
-        free(conf);
+        vm_settings = vm_get_settings(CONFIG_PATH);
+        vm_set_settings(vm_settings, &vm_conf);
+
         uint32_t size;
         char* msize = &parts[1][0];
         if (!msize) size = vm_conf.mem_size;
-        else size = strtol(parts[1], NULL, 0);
+        else size = strtoul(parts[1], NULL, 0);
         vm_init(size);
-        printf("Initialized the VM with %d bytes of available virtual memory.\n", ram_size(vm_memory.ram));
+        printf("Initialized the VM with %lu bytes of available virtual memory.\n", ram_size(vm_memory.ram));
         printf("CPU speed set to %lu cycles/second with a delay of %lums\n", vm_conf.cycle_count, vm_cpu->clock_delay_ms);
     }
     else if (strcmp(parts[0], "boot") == 0) {
@@ -111,6 +112,10 @@ void vm_run_shell_command(char* command) {
         vm_runp(vm_cpu, &vm_memory, vm_cpu->registers->PC);
     }
     else if (strcmp(parts[0], "memview") == 0) {
+        if (parts[1] == NULL || parts[2] == NULL || parts[3] == NULL) {
+            printf("Usage: memview <start_address> <count> <chunk_size>\n");
+            return;
+        }
         uint32_t start = (uint32_t) strtoul(parts[1], NULL, 0);
         int count = strtol(parts[2], NULL, 0);
         int chunk = strtol(parts[3], NULL, 0);
@@ -128,6 +133,10 @@ void vm_run_shell_command(char* command) {
     }
 
     else if (strcmp(parts[0], "memwrite") == 0) {
+        if (parts[1] == NULL || parts[2] == NULL) {
+            printf("Usage: memwrite <address> <value> [mode]\n");
+            return;
+        }
         uint32_t addr = strtoul(parts[1], NULL, 0);
         uint32_t val = strtoul(parts[2], NULL, 0);
         char* wmode = &parts[3][0];
@@ -135,12 +144,22 @@ void vm_run_shell_command(char* command) {
         else{
             char mode = *wmode;
             uint32_t wr = 0;
-            if (mode == 'b') wr = mem_write_byte(&vm_memory, addr, val);
-            else if (mode == 'w') wr = mem_write_word(&vm_memory, addr, val);
-            else if (mode == 'd') wr = mem_write_dword(&vm_memory, addr, val);
-            else printf("Unknown write mode '%c'\n", mode);
+            switch (mode) {
+                case 'b':
+                    wr = mem_write_byte(&vm_memory, addr, val);
+                    break;
+                case 'w':
+                    wr = mem_write_word(&vm_memory, addr, val);
+                    break;
+                case 'd':
+                    wr = mem_write_dword(&vm_memory, addr, val);
+                    break;
+                default:
+                    printf("Unknown write mode '%c'\n", mode);
+                    break;
+            }
 
-            if (wr != val) printf("Unable to write value: %u to address: 0x%08X\n", val, addr);
+            if (wr != MEM_WRITE_SUCCESS) printf("Unable to write value: %u to address: 0x%08X\n", val, addr);
         }
     }
     else if (strcmp(parts[0], "regwrite") == 0) {
@@ -152,9 +171,20 @@ void vm_run_shell_command(char* command) {
             if (!wmode) printf("You need to specify the write mode.\n");
             else {
                 char mode = *wmode;
-                if (mode == 'b') reg_write_b(vm_cpu->registers, index, val);
-                else if (mode == 'w') reg_write_w(vm_cpu->registers, index / 2, val);
-                else if (mode == 'd') reg_write_dw(vm_cpu->registers, index / 4, val);
+                switch (mode) {
+                    case 'b':
+                        reg_write_b(vm_cpu->registers, index, val);
+                        break;
+                    case 'w':
+                        reg_write_w(vm_cpu->registers, index / 2, val);
+                        break;
+                    case 'd':
+                        reg_write_dw(vm_cpu->registers, index / 4, val);
+                        break;
+                    default:
+                        printf("Unknown write mode '%c'\n", mode);
+                        break;
+                }
             }
         }
     }

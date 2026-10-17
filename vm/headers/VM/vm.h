@@ -3,12 +3,12 @@
 
 #include<CPU/CPU.h>
 #include<Memory/memory.h>
-#include<utils/hashmap/hmap.h>
+#include<utils/tky_hashmap.h>
 
 #include<stdint.h>
 #include<stdbool.h>
 
-#define VM_VER "1.4.1b"
+#define VM_VER "2.0.0b"
 
 // ERRORS: < 0
 #define FILE_NOT_OPEN -1
@@ -28,6 +28,7 @@ extern CPU* vm_cpu;
 extern memory vm_memory;
 extern bool ui_mode;
 extern uint32_t vm_entry;
+extern tky_hashmap* vm_settings;
 
 void vm_init(int memsize);
 void vm_init_nomem();

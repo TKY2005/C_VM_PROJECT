@@ -4,7 +4,7 @@
 #include<VM/vm_settings.h>
 #include<VM/vm_shell.h>
 #include<CPU/registers.h>
-#include<utils/hashmap/hmap.h>
+#include<utils/tky_hashmap.h>
 #include<debuglogger.h>
 
 #include<stdlib.h>
@@ -17,8 +17,8 @@ int main(int argc, char** argv) {
     }
     else {
         printd("Starting from file '%s'\n", argv[1]);
-        hmap* all = vm_get_settings(CONFIG_PATH);
-        vm_set_settings(all, &vm_conf);
+        vm_settings = vm_get_settings(CONFIG_PATH);
+        vm_set_settings(vm_settings, &vm_conf);
         vm_init(vm_conf.mem_size);
         
         vm_load_binary_file(vm_memory.ram, argv[1], strtoul(argv[2], NULL, 0));

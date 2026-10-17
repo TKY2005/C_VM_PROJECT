@@ -18,12 +18,13 @@
 #include<VM/vm_settings.h>
 
 #include<utils/helpers.h>
-#include<utils/hashmap/hmap.h>
+#include<utils/tky_hashmap.h>
 
 CPU* vm_cpu;
 memory vm_memory;
 bool ui_mode;
 uint32_t vm_entry = 0;
+tky_hashmap* vm_settings = NULL;
 
 void vm_init(int memsize) {
     if (vm_memory.ram != NULL && vm_memory.bios_rom != NULL && vm_memory.fb != NULL) mem_destroy(&vm_memory);
@@ -37,7 +38,7 @@ void vm_init(int memsize) {
     vm_memory.bios_rom->mem = load_BIOS_img(vm_conf.bios_path);
     if (vm_memory.bios_rom->mem == NULL) {
         printf("Couldn't load BIOS image from '%s'.\n", vm_conf.bios_path);
-        exit(1);
+        vm_shutdown();
     }
     vm_cpu->clock_delay_ms = vm_calculate_delay_ms(vm_conf.cycle_count);
     vm_entry = vm_conf.entrypoint;
@@ -58,6 +59,7 @@ void vm_shutdown() {
     
     CPU_destroy(vm_cpu);
     mem_destroy(&vm_memory);
+    vm_free_settings(vm_settings);
 }
 
 int vm_boot_sequence(CPU* cpu, memory* mem) {
