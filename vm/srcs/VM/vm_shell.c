@@ -190,4 +190,5 @@ void vm_run_shell_command(char* command) {
     }
     else if (strcmp(parts[0], "c") == 0) reg_clear_flags(vm_cpu->registers, FLG_T);
     else printf("Unkown command.\n");
+    split_string_free(parts);
 }

@@ -35,10 +35,15 @@ void vm_init(int memsize) {
         vm_cpu = CPU_init(regfile, ins_set);
     }
     vm_memory = mem_init(memsize);
-    vm_memory.bios_rom->mem = load_BIOS_img(vm_conf.bios_path);
-    if (vm_memory.bios_rom->mem == NULL) {
-        printf("Couldn't load BIOS image from '%s'.\n", vm_conf.bios_path);
-        vm_shutdown();
+    int load = load_BIOS_img(vm_conf.bios_path, vm_memory.bios_rom);
+    if (load == BIOS_ERR_COULDNT_OPEN_FILE) {
+        printf("Couldn't open the BIOS image file '%s'.\n", vm_conf.bios_path);
+    }
+    else if (load == BIOS_ERR_FILE_INCOMPLETE) {
+        printf("warning: The BIOS image file '%s' has not been completley loaded into memory.\n", vm_conf.bios_path);
+    }
+    else if (load == BIOS_ERR_NOINIT) {
+        printf("BIOS ROM is not initialized. Please initialize first using vm_init\n");
     }
     vm_cpu->clock_delay_ms = vm_calculate_delay_ms(vm_conf.cycle_count);
     vm_entry = vm_conf.entrypoint;

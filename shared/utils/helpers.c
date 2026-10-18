@@ -81,3 +81,12 @@ char** split_string(const char* str, char delimiter) {
     result[index] = NULL; // Null-terminate the array
     return result;
 }
+
+void split_string_free(char** split) {
+    if (!split) return;
+
+    for (int i = 0; split[i] != NULL; i++) {
+        free(split[i]);
+    }
+    free(split);
+}

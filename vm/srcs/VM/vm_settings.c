@@ -26,25 +26,51 @@ tky_hashmap* vm_get_settings(const char* filepath) {
     char buff[255];
     tky_hashmap* h = hashmap_init(hf_fnv1a);
 
+    char** split = NULL;
     while ( (fgets(buff, sizeof(buff), f)) ) {
-        char** split = split_string(buff, '=');
+        split = split_string(buff, '=');
         split[1][strcspn(split[1], "\r\n")] = '\0';
-        hashmap_put(h, split[0], strlen(split[0]), (void*) split[1]);
+
+        int fieldlen = strlen(split[0]);
+        int valuelen = strlen(split[1]);
+
+        char* field = calloc(fieldlen + 1, sizeof(char));
+        char* value = calloc(valuelen + 1, sizeof(char));
+
+        memcpy(field, split[0], fieldlen);
+        memcpy(value, split[1], valuelen);
+        hashmap_put(h, field, fieldlen, (void*) value);
+
+        free(field);
+        if(split) split_string_free(split);
     }
     fclose(f);
     return h;
 }
 
 void vm_set_settings(tky_hashmap* source, struct vm_config* target) {
-    target->mem_size = vm_parse_conf_field( (char*) hashmap_get(source, SETTINGS_MEM_FIELD, strlen(SETTINGS_MEM_FIELD)) );
-    target->cycle_count = vm_parse_conf_field( (char*) hashmap_get(source, SETTINGS_SPEED_FIELD, strlen(SETTINGS_SPEED_FIELD)));
-    strncpy(target->bios_path, 
-        (char*) hashmap_get(source, SETTINGS_BIOS_FIELD, strlen(SETTINGS_BIOS_FIELD)),
-        sizeof(target->bios_path));
 
-    vm_set_display_settings((char*) hashmap_get(source, SETTINGS_DISPLAY_FIELD, strlen(SETTINGS_DISPLAY_FIELD)), target);
+    char* mem_field = (char*) hashmap_get(source, SETTINGS_MEM_FIELD, strlen(SETTINGS_MEM_FIELD));
+    char* cycle_field = (char*) hashmap_get(source, SETTINGS_SPEED_FIELD, strlen(SETTINGS_SPEED_FIELD));
+    char* bios_field = (char*) hashmap_get(source, SETTINGS_BIOS_FIELD, strlen(SETTINGS_BIOS_FIELD));
+    char* display_field = (char*) hashmap_get(source, SETTINGS_DISPLAY_FIELD, strlen(SETTINGS_DISPLAY_FIELD));
+    char* entry_field = (char*) hashmap_get(source, SETTINGS_ENTRY_FIELD, strlen(SETTINGS_ENTRY_FIELD));
 
-    target->entrypoint = strtoul((char*) hashmap_get(source, SETTINGS_ENTRY_FIELD, strlen(SETTINGS_ENTRY_FIELD)), NULL, 0);
+    target->mem_size = vm_parse_conf_field(mem_field);
+    target->cycle_count = vm_parse_conf_field(cycle_field);
+
+    int path_size = strlen(bios_field);
+    strncpy(target->bios_path, bios_field, path_size);
+
+    vm_set_display_settings(display_field, target);
+
+    target->entrypoint = strtoul(entry_field, NULL, 0);
+
+    free(mem_field);
+    free(cycle_field);
+    free(bios_field);
+    free(display_field);
+    free(entry_field);
 }
 
 uint32_t vm_parse_conf_field(const char* fieldval) {
