@@ -70,6 +70,8 @@ int CPU_read_imm16(CPU* cpu, memory* mem, ins_encoding* ins);
 // Reads a 32-bit immediate, places it in 'ins->imm_val', and increments the PC register
 int CPU_read_imm32(CPU* cpu, memory* mem, ins_encoding* ins);
 
+int CPU_interrupt(CPU* cpu, memory* mem, uint8_t icode);
+
 // reads the lh_select bit for 8-bit registers in 'reg' and returns the result
 int CPU_check_lh_8bit(REG_SELECT* reg, uint8_t operselect);
 // reads the register select bits for 8-bit registers in 'reg' and returns the result

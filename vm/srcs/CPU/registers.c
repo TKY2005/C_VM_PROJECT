@@ -53,6 +53,7 @@ int reg_get_index(const char* reg) {
 	else if (strcmp("cs", regname) == 0) return REG_CS_IDX * 4;
 	else if (strcmp("ss", regname) == 0) return REG_SS_IDX * 4;
 	else if (strcmp("ds", regname) == 0) return REG_DS_IDX * 4;
+	else if (strcmp("ivtr", regname) == 0) return REG_IVTR_IDX * 4;
 
 	else {
 		if (strlen(regname) == 3) {

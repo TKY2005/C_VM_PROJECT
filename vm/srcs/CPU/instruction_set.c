@@ -12,8 +12,7 @@
 #include<time.h>
 
 /*TODO: 
-implement new instructions 0x49 through 0x4f
-add a new interrupt vector base register to the CPU
+implement the new branch instructions
 */
 
 instruction* create_ins_table() {
@@ -579,7 +578,7 @@ void _int_(CPU* cpu, memory* mem) {
     }
     else {
         uint32_t intcode = CPU_decode_dest(cpu, mem, ins);
-        vm_interrupt(cpu, mem, (uint8_t) intcode);
+        CPU_interrupt(cpu, mem, intcode);
     }
 }
 
@@ -762,9 +761,18 @@ void _calbe(CPU* cpu, memory* mem) {
 }
 
 void _iret(CPU* cpu, memory* mem) {
-    return;
+    uint32_t s = 0;
+    CPU_stack_pop(cpu, mem, &s);
+    cpu->state->state = (uint8_t) s;
+
+    CPU_stack_pop(cpu, mem, &cpu->registers->CS);
+    CPU_stack_pop(cpu, mem, &cpu->registers->PC);
 }
 
 void _livt(CPU* cpu, memory* mem) {
-    CPU_read_operand_bytes(cpu, mem, &(ins_encoding){.single_oper = 1});
+    ins_encoding encoding = {.single_oper = 1};
+    CPU_read_operand_bytes(cpu, mem, &encoding);
+
+    uint32_t ivtaddr = CPU_decode_dest(cpu, mem, &encoding);
+    cpu->registers->IVTR = ivtaddr;
 }

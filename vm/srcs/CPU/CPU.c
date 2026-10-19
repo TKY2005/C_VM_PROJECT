@@ -166,6 +166,19 @@ int CPU_read_imm32(CPU* cpu, memory* mem, ins_encoding* ins) {
     return mem_read_dword_e(mem, cpu->registers->PC, &ins->imm_val, CPU_step_e, (void*) &cpu);
 }
 
+int CPU_interrupt(CPU* cpu, memory* mem, uint8_t icode) {
+    uint32_t interrupt_addr = 0;
+    CPU_stack_push(cpu, mem, cpu->registers->PC);
+    CPU_stack_push(cpu, mem, cpu->registers->CS);
+    CPU_stack_push(cpu, mem, cpu->state->state);
+
+    uint32_t ivtr_base = cpu->registers->IVTR;
+
+    uint32_t interrupt_index = ivtr_base + (icode * 4);
+    mem_read_dword(mem, interrupt_index, &interrupt_addr);
+
+    CPU_jump_addr(cpu, interrupt_addr);
+}
 
 int CPU_check_lh_8bit(REG_SELECT* reg, uint8_t operselect) {
     if (operselect == SRC) return reg->src & LH_CHECK;
