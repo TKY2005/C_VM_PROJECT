@@ -5,6 +5,7 @@
 #include<ISA_encoding_info.h>
 #include<debuglogger.h>
 #include<VM/vm.h>
+#include<VM/vm_settings.h>
 #include<VM/vm_interrupts.h>
 #include<Timing/clock.h>
 
@@ -44,7 +45,10 @@ void CPU_destroy(CPU* cpu) {
 }
 
 int CPU_run(CPU* cpu, memory* mem) {
-    
+
+    timer_thread = clock_timer_start(vm_conf.timer_interval);
+    if (timer_thread == NULL) return CPU_EXEC_FAILURE;
+
     while (cpu->state->CPU_RUNNING) {
         uint8_t opcode = 0;
         int read = mem_read_byte(mem, cpu->registers->PC, &opcode);
@@ -57,7 +61,39 @@ int CPU_run(CPU* cpu, memory* mem) {
             if (reg_check_flag(cpu->registers, FLG_T)) vm_debug_shell();
             CPU_exec_ins(cpu, mem, opcode);
         }
+
+        int interrupt_pending = ic_interrupt_line_status(&vm_ic);
+        if (interrupt_pending < 0) {
+            CPU_fail(cpu, "Unable to check interrupt line.\n");
+        }
+        else if (interrupt_pending && reg_check_flag(cpu->registers, FLG_I)) {
+            int icode = ic_interrupt_acknowledge(&vm_ic);
+            if (icode < 0) CPU_fail(cpu, "Unable to acknowledge interrupt.\n");
+            else {
+                /* 
+                We have to decreemnt the PC, then increment twice
+                becasue the CPU receives a hardware interrupt when the PC is at the start of the next instruction
+                The PC is pushed to the stack and the CPU jumps to the interrupt handler.
+                when the CPU returns using iret the return address is popped and placed in the PC.
+                The PC then auto increments at the end of the instruction
+                which causes the CPU to land one byte ahead of where it should be
+                in the case of a software interrupt or a regular branch the CPU is at the last byte of the previous instruction
+                so when the CPU returns using ret or iret it auto increments and places itelf at the start of the next instruction
+                We have to increment twice
+                the first increment is to cancel the previous decrement
+                the second increment is because the PC doesn't auto increment in this branch
+                cpu_exec_ins auto increments the PC
+                so we have to manually increment here.
+                */
+                cpu->registers->PC--;
+                CPU_interrupt(cpu, mem, (uint8_t) icode);
+                CPU_step(cpu);
+                CPU_step(cpu);
+            }
+        }
     }
+    clock_timer_stop(timer_thread);
+    ic_reset(&vm_ic);
     return CPU_EXEC_SUCCESS;
 }
 
@@ -170,7 +206,7 @@ int CPU_interrupt(CPU* cpu, memory* mem, uint8_t icode) {
     uint32_t interrupt_addr = 0;
     CPU_stack_push(cpu, mem, cpu->registers->PC);
     CPU_stack_push(cpu, mem, cpu->registers->CS);
-    CPU_stack_push(cpu, mem, cpu->state->state);
+    CPU_push_flags(cpu, mem);
 
     uint32_t ivtr_base = cpu->registers->IVTR;
 
@@ -178,6 +214,17 @@ int CPU_interrupt(CPU* cpu, memory* mem, uint8_t icode) {
     mem_read_dword(mem, interrupt_index, &interrupt_addr);
 
     CPU_jump_addr(cpu, interrupt_addr);
+}
+
+int CPU_push_flags(CPU* cpu, memory* mem) {
+    CPU_stack_push(cpu, mem, cpu->state->state);
+}
+
+int CPU_pop_flags(CPU* cpu, memory* mem) {
+    uint32_t x = 0;
+    CPU_stack_pop(cpu, mem, &x);
+
+    cpu->state->state = (uint8_t) x;
 }
 
 int CPU_check_lh_8bit(REG_SELECT* reg, uint8_t operselect) {
@@ -569,7 +616,7 @@ void CPU_write_out(CPU* cpu, memory* mem, const char* txt, ...) {
     
     va_end(args);
 
-    vm_interrupt(cpu, mem, VM_SINTR_WRITE_FD);
+    //vm_interrupt(cpu, mem, VM_SINTR_WRITE_FD);
 }
 
 void CPU_fail(CPU* cpu, const char* msg, ...) {

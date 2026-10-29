@@ -18,37 +18,37 @@ tky_queue* queue_init() {
 }
 
 bool queue_empty(tky_queue* q) {
-    return q->size > 0;
+    return (q->size == 0);
 }
 
-void queue_enqueue(tky_queue* q, void* data) {
+void queue_enqueue_back(tky_queue* q, void* data) {
     llist_push_back(q->data, data);
     q->size++;
 }
 
-void* queue_dequeue(tky_queue* q) {
-    void* d = llist_pop_back(q->data);
-    if (d != NULL) q->size--;
-    return d;
-}
-
-void queue_enqueue_back(tky_queue* q, void* data) {
+void queue_enqueue_front(tky_queue* q, void* data) {
     llist_push_front(q->data, data);
     q->size++;
 }
 
-void* queue_dequeue_back(tky_queue* q) {
+void* queue_dequeue_front(tky_queue* q) {
     void* d = llist_pop_front(q->data);
     if (d != NULL) q->size--;
     return d;
 }
 
+void* queue_dequeue_back(tky_queue* q) {
+    void* d = llist_pop_back(q->data);
+    if (d != NULL) q->size--;
+    return d;
+}
+
 void* queue_peek_back(tky_queue* q) {
-    return llist_get_head(q->data);
+    return llist_get_tail(q->data);
 }
 
 void* queue_peek_front(tky_queue* q) {
-    return llist_get_tail(q->data);
+    return llist_get_head(q->data);
 }
 
 size_t queue_size(tky_queue* q) {

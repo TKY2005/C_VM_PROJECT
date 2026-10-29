@@ -76,18 +76,58 @@ class Parser {
 
     std::vector<std::vector<Token>> extractLines() {
 
-        std::vector<std::vector<Token>> lines;
+        std::vector<std::vector<Token>> sourceProgramLines;
         std::vector<Token> currentLine;
 
         for(int i = 0; i < tokens.size(); i++) {
             if (tokens[i].maintype == MainType::ENOF) break;
             if (tokens[i].maintype == MainType::NEWLINE) {
                 if (currentLine.size() > 0) {
-                    lines.push_back(currentLine);
+                    sourceProgramLines.push_back(currentLine);
                     currentLine.clear();
                 }
             }
             else currentLine.push_back(tokens[i]);
+        }
+
+        const auto isDataDirective = [](const Token& token) {
+            return token.subtype == SubType::DIR_DEFB ||
+                token.subtype == SubType::DIR_DEFW ||
+                token.subtype == SubType::DIR_DEFDW;
+        };
+        std::vector<std::vector<Token>> lines;
+        for (size_t i = 0; i < sourceProgramLines.size(); ++i) {
+            std::vector<Token> line = sourceProgramLines[i];
+            size_t directiveIndex = line.size();
+
+            if (!line.empty() && line.front().maintype == MainType::DECL) {
+                if (line.size() > 1 && isDataDirective(line[1])) {
+                    directiveIndex = 1;
+                }
+                else if (line.size() == 1 && i + 1 < sourceProgramLines.size() &&
+                         !sourceProgramLines[i + 1].empty() &&
+                         isDataDirective(sourceProgramLines[i + 1].front())) {
+                    directiveIndex = 1;
+                    const std::vector<Token>& directiveLine = sourceProgramLines[++i];
+                    line.insert(line.end(), directiveLine.begin(), directiveLine.end());
+                }
+            }
+            else if (!line.empty() && isDataDirective(line.front())) {
+                directiveIndex = 0;
+            }
+
+            if (directiveIndex < line.size()) {
+                while (line.back().subtype == SubType::DIR_DEFB ||
+                       line.back().subtype == SubType::DIR_DEFW ||
+                       line.back().subtype == SubType::DIR_DEFDW ||
+                       line.back().maintype == MainType::COMMA) {
+                    if (i + 1 >= sourceProgramLines.size()) break;
+                    const std::vector<Token>& continuation = sourceProgramLines[++i];
+                    line.insert(line.end(), continuation.begin(), continuation.end());
+                }
+            }
+
+            lines.push_back(std::move(line));
         }
         return lines;
     }

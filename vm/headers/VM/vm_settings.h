@@ -8,8 +8,15 @@
 #define SETTINGS_BIOS_FIELD "bios"
 #define SETTINGS_ENTRY_FIELD "entry"
 #define SETTINGS_DISPLAY_FIELD "display"
+#define SETTINGS_TIMER_FIELD "timerms"
 
-#define SETTINGS_DEFAULT_SETTINGS "memsize=10MB\ncycles=1MHZ\nbios=./bios.tky\nentry=0xF9C00000\ndisplay=640x480@30"
+#define SETTINGS_DEFAULT_SETTINGS \
+"memsize=10MB\n \
+cycles=1MHZ\n \
+bios=./bios.tky\n \
+entry=0xF9C00000\n \
+display=640x480@30\n \
+timerms=100"
 
 #include<stdint.h>
 #include<stdio.h>
@@ -22,6 +29,7 @@ struct vm_config {
     uint32_t mem_size;
     uint32_t entrypoint;
     uint64_t cycle_count;
+    uint64_t timer_interval;
     char bios_path[1024];
 };
 

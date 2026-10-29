@@ -13,7 +13,7 @@ typedef struct tky_dlist {
 
 static void dynamic_list_resize(tky_dlist* l) {
     l->capacity *= 2;
-    l->data = (void**) realloc(l->data, l->capacity * sizeof(void*));
+    l->data = realloc(l->data, l->capacity * sizeof(void*));
 }
 
 size_t dlist_size(tky_dlist* l) {
@@ -28,7 +28,7 @@ tky_dlist* dlist_init(size_t* init_size) {
     l->size = 0;
     if (init_size) l->capacity = *init_size;
     else l->capacity = DL_INIT_SIZE;
-    l->data = (void**) calloc(l->capacity, sizeof(void*));
+    l->data = calloc(l->capacity, sizeof(void*));
     return l;
 }
 

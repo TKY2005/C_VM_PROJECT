@@ -38,6 +38,7 @@ instruction* setup_instruction_set() {
 
 void _ext(CPU* cpu, memory* mem) {
     cpu->state->CPU_RUNNING = 0;
+    reg_clear_flags(cpu->registers, FLG_I);
 }
 
 void _nop(CPU* cpu, memory* mem) {
@@ -761,10 +762,7 @@ void _calbe(CPU* cpu, memory* mem) {
 }
 
 void _iret(CPU* cpu, memory* mem) {
-    uint32_t s = 0;
-    CPU_stack_pop(cpu, mem, &s);
-    cpu->state->state = (uint8_t) s;
-
+    CPU_pop_flags(cpu, mem);
     CPU_stack_pop(cpu, mem, &cpu->registers->CS);
     CPU_stack_pop(cpu, mem, &cpu->registers->PC);
 }

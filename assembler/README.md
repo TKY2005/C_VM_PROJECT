@@ -27,7 +27,19 @@ to print each source line followed by the bytes emitted for that line:
 tkyc source.asm [output.tky]
 tkyc --list source.asm [output.tky]
 tkyc --max 64k source.asm [output.tky]
+tkyc -d [--base address] input.tky output.txt
 ```
+
+`-d` (or `--disassemble`) disassembles a flat binary image. Flat binaries do
+not store the `org` value, so the disassembler infers the image address from
+absolute control-flow targets when possible; use `--base` to provide the
+address explicitly when it cannot be inferred (for example, a program with no
+absolute branches). Addresses on instructions and function labels are
+absolute. The disassembler follows reachable instructions from the image
+start and discovered control-flow targets, then makes a linear-sweep guess at
+remaining code islands and presents other ranges as data, combining printable
+ASCII runs into quoted strings when possible. Instruction bytes are padded
+independently of reconstructed data rows.
 
 `--max` (or `-m`) limits the generated image size; suffixes `b`, `k`, `m`, and
 `g` mean bytes and powers of 1024. A suffix is optional and defaults to bytes.
@@ -44,5 +56,7 @@ Symbols retain their absolute addresses, and operand metadata follows
 displacement terms in any order; only the displacement term is register-free.
 Data strings encode one Unicode code point per element using the width of their
 directive (`defb`, `defw`, or `defdw`) and the same most-significant-byte-first
-order as numeric data. Diagnostics include the source location, source line,
-and token at the reported column.
+order as numeric data. Data declarations may span lines; a comma at the end of
+a data row continues the declaration, and the directive may be placed on its
+own line after the label. Diagnostics include the source location, source
+line, and token at the reported column.

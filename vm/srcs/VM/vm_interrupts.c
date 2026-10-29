@@ -1,65 +1,64 @@
 #include<VM/vm_interrupts.h>
-#include<CPU/CPU.h>
-#include<Memory/memory.h>
-#include<VM/vm_input.h>
-#include<Timing/clock.h>
 
+#include<pthread.h>
+#include<stdio.h>
 #include<stdint.h>
 
-int vm_hardware_interrupt(CPU* cpu, memory* mem) {
+static pthread_mutex_t interrupt_queue_mutex = PTHREAD_MUTEX_INITIALIZER;
 
+static int ic_lock(void) {
+    int result = pthread_mutex_lock(&interrupt_queue_mutex);
+    if (result != 0) {
+        fprintf(stderr, "Unable to lock interrupt queue (error %d).\n", result);
+        return -1;
+    }
+    return 0;
 }
 
-int vm_software_interrupt(CPU* cpu, memory* mem) {
-    
-    switch(cpu->registers->ALH){ // interrupt code register: AH
-
-        case VM_SINTR_READ_CHR: {
-            int c = vm_getchr();
-            cpu->registers->DXL = (uint16_t) c; // result stored in DX register
-            break;
-        }
-        case VM_SINTR_READ_NUM: {
-            uint8_t mode = cpu->registers->ALL; // read mode: AL
-            uint32_t n = vm_getnum();
-            // result is stored in D register
-            if (mode == READ_MODE_BYTE) cpu->registers->DLL = (uint8_t) n;
-            else if (mode == READ_MODE_WORD) cpu->registers->DXL = (uint16_t) n;
-            else if (mode == READ_MODE_DWORD) cpu->registers->D = n;
-            else cpu->registers->DLL = (uint8_t) n;
-            break;
-        }
-        case VM_SINTR_READ_TO_BUFF: {
-            // destination buffer address: SI
-            // write amount: EDX
-            // write mode: AL
-            uint32_t buffaddr = cpu->registers->SI;
-            uint8_t mode = cpu->registers->ALL;
-            uint32_t amount = cpu->registers->D;
-            int inc = 1;
-            
-            if (mode == READ_MODE_BYTE) inc = 1;
-            else if (mode == READ_MODE_WORD) inc = 2;
-            else if (mode == READ_MODE_DWORD) inc = 4;
-            amount *= inc;
-
-            uint32_t index = 0;
-            uint32_t chr;
-            while ( (chr = vm_getchr()) != VM_KEY_ENTER && index < amount) {
-                if (mode == READ_MODE_BYTE) mem_write_byte(mem, buffaddr + index, (uint8_t) chr);
-                else if (mode == READ_MODE_WORD) mem_write_word(mem, buffaddr + index,(uint16_t) chr);
-                else if (mode == READ_MODE_DWORD) mem_write_dword(mem, buffaddr + index, chr);
-                else mem_write_byte(mem, buffaddr + index, (uint8_t) chr);
-                printf("%c", vmchr_to_platform(chr));
-                clock_simulate_delay(cpu->clock_delay_ms);
-                if(chr == VM_KEY_DEL) index -= inc;
-                else index += inc;
-            }
-            cpu->registers->D = index / inc; // write the amount written back to EDX
-            break;
-        }
-        default:
-        return VM_UNKNOWN_INTERRUPT;
-        break;
+static void ic_unlock(void) {
+    int result = pthread_mutex_unlock(&interrupt_queue_mutex);
+    if (result != 0) {
+        fprintf(stderr, "Unable to unlock interrupt queue (error %d).\n", result);
     }
+}
+
+interrupt_controller ic_init() {
+    interrupt_controller ic = {0};
+    ic.interrupt_queue = queue_init();
+    return ic;
+}
+
+int ic_interrupt_enqueue(interrupt_controller* ic, uint8_t icode) {
+    if (ic_lock() < 0) return -1;
+    queue_enqueue_back(ic->interrupt_queue, (void*) (uintptr_t) icode);
+    ic_unlock();
+    return 0;
+}
+
+int ic_interrupt_line_status(interrupt_controller* ic) {
+    if (ic_lock() < 0) return -1;
+    int pending = !queue_empty(ic->interrupt_queue);
+    ic_unlock();
+    return pending;
+}
+
+int ic_interrupt_acknowledge(interrupt_controller* ic) {
+    if (ic_lock() < 0) return -1;
+    int icode = (int) (uintptr_t) queue_dequeue_front(ic->interrupt_queue);
+    ic_unlock();
+    return icode;
+}
+
+void ic_reset(interrupt_controller* ic) {
+    if (ic_lock() < 0) return;
+    queue_free(ic->interrupt_queue);
+    ic->interrupt_queue = queue_init();
+    ic_unlock();
+}
+
+void ic_free(interrupt_controller* ic) {
+    if (ic_lock() < 0) return;
+    queue_free(ic->interrupt_queue);
+    ic->interrupt_queue = NULL;
+    ic_unlock();
 }

@@ -3,6 +3,7 @@
 #include<stdbool.h>
 #include<string.h>
 #include<ctype.h>
+#include<pthread.h>
 
 #include<VM/vm.h>
 #include<CPU/CPU.h>
@@ -16,6 +17,7 @@
 #include<VM/vm_input.h>
 #include<VM/vm_interrupts.h>
 #include<VM/vm_settings.h>
+#include<Timing/clock.h>
 
 #include<utils/helpers.h>
 #include<utils/tky_hashmap.h>
@@ -25,6 +27,8 @@ memory vm_memory;
 bool ui_mode;
 uint32_t vm_entry = 0;
 tky_hashmap* vm_settings = NULL;
+interrupt_controller vm_ic;
+pthread_t* timer_thread;
 
 void vm_init(int memsize) {
     if (vm_memory.ram != NULL && vm_memory.bios_rom != NULL && vm_memory.fb != NULL) mem_destroy(&vm_memory);
@@ -47,6 +51,8 @@ void vm_init(int memsize) {
     }
     vm_cpu->clock_delay_ms = vm_calculate_delay_ms(vm_conf.cycle_count);
     vm_entry = vm_conf.entrypoint;
+
+    vm_ic = ic_init();
 }
 
 uint64_t vm_calculate_delay_ms(uint64_t cycles) {
@@ -65,12 +71,13 @@ void vm_shutdown() {
     CPU_destroy(vm_cpu);
     mem_destroy(&vm_memory);
     vm_free_settings(vm_settings);
+    ic_free(&vm_ic);
 }
 
 int vm_boot_sequence(CPU* cpu, memory* mem) {
     cpu->registers->PC = vm_entry;
     cpu->state->CPU_RUNNING = 1;
-    reg_set_flags(cpu->registers, FLG_I);
+    //reg_set_flags(cpu->registers, FLG_I); The Software should set this flag through 'sli' instruction
     CPU_run(cpu, mem);
 }
 
@@ -88,7 +95,7 @@ int vm_runf(CPU* cpu, memory* mem, const char* filepath) {
     }
 
     cpu->state->CPU_RUNNING = 1;
-    reg_set_flags(cpu->registers, FLG_I);
+    //reg_set_flags(cpu->registers, FLG_I); The Software should set this flag through 'sli' instruction
     CPU_run(cpu, mem);
 
     return VM_SUCCESS;
@@ -169,24 +176,8 @@ int vm_runp(CPU* cpu, memory* mem, uint32_t entry) {
     
     cpu->registers->PC = entry;
     cpu->state->CPU_RUNNING = 1;
-    reg_set_flags(cpu->registers, FLG_I);
+    //reg_set_flags(cpu->registers, FLG_I); The Software should set this flag through 'sli' instruction
 
     CPU_run(cpu, mem);
     return VM_SUCCESS;
-}
-
-int vm_interrupt(CPU* cpu, memory* mem, uint8_t icode) {
-    
-    if (!reg_check_flag(cpu->registers, FLG_I)) {
-        return INTERRUPT_FLAG_DISABLED;
-    }
-    else {
-        if (icode == VM_HARDWARE_INTERRUPT) return vm_hardware_interrupt(cpu, mem);
-        else if (icode == VM_SOFTWARE_INTERRUPT) return vm_software_interrupt(cpu, mem);
-        else if (icode == VM_TRAP_INTERRUPT){
-            reg_set_flags(vm_cpu->registers, FLG_T);
-            vm_debug_shell();
-        }
-        else return VM_UNKNOWN_INTERRUPT;
-    }
 }
