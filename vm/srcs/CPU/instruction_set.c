@@ -8,6 +8,7 @@
 #include<VM/vm_input.h>
 #include<ISA_encoding_info.h>
 #include<Timing/clock.h>
+#include<VM/vm_io.h>
 #include<math.h>
 #include<time.h>
 
@@ -263,7 +264,19 @@ void _outs(CPU* cpu, memory* mem) {
         offset++;
     }
 }
-void _inp(CPU* cpu, memory* mem) { }
+void _inp(CPU* cpu, memory* mem) {
+    ins_encoding encoding = {0};
+    encoding.resolve_sym = 1;
+
+    int read = CPU_read_operand_bytes(cpu, mem, &encoding);
+
+    uint32_t port = CPU_decode_src(cpu, mem, &encoding);
+
+    uint32_t result = 0;
+    int r = io_read((uint8_t) port, &result);
+
+    CPU_write_dest(cpu, mem, &encoding, result);
+}
 void _inps(CPU* cpu, memory* mem) { }
 
 void _push(CPU* cpu, memory* mem) {
@@ -773,4 +786,16 @@ void _livt(CPU* cpu, memory* mem) {
 
     uint32_t ivtaddr = CPU_decode_dest(cpu, mem, &encoding);
     cpu->registers->IVTR = ivtaddr;
+}
+
+void _outp(CPU* cpu, memory* mem) {
+    ins_encoding encoding = {.single_oper = 1};
+    encoding.resolve_sym = 1;
+
+    int read = CPU_read_operand_bytes(cpu, mem, &encoding);
+
+    uint32_t port = CPU_decode_dest(cpu, mem, &encoding);
+    uint32_t val = CPU_decode_src(cpu, mem, &encoding);
+
+    io_write((uint8_t) port, val);
 }

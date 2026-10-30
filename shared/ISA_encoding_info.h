@@ -93,6 +93,7 @@
     X(CALBE, 0x4D, _calbe)  \
     X(IRET, 0x4E, _iret)  \
     X(LIVT, 0x4F, _livt)  \
+    X(OUTP, 0x50, _outp) \
 
 
 #define X(mnemonic, opcode, funcname) INS_##mnemonic = opcode,

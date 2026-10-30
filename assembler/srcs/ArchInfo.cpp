@@ -114,7 +114,8 @@ map<string, uint8_t> ArchInfo::insmap = {
     {"calae",0x4C},
     {"calbe",0x4D},
     {"iret", 0x4E},
-    {"livt", 0x4F}
+    {"livt", 0x4F},
+    {"outp", 0x50}
 };
 
 map<string, uint8_t> ArchInfo::reg_select_map = {

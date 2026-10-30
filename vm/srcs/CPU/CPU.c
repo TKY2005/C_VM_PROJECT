@@ -428,7 +428,7 @@ uint32_t CPU_decode_src(CPU* cpu, memory* mem, ins_encoding* ins) {
 
 int CPU_write_dest(CPU* cpu, memory* mem, ins_encoding* ins, uint32_t val) {
 
-    if (CPU_dest_is_reg(ins->opertype.dest_type)){
+    if (CPU_dest_is_reg(ins->opertype.dest_type)) {
         int is8bit = ins->opertype.dest_type == REG8;
 
         int idx = 0;

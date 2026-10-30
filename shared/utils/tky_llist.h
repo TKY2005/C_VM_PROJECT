@@ -25,6 +25,7 @@ void        llist_remove_back(tky_llist *l);
 void        llist_remove_front(tky_llist *l);
 void*       llist_pop_front(tky_llist* l);
 void*       llist_pop_back(tky_llist* l);
+void*       llist_pop_idx(tky_llist* l, int idx);
 void*       llist_get(tky_llist* l, int index);
 void        llist_remove_idx(tky_llist* l, int index);
 

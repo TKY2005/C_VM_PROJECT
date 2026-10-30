@@ -172,6 +172,29 @@ void llist_remove_idx(tky_llist* l, int idx) {
     l->size--;
 }
 
+void* llist_pop_idx(tky_llist* l, int idx) {
+    if (llist_empty(l)) return NULL;
+    if (idx >= l->size || idx < 0) return NULL;
+    if (idx == 0) return llist_pop_front(l);
+    else if (idx == l->size - 1) return llist_pop_back(l);
+    else {
+        tky_lnode* p = l->head;
+        int i = 0;
+        while (i < idx) {
+            p = p->next;
+            i++;
+        }
+        tky_lnode* prev_node = p->prev;
+        tky_lnode* next_node = p->next;
+        prev_node->next = next_node;
+        next_node->prev = prev_node;
+        void* data = p->data;
+        lnode_free(p);
+        l->size--;
+        return data;
+    }
+}
+
 void llist_display(tky_llist* l) {
     tky_lnode* p = l->head;
     while (p != NULL) {

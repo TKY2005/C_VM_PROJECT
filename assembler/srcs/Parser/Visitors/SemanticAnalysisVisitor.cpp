@@ -39,7 +39,6 @@ int expectedOperandCount(uint8_t opcode)
         case 0x0D:
         case 0x0F:
         case 0x10:
-        case 0x12:
         case 0x13:
         case 0x14:
         case 0x15:
@@ -89,6 +88,7 @@ int expectedOperandCount(uint8_t opcode)
         case 0x08:
         case 0x0A:
         case 0x0E:
+        case 0x12:
         case 0x26:
         case 0x27:
         case 0x28:
@@ -96,6 +96,7 @@ int expectedOperandCount(uint8_t opcode)
         case 0x2C:
         case 0x32:
         case 0x33:
+        case 0x50:
             return 2;
         default:
             throw std::runtime_error("instruction opcode has no declared operand count");
