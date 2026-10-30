@@ -5,6 +5,8 @@
 #include<stdlib.h>
 #include<VM/vm_interrupts.h>
 #include<VM/vm.h>
+#include<VM/vm_settings.h>
+#include<CPU/CPU.h>
 
 #include<Timing/clock_internal.h>
 #include<Timing/clock.h>
@@ -13,16 +15,22 @@ static atomic_bool timer_running = ATOMIC_VAR_INIT(false);
 
 void* timer_tick_task(void* arg) {
     uint64_t ms = *(uint64_t*) arg;
+    float speedup = vm_conf.timer_speedup_factor;
+    uint64_t cycles = (ms * 1000) * speedup;
+    uint64_t last_interrupt_cycle = 0;
+
     free(arg);
 
     while (atomic_load(&timer_running)) {
-        timer_sleep(ms);
+        uint64_t elapsed = CPU_get_cycles(vm_cpu);
         if (!atomic_load(&timer_running)) break;
+        if (elapsed % cycles != 0 || elapsed == last_interrupt_cycle) continue;
         if (ic_interrupt_enqueue(&vm_ic, TIMER_INTERRUPT_VECTOR) < 0) {
             fprintf(stderr, "Unable to enqueue timer interrupt.\n");
             atomic_store(&timer_running, false);
             break;
         }
+        last_interrupt_cycle = elapsed;
     }
     return NULL;
 }
@@ -30,6 +38,10 @@ void* timer_tick_task(void* arg) {
 pthread_t* clock_timer_start(uint64_t interval) {
     if (interval == 0) {
         fprintf(stderr, "Timer interval must be greater than zero.\n");
+        return NULL;
+    }
+    if (interval > UINT64_MAX / 1000) {
+        fprintf(stderr, "Timer interval is too large.\n");
         return NULL;
     }
 

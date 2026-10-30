@@ -3,6 +3,7 @@
 
 #include<stdint.h>
 #include<stdarg.h>
+#include<stdatomic.h>
 
 #include<Memory/memory.h>
 #include<CPU/registers.h>
@@ -33,6 +34,8 @@ typedef struct CPU {
     CPU_STATE* state;
     instruction* instruction_set;
     uint64_t clock_delay_ms;
+
+    _Atomic uint64_t cycles_count;
 } CPU;
 
 // Initializes the CPU with the given registers and instructions set
@@ -107,6 +110,8 @@ void CPU_update_flags16(CPU* cpu, uint16_t dest, uint16_t src, uint16_t val);
 void CPU_update_flags32(CPU* cpu, uint32_t dest, uint32_t src, uint32_t val);
 // Resets the flags and updates its value according to the destination operand
 void CPU_update_flags(CPU* cpu, ins_encoding* ins, uint32_t dest, uint32_t src, uint32_t val);
+// returns the number of cycles elapsed since the last run
+uint64_t CPU_get_cycles(CPU* cpu);
 
 // returns the effective address using the formula: base + (index * scale) + displacement
 uint32_t CPU_calc_addr(CPU* cpu, ins_encoding* ins);

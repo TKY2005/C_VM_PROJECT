@@ -56,10 +56,12 @@ void vm_set_settings(tky_hashmap* source, struct vm_config* target) {
     char* display_field = (char*) hashmap_get(source, SETTINGS_DISPLAY_FIELD, strlen(SETTINGS_DISPLAY_FIELD));
     char* entry_field = (char*) hashmap_get(source, SETTINGS_ENTRY_FIELD, strlen(SETTINGS_ENTRY_FIELD));
     char* timer_field = (char*) hashmap_get(source, SETTINGS_TIMER_FIELD, strlen(SETTINGS_TIMER_FIELD));
+    char* speedup_field = (char*) hashmap_get(source, SETTINGS_SPEEDUP_FIELD, strlen(SETTINGS_SPEEDUP_FIELD));
 
     target->mem_size = vm_parse_conf_field(mem_field);
     target->cycle_count = vm_parse_conf_field(cycle_field);
     target->timer_interval = vm_parse_conf_field(timer_field);
+    sscanf(speedup_field, "%f", &target->timer_speedup_factor);
 
     int path_size = strlen(bios_field);
     strncpy(target->bios_path, bios_field, path_size);
@@ -74,6 +76,7 @@ void vm_set_settings(tky_hashmap* source, struct vm_config* target) {
     free(display_field);
     free(entry_field);
     free(timer_field);
+    free(speedup_field);
 }
 
 uint32_t vm_parse_conf_field(const char* fieldval) {

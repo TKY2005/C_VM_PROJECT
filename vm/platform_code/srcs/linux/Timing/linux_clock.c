@@ -13,11 +13,3 @@ void clock_simulate_delay(uint64_t ms) {
     s.tv_nsec = ms * 1000000;
     nanosleep(&s, NULL);
 }
-
-void timer_sleep(uint64_t ms) {
-    fflush(stdout);
-    struct timespec s;
-    s.tv_sec = ms / 1000;
-    s.tv_nsec = ms * 1000000;
-    nanosleep(&s, NULL);
-}

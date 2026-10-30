@@ -60,6 +60,12 @@ void vm_run_shell_command(char* command) {
     else if (strcmp(parts[0], "boot") == 0) {
         vm_boot_sequence(vm_cpu, &vm_memory);
     }
+    else if (strcmp(parts[0], "cycles") == 0) {
+        if (vm_cpu == NULL) printf("CPU not initialized. intialize with vm_init first.\n");
+        else {
+            printf("Cycles since last run: %lu\n", CPU_get_cycles(vm_cpu));
+        }
+    }
     else if (strcmp(parts[0], "loadfile") == 0) {
 
         if (vm_memory.ram == NULL) printf("No virtual memory to load the file to. initialize with vm_init first.\n");

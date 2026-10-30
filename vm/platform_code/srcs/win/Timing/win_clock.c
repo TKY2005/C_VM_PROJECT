@@ -8,9 +8,3 @@ void clock_simulate_delay(uint64_t ms) {
     Sleep(ms);
     timeEndPeriod(1);
 }
-
-void timer_sleep(uint64_t ms) {
-    timeBeginPeriod(1);
-    Sleep(ms);
-    timeBeginPeriod(1);
-}

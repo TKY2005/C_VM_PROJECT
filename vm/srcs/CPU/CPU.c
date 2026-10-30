@@ -24,6 +24,7 @@ CPU* CPU_init(union registerfile* regfile, instruction* ins_set) {
     cpu->state = calloc(1, sizeof(CPU_STATE));
 
     cpu->instruction_set = ins_set;
+    atomic_init(&cpu->cycles_count, 0);
 
     return cpu;
 }
@@ -46,6 +47,7 @@ void CPU_destroy(CPU* cpu) {
 
 int CPU_run(CPU* cpu, memory* mem) {
 
+    atomic_store(&cpu->cycles_count, 0);
     timer_thread = clock_timer_start(vm_conf.timer_interval);
     if (timer_thread == NULL) return CPU_EXEC_FAILURE;
 
@@ -109,6 +111,7 @@ void CPU_exec_ins(CPU* cpu, memory* mem, uint8_t opcode) {
     else {
         ins(cpu, mem);
         CPU_step(cpu);
+        atomic_fetch_add(&cpu->cycles_count, 1);
     }
 }
 
@@ -300,6 +303,10 @@ void CPU_update_flags(CPU* cpu, ins_encoding* ins, uint32_t dest, uint32_t src, 
         else if (CPU_destsize_16(ins->opertype.dest_type)) CPU_update_flags16(cpu, dest, src, val);
         else if (CPU_destsize_32(ins->opertype.dest_type)) CPU_update_flags32(cpu, dest, src, val);
     }
+}
+
+uint64_t CPU_get_cycles(CPU* cpu){
+    return atomic_load(&cpu->cycles_count);
 }
 
 int CPU_read_displacement_value(CPU* cpu, memory* mem, ins_encoding* ins) {
