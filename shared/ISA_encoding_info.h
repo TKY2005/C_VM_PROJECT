@@ -94,6 +94,7 @@
     X(IRET, 0x4E, _iret)  \
     X(LIVT, 0x4F, _livt)  \
     X(OUTP, 0x50, _outp) \
+    X(HLT, 0x51, _hlt) \
 
 
 #define X(mnemonic, opcode, funcname) INS_##mnemonic = opcode,

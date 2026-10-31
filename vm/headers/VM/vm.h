@@ -10,7 +10,7 @@
 #include<stdbool.h>
 #include<pthread.h>
 
-#define VM_VER "2.0.0b"
+#define VM_VER "2.2.0b"
 
 // ERRORS: < 0
 #define FILE_NOT_OPEN -1

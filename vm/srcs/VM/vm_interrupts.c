@@ -28,6 +28,8 @@ interrupt_controller ic_init() {
     interrupt_controller ic = {0};
     ic.interrupt_queue = queue_init();
     ic.enabled = IC_ENABLED;
+
+    memset(&ic.wakeup_list, INT_CANWAKEUP, sizeof(ic.wakeup_list));
     return ic;
 }
 
@@ -42,7 +44,14 @@ int ic_interrupt_enqueue(interrupt_controller* ic, uint8_t icode) {
         ic_unlock();
         return 0;
     }
-    queue_enqueue_back(ic->interrupt_queue, (void*) (uintptr_t) icode);
+    if(!vm_cpu->state->CPU_HALTED) queue_enqueue_back(ic->interrupt_queue, (void*) (uintptr_t) icode);
+    else {
+        if (ic_canwakeup(ic, icode)){
+            queue_enqueue_front(ic->interrupt_queue, (void*) (uintptr_t) icode);
+            vm_cpu->state->CPU_HALTED = 0;
+        }
+        else queue_enqueue_back(ic->interrupt_queue, (void*) (uintptr_t) icode);
+    }
     ic_unlock();
     return 0;
 }
@@ -119,6 +128,34 @@ int ic_cmd_allowall(interrupt_controller* ic) {
     return 0;
 }
 
+int ic_cmd_disablewakeup_all(interrupt_controller* ic) {
+    if (ic_lock() < 0) return -1;
+    memset(ic->wakeup_list, INT_NOWAKEUP, sizeof(ic->wakeup_list));
+    ic_unlock();
+    return 0;
+}
+
+int ic_cmd_disablewakeup_vec(interrupt_controller* ic) {
+    if (ic_lock() < 0) return -1;
+    ic->wakeup_list[ic->data] = INT_NOWAKEUP;
+    ic_unlock();
+    return 0;
+}
+
+int ic_cmd_enablewakeup_all(interrupt_controller* ic) {
+    if (ic_lock() < 0) return -1;
+    memset(ic->wakeup_list, INT_CANWAKEUP, sizeof(ic->wakeup_list));
+    ic_unlock();
+    return 0;
+}
+
+int ic_cmd_enablewakeup_vec(interrupt_controller* ic) {
+    if (ic_lock() < 0) return -1;
+    ic->wakeup_list[ic->data] = INT_CANWAKEUP;
+    ic_unlock();
+    return 0;
+}
+
 int ic_run_command(interrupt_controller* ic, uint8_t command) {
     switch(command) {
 
@@ -154,6 +191,17 @@ int ic_run_command(interrupt_controller* ic, uint8_t command) {
             ic_cmd_allowall(ic);
             return 0;
         
+        case IC_COMMAND_DISABLEWAKEUP_ALL:
+            return ic_cmd_disablewakeup_all(ic);
+
+        case IC_COMMAND_DISABLEWAKEUP_VEC:
+            return ic_cmd_disablewakeup_vec(ic);
+
+        case IC_COMMAND_ENABLEWAKEUP_ALL:
+            return ic_cmd_enablewakeup_all(ic);
+        
+        case IC_COMMAND_ENABLEWAKEUP_VEC:
+            return ic_cmd_enablewakeup_vec(ic);
         default:
             return -1;
     }
@@ -171,6 +219,10 @@ int ic_write_data(interrupt_controller* ic, uint8_t data) {
 
 int ic_isrejected(interrupt_controller* ic, uint8_t port) {
     return ic->rejection_list[port];
+}
+
+int ic_canwakeup(interrupt_controller* ic, uint8_t port) {
+    return ic->wakeup_list[port];
 }
 
 void ic_reset(interrupt_controller* ic) {

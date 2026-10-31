@@ -48,10 +48,12 @@ void CPU_destroy(CPU* cpu) {
 int CPU_run(CPU* cpu, memory* mem) {
 
     atomic_store(&cpu->cycles_count, 0);
+    atomic_store(&cpu->saved_cycles, 0);
     timer_thread = clock_timer_start(vm_conf.timer_interval);
     if (timer_thread == NULL) return CPU_EXEC_FAILURE;
 
-    while (cpu->state->CPU_RUNNING) {
+
+    while (cpu->state->CPU_RUNNING && !cpu->state->CPU_HALTED) {
         uint8_t opcode = 0;
         int read = mem_read_byte(mem, cpu->registers->PC, &opcode);
 
@@ -63,6 +65,8 @@ int CPU_run(CPU* cpu, memory* mem) {
             if (reg_check_flag(cpu->registers, FLG_T)) vm_debug_shell();
             CPU_exec_ins(cpu, mem, opcode);
         }
+
+        interrupt_handler:
 
         int interrupt_pending = ic_interrupt_line_status(&vm_ic);
         if (interrupt_pending < 0) {
@@ -94,6 +98,18 @@ int CPU_run(CPU* cpu, memory* mem) {
             }
         }
     }
+
+    // since the timer is based on CPU cycles. we have to simulate CPU cycles to prevent the timer from freezing
+    if (cpu->state->CPU_HALTED) {
+        cpu->saved_cycles = atomic_load(&cpu->cycles_count);
+        while (cpu->state->CPU_HALTED) {
+            clock_simulate_delay(cpu->clock_delay_ms);
+            atomic_fetch_add(&cpu->cycles_count, 1);
+        }
+        cpu->cycles_count = atomic_load(&cpu->saved_cycles);
+        goto interrupt_handler;
+    }
+    
     clock_timer_stop(timer_thread);
     ic_reset(&vm_ic);
     return CPU_EXEC_SUCCESS;

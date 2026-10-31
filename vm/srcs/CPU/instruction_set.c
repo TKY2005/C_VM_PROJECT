@@ -799,3 +799,7 @@ void _outp(CPU* cpu, memory* mem) {
 
     io_write((uint8_t) port, val);
 }
+
+void _hlt(CPU* cpu, memory* mem) {
+    cpu->state->CPU_HALTED = 1;
+}

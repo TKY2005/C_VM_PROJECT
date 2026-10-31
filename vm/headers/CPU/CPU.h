@@ -36,6 +36,7 @@ typedef struct CPU {
     uint64_t clock_delay_ms;
 
     _Atomic uint64_t cycles_count;
+    _Atomic uint64_t saved_cycles;
 } CPU;
 
 // Initializes the CPU with the given registers and instructions set
