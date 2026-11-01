@@ -15,6 +15,9 @@
 #define CPU_EXEC_SUCCESS 0
 #define CPU_EXEC_FAILURE -1
 
+#define CPU_EXCEPTION_DIVZERO 0x00
+#define CPU_EXCEPTION_INVOP 0x01
+
 #define CPU_UNDEFINED_OPCODE -1
 
 typedef union {

@@ -146,9 +146,13 @@ void _div(CPU* cpu, memory* mem) {
     else {
         uint32_t dest = CPU_decode_dest(cpu, mem, ins);
         uint32_t src = CPU_decode_src(cpu, mem, ins);
-        uint32_t val = dest / src;
-        CPU_write_dest(cpu, mem, ins, val);
-        CPU_update_flags(cpu, ins, dest, src, val);
+
+        if (src == 0) CPU_interrupt(cpu, mem, CPU_EXCEPTION_DIVZERO);
+        else {
+            uint32_t val = dest / src;
+            CPU_write_dest(cpu, mem, ins, val);
+            CPU_update_flags(cpu, ins, dest, src, val);
+        }
     }
 }
 void _pow(CPU* cpu, memory* mem) {

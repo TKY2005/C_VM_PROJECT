@@ -54,6 +54,7 @@ int CPU_run(CPU* cpu, memory* mem) {
 
 
     while (cpu->state->CPU_RUNNING && !cpu->state->CPU_HALTED) {
+
         uint8_t opcode = 0;
         int read = mem_read_byte(mem, cpu->registers->PC, &opcode);
 
@@ -120,9 +121,12 @@ void CPU_exec_ins(CPU* cpu, memory* mem, uint8_t opcode) {
     instruction ins = cpu->instruction_set[opcode];
 
     if (ins == NULL) {
+        CPU_interrupt(cpu, mem, CPU_EXCEPTION_INVOP);
+        CPU_step(cpu);
         char buff[2048] = {0};
         sprintf(buff, "The CPU requested instruction with opcode: 0x%02X but it isn't defined.\n", opcode);
-        CPU_fail(cpu, buff);
+        printd(buff);
+        //CPU_fail(cpu, buff);
     }
     else {
         ins(cpu, mem);
