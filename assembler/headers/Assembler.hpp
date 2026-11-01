@@ -5,6 +5,7 @@
 #include<vector>
 #include<cstdint>
 #include<limits>
+#include<map>
 
 #include<LexicalAnalyzer/Tokenizer.hpp>
 
@@ -27,7 +28,8 @@ class Assembler {
         std::string sourcefile,
         std::string destinationfile,
         bool printListing = false,
-        uint64_t maximumImageSize = std::numeric_limits<uint64_t>::max()
+        uint64_t maximumImageSize = std::numeric_limits<uint64_t>::max(),
+        std::map<std::string, uint32_t> symbols = {}
     );
 };
 

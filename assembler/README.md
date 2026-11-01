@@ -27,8 +27,15 @@ to print each source line followed by the bytes emitted for that line:
 tkyc source.asm [output.tky]
 tkyc --list source.asm [output.tky]
 tkyc --max 64k source.asm [output.tky]
+tkyc -D "{sym1: 0xXXXX, sym2: 0bXXXX}" source.asm [output.tky]
+tkyc --define "{sym1: 0xXXXX, sym2: 0bXXXX}" source.asm [output.tky]
 tkyc -d [--base address] input.tky output.txt
 ```
+
+`-D` (or `--define`) adds comma-separated symbols to the assembler's symbol
+table. Values are absolute unsigned 32-bit addresses used as-is, not offsets,
+and may be decimal or use `0x` (hexadecimal), `0b` (binary), `0o` (octal), or
+a leading zero (octal).
 
 `-d` (or `--disassemble`) disassembles a flat binary image. Flat binaries do
 not store the `org` value, so the disassembler infers the image address from

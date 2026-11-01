@@ -29,7 +29,7 @@ uint32_t checkedLength(uint64_t length)
 
 std::any SymbolLengthVisitor::calculate(ParseResult& result, AsmContext& c)
 {
-    std::map<std::string, uint32_t> previousSymbols;
+    std::map<std::string, uint32_t> previousSymbols = c.symMap;
 
     for (int pass = 0; pass < 32; ++pass) {
         c.program_counter = 0;

@@ -9,6 +9,7 @@
 #include<sstream>
 #include<stdexcept>
 #include<string>
+#include<utility>
 #include<vector>
 #include<ErrorHandler/ErrorHandler.hpp>
 
@@ -18,7 +19,8 @@ int Assembler::assembleSource(
     std::string sourcefile,
     std::string destinationfile,
     bool printListing,
-    uint64_t maximumImageSize
+    uint64_t maximumImageSize,
+    std::map<std::string, uint32_t> symbols
 )
 {
     ErrorBucket::clear();
@@ -70,6 +72,7 @@ int Assembler::assembleSource(
 
         AsmContext context;
         context.sourceFile = sourcefile;
+        context.symMap = std::move(symbols);
         AssemblerPipeline pipeline;
         std::vector<uint8_t> output =
             std::any_cast<std::vector<uint8_t>>(pipeline.assemble(*result, context));
