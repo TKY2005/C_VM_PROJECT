@@ -78,6 +78,14 @@ std::string hexValue(uint32_t value)
     return result.str();
 }
 
+std::string hexDataValue(uint32_t value, size_t width)
+{
+    std::ostringstream result;
+    result << "0x" << std::uppercase << std::hex << std::setw(width * 2)
+           << std::setfill('0') << value;
+    return result.str();
+}
+
 std::string registerName(uint8_t type, uint8_t code)
 {
     static const char* const names32[] = {
@@ -152,7 +160,7 @@ bool isOperandless(uint8_t opcode)
         opcode == INS_EXT || opcode == INS_IRET || opcode == INS_LEN ||
         opcode == INS_STR || opcode == INS_OUTS || opcode == INS_INP ||
         opcode == INS_INPS || opcode == INS_OUTSW || opcode == INS_LENW ||
-        (opcode >= INS_CLC && opcode <= INS_SLI);
+        (opcode >= INS_CLC && opcode <= INS_SLI) || opcode == INS_HLT;
 }
 
 bool isUnconditionalTerminator(uint8_t opcode)
@@ -367,7 +375,8 @@ std::string formatData(
     const std::vector<uint8_t>& bytes,
     size_t begin,
     size_t end,
-    uint32_t imageBase
+    uint32_t imageBase,
+    const std::string& dataPrefix
 )
 {
     size_t width = 1;
@@ -400,15 +409,26 @@ std::string formatData(
     if (hasString) width = 1;
 
     const char* directive = width == 1 ? "b" : width == 2 ? "w" : "dw";
-    std::string result = "def(" + std::string(directive) + ") ";
-    bool first = true;
+    std::string result = dataPrefix + "def" + std::string(directive) + " ";
+    const size_t continuationIndent = result.size();
+    size_t elementCount = 0;
+    const auto appendElement = [&](const std::string& element) {
+        if (elementCount != 0) {
+            if (elementCount % 6 == 0) {
+                result += ",\n";
+                result.append(continuationIndent, ' ');
+            } else {
+                result += ", ";
+            }
+        }
+        result += element;
+        ++elementCount;
+    };
     for (size_t i = begin; i < end;) {
         size_t runEnd = i;
         while (runEnd < end && isStringByte(bytes[runEnd])) ++runEnd;
         if (runEnd - i >= 4) {
-            if (!first) result += ", ";
-            result += quoteString(bytes, i, runEnd);
-            first = false;
+            appendElement(quoteString(bytes, i, runEnd));
             i = runEnd;
             continue;
         }
@@ -416,9 +436,7 @@ std::string formatData(
         size_t valueEnd = std::min(end, i + width);
         uint32_t value = 0;
         for (size_t j = i; j < valueEnd; ++j) value = (value << 8) | bytes[j];
-        if (!first) result += ", ";
-        result += hexValue(value);
-        first = false;
+        appendElement(hexDataValue(value, width));
         i = valueEnd;
     }
     return result;
@@ -458,9 +476,10 @@ void writeDataSegment(
         return;
     }
 
-    output << "<data_" << dataIndex++ << " @0x"
-           << addressText(imageBase + static_cast<uint32_t>(begin)) << "> "
-           << formatData(bytes, begin, end, imageBase) << '\n';
+    std::ostringstream dataPrefix;
+    dataPrefix << "<data_" << dataIndex++ << " @0x"
+               << addressText(imageBase + static_cast<uint32_t>(begin)) << "> ";
+    output << formatData(bytes, begin, end, imageBase, dataPrefix.str()) << '\n';
 }
 
 void decodeReachable(
