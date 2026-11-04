@@ -21,11 +21,14 @@ expression results continue to use `std::any`: expression evaluation returns a
 `std::vector<uint8_t>`.
 
 Run the assembler with a source path and an optional output path. Add `--list`
-to print each source line followed by the bytes emitted for that line:
+to print each source line followed by the bytes emitted for that line. Append
+`s` (`-ls` or `--list s`) to print the completed symbol map instead:
 
 ```text
 tkyc source.asm [output.tky]
 tkyc --list source.asm [output.tky]
+tkyc -ls source.asm [output.tky]
+tkyc --list s source.asm [output.tky]
 tkyc --max 64k source.asm [output.tky]
 tkyc -D "{sym1: 0xXXXX, sym2: 0bXXXX}" source.asm [output.tky]
 tkyc --define "{sym1: 0xXXXX, sym2: 0bXXXX}" source.asm [output.tky]
@@ -36,6 +39,9 @@ tkyc -d [--base address] input.tky output.txt
 table. Values are absolute unsigned 32-bit addresses used as-is, not offsets,
 and may be decimal or use `0x` (hexadecimal), `0b` (binary), `0o` (octal), or
 a leading zero (octal).
+
+Symbol listing entries are printed as `name => 0xXXXXXXXX`, with addresses
+shown as eight uppercase hexadecimal digits.
 
 `-d` (or `--disassemble`) disassembles a flat binary image. Flat binaries do
 not store the `org` value, so the disassembler infers the image address from

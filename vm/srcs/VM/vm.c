@@ -29,8 +29,15 @@ uint32_t vm_entry = 0;
 tky_hashmap* vm_settings = NULL;
 interrupt_controller vm_ic;
 pthread_t* timer_thread;
+vm_display* display;
+display_arg display_arguments = {0};
 
 void vm_init(int memsize) {
+    if (display != NULL) {
+        if (window_close(display) != 0) return;
+        display = NULL;
+        display_arguments = (display_arg){0};
+    }
     if (vm_memory.ram != NULL && vm_memory.bios_rom != NULL && vm_memory.fb != NULL) mem_destroy(&vm_memory);
     if (vm_cpu) CPU_reset_state(vm_cpu);
     else {
@@ -53,9 +60,28 @@ void vm_init(int memsize) {
     vm_entry = vm_conf.entrypoint;
 
     vm_ic = ic_init();
+
+    display = window_start();
+    if (display == NULL) {
+        fprintf(stderr, "Unable to allocate display state.\n");
+        return;
+    }
+    display_arguments.d = display;
+    display_arguments.fb = vm_memory.fb;
+
+    int result = pthread_create(&display->update_thread, NULL, window_update, &display_arguments);
+    if (result != 0) {
+        fprintf(stderr, "Unable to start display thread (error %d).\n", result);
+        window_close(display);
+        display = NULL;
+        display_arguments = (display_arg){0};
+        return;
+    }
+    display->update_thread_started = true;
 }
 
 uint64_t vm_calculate_delay_ms(uint64_t cycles) {
+    if (cycles == 0) return 0;
     return 1000 / cycles;
 }
 
@@ -67,7 +93,11 @@ void vm_init_nomem() {
 }
 
 void vm_shutdown() {
-    
+    if (display != NULL) {
+        if (window_close(display) != 0) return;
+        display = NULL;
+        display_arguments = (display_arg){0};
+    }
     CPU_destroy(vm_cpu);
     mem_destroy(&vm_memory);
     vm_free_settings(vm_settings);

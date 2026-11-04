@@ -157,6 +157,7 @@ bool parseSymbols(
 int main(int argc, char** argv)
 {
     bool printListing = false;
+    bool printSymbols = false;
     bool disassemble = false;
     std::optional<uint32_t> imageBase;
     uint64_t maximumImageSize = std::numeric_limits<uint64_t>::max();
@@ -166,6 +167,14 @@ int main(int argc, char** argv)
         const std::string argument = argv[i];
         if (argument == "--list" || argument == "--listing" || argument == "-l") {
             printListing = true;
+            if (i + 1 < argc && std::string(argv[i + 1]) == "s") {
+                printSymbols = true;
+                ++i;
+            }
+        }
+        else if (argument == "-ls") {
+            printListing = true;
+            printSymbols = true;
         }
         else if (argument == "-d" || argument == "--disassemble") {
             disassemble = true;
@@ -259,6 +268,7 @@ int main(int argc, char** argv)
         ? positionalArguments[1] : "./out.tky";
     Assembler assembler;
     return assembler.assembleSource(
-        sourceFileName, outputFileName, printListing, maximumImageSize, symbols
+        sourceFileName, outputFileName, printListing, maximumImageSize, symbols,
+        printSymbols
     );
 }

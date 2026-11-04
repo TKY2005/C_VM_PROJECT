@@ -137,14 +137,16 @@ void CPU_exec_ins(CPU* cpu, memory* mem, uint8_t opcode) {
 
 uint32_t CPU_step(CPU* cpu) {
     cpu->registers->PC++;
-    clock_simulate_delay(cpu->clock_delay_ms);
+    if (vm_conf.cycle_count != 0) 
+        clock_simulate_delay(cpu->clock_delay_ms);
     return cpu->registers->PC;
 }
 void CPU_step_e(void** arg) {
     CPU* cpu = (CPU*) arg[0];
 
     cpu->registers->PC++;
-    clock_simulate_delay(cpu->clock_delay_ms);
+    if (vm_conf.cycle_count != 0) 
+        clock_simulate_delay(cpu->clock_delay_ms);
     return;
 }
 

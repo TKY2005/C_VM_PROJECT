@@ -5,6 +5,7 @@
 #include<Memory/memory.h>
 #include<utils/tky_hashmap.h>
 #include<VM/vm_interrupts.h>
+#include<VM/vm_display.h>
 
 #include<stdint.h>
 #include<stdbool.h>
@@ -33,6 +34,8 @@ extern uint32_t vm_entry;
 extern tky_hashmap* vm_settings;
 extern interrupt_controller vm_ic;
 extern pthread_t* timer_thread;
+extern vm_display* display;
+extern display_arg display_arguments;
 
 void vm_init(int memsize);
 void vm_init_nomem();

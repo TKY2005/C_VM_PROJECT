@@ -20,7 +20,8 @@ int Assembler::assembleSource(
     std::string destinationfile,
     bool printListing,
     uint64_t maximumImageSize,
-    std::map<std::string, uint32_t> symbols
+    std::map<std::string, uint32_t> symbols,
+    bool printSymbols
 )
 {
     ErrorBucket::clear();
@@ -98,7 +99,15 @@ int Assembler::assembleSource(
             std::cerr << "Failed while writing output file: " << destinationfile << '\n';
             return ERR_ASM_FAIL;
         }
-        if (printListing) {
+        if (printSymbols) {
+            for (const auto& symbol : context.symMap) {
+                std::cout << symbol.first << ": 0x" << std::uppercase
+                          << std::hex << std::setw(8) << std::setfill('0')
+                          << symbol.second << '\n';
+            }
+            std::cout << std::dec << std::setfill(' ');
+        }
+        else if (printListing) {
             for (const auto& node : result->parsedLines) {
                 std::cout << node->sourceLine << " ->";
                 const auto addresses = context.nodeAddresses.find(node.get());
