@@ -17,8 +17,11 @@ enum class MainType {
     COMMA,
     NEWLINE,
     OPEN_BRACE,
+    OPEN_PAREN,
     SEMICOLON,
     CLOSE_BRACE,
+    CLOSE_PAREN,
+    SPECIAL,
     ENOF,
     UNDEFINED
 };
@@ -30,6 +33,7 @@ enum class SubType {
     DIR_DEFB, DIR_DEFW, DIR_DEFDW,
     DIR_RESB, DIR_RESW, DIR_RESDW,
     OPER_ADD, OPER_SUB, OPER_MUL, OPER_DIV,
+    SPECIAL_PROG_OFFSET, SPECIAL_SECT_OFFSET,
     NONE
 };
 

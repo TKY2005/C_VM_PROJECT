@@ -10,7 +10,7 @@
 #include<Memory/framebuffer.h>
 #include<Memory/RAM.h>
 #include<CPU/CPU.h>
-#include<utils/strbuilder/strbuilder.h>
+#include<utils/tky_strbuilder.h>
 #include<utils/helpers.h>
 #include<VM/vm_events.h>
 #include<VM/vm.h>
@@ -58,13 +58,13 @@ int mem_dispatch_write(memory* m, uint32_t addr, size_t count, uint8_t* val) {
   else return ram_write_bytes(m->ram, addr, count, val);
 }
 
-int mem_size(const memory *m) { return m->ram->size; }
+int mem_size(const memory* m) { return m->ram->size; }
 
-int mem_write_byte(memory *m, uint32_t addr, uint8_t val) {
+int mem_write_byte(memory* m, uint32_t addr, uint8_t val) {
   return mem_dispatch_write(m, addr, 1, &val);
 }
 
-int mem_write_word(memory *m, uint32_t addr, uint16_t val) {
+int mem_write_word(memory* m, uint32_t addr, uint16_t val) {
   uint8_t x[2] = {(val >> 8) & 0xff, val & 0xff};
   return mem_dispatch_write(m, addr, 2, x);
 }
@@ -78,40 +78,41 @@ int mem_write_dword(memory *m, uint32_t addr, uint32_t val) {
    return mem_dispatch_write(m, addr, 4, x);
 }
 
-int mem_write_bytes(memory *m, uint32_t addr, int count, uint8_t *vals) {
+int mem_write_bytes(memory* m, uint32_t addr, int count, uint8_t* vals) {
 
   return mem_dispatch_write(m, addr, count, vals);
 }
 
-int mem_read_byte(memory *m, uint32_t addr, uint8_t* result) {
-  uint8_t* r = calloc(1, sizeof(uint8_t));
+int mem_read_byte(memory* m, uint32_t addr, uint8_t* result) {
+  uint8_t r[1] = {0};
   int s = mem_dispatch_read(m, addr, 1, r);
   *result = r[0];
-  if(r) free(r);
   return s;
 }
-int mem_read_word(memory *m, uint32_t addr, uint16_t* result) {
-  uint8_t* r = calloc(2, sizeof(uint8_t));
+
+int mem_read_word(memory* m, uint32_t addr, uint16_t* result) {
+
+  uint8_t r[2] = {0};
   int s = mem_dispatch_read(m, addr, 2, r);
   uint8_t high = r[0];
   uint8_t low = r[1];
   *result = (high << 8) | low;
-  free(r);
   return s;
 }
-int mem_read_dword(memory *m, uint32_t addr, uint32_t* result) {
+
+int mem_read_dword(memory* m, uint32_t addr, uint32_t* result) {
   
-  uint8_t* r = calloc(4, sizeof(uint8_t));
+  uint8_t r[4] = {0};
   int s = mem_dispatch_read(m, addr, 4, r);
 
   uint16_t high = (r[0] << 8) | r[1];
   uint16_t low = (r[2] << 8) | r[3];
 
   *result = (high << 16) | low;
-  free(r);
   return s;
 }
-int mem_read_bytes(memory *m, uint32_t addr, int count, uint8_t* result) {
+
+int mem_read_bytes(memory* m, uint32_t addr, int count, uint8_t* result) {
   return mem_dispatch_read(m, addr, count, result);
 }
 
@@ -168,53 +169,56 @@ char* mem_display(memory* m, uint32_t start, int count, int chunk_size) {
   snprintf(val_dummy, sizeof(val_dummy), "%02X  ", 0x00);
   int val_size = strlen(val_dummy);
 
-  strbuilder charset = strbuilder_init();
-  strbuilder mem_str = strbuilder_init();
+  tky_strbuilder* charset = strbuilder_init();
+  tky_strbuilder* mem_str = strbuilder_init();
 
-  strbuilder offset = strbuilder_init();
+  tky_strbuilder* offset = strbuilder_init();
   for (int i = 0; i < chunk_size; i++) {
   
-    strbuilder_appendf(&offset, "%02X", i);
-    strbuilder_fill_chr(&offset, ' ', val_size);
+    strbuilder_appendf(offset, "%02X", i);
+    strbuilder_fill(offset, " ", val_size);
     if ((i + 1) % chunk_half == 0) {
-      strbuilder_append(&offset, "  ");
+      strbuilder_append(offset, "  ");
     }
   }
 
-  strbuilder_fill_chr(&mem_str, ' ', addr_size);
-  strbuilder_append(&mem_str, strbuilder_getstr(&offset));
-  strbuilder_append(&mem_str, "\n");
-  strbuilder_destroy(&offset);
+  strbuilder_fill(mem_str, " ", addr_size);
+  strbuilder_append(mem_str, strbuilder_getstr(offset));
+  strbuilder_append(mem_str, "\n");
+  strbuilder_free(offset);
   uint8_t c;
   for (int i = start; i < start + count; i++) {
     
     if (i % chunk_size == 0 || i - start == 0) {
-      strbuilder_appendf(&mem_str, "%08X:  ", i);
+      strbuilder_appendf(mem_str, "%08X:  ", i);
     }
     mem_read_byte(m, i, &c);
-    strbuilder_appendf(&mem_str, "0x%02X  ", c);
-    strbuilder_append_chr(&charset, (is_printable(c) == 0 ? (char) c : '.'));
+    strbuilder_appendf(mem_str, "0x%02X  ", c);
+    strbuilder_appendc(charset, (is_printable(c) == 0 ? (char) c : '.'));
 
     if ((i + 1) % chunk_half == 0 && (i + 1) % chunk_size != 0) {
-      strbuilder_append(&mem_str, "  ");
-      strbuilder_append(&charset, "  ");
+      strbuilder_append(mem_str, "  ");
+      strbuilder_append(charset, "  ");
     }
 
     if ((i + 1) % chunk_size == 0) {
-      strbuilder_append_chr(&charset, '\0');
-      strbuilder_append(&mem_str, "\t|");
-      strbuilder_append(&mem_str, strbuilder_getstr(&charset));
-      strbuilder_append(&mem_str, "|\n");
-      strbuilder_reset(&charset);
+      strbuilder_appendc(charset, '\0');
+      strbuilder_append(mem_str, "\t|");
+      strbuilder_append(mem_str, strbuilder_getstr(charset));
+      strbuilder_append(mem_str, "|\n");
+      strbuilder_reset(charset);
     }
   }
-  if (strbuilder_size(&charset) != 0){
-    strbuilder_append(&mem_str, "\t|");
-    strbuilder_append(&mem_str, strbuilder_getstr(&charset));
-    strbuilder_append(&mem_str, "|\n");
+  if (strbuilder_size(charset) != 0){
+    strbuilder_append(mem_str, "\t|");
+    strbuilder_append(mem_str, strbuilder_getstr(charset));
+    strbuilder_append(mem_str, "|\n");
   }
-  strbuilder_destroy(&charset);
-  return strbuilder_getstr(&mem_str);
+  strbuilder_free(charset);
+  char* result = malloc(strbuilder_size(mem_str) + 1);
+  if (result != NULL) memcpy(result, strbuilder_getstr(mem_str), strbuilder_size(mem_str) + 1);
+  strbuilder_free(mem_str);
+  return result;
 }
 
 void mem_destroy(memory* m) {

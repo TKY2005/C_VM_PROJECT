@@ -3,6 +3,7 @@
 #include<stdbool.h>
 #include<string.h>
 #include<ctype.h>
+#include<pthread.h>
 
 #include<VM/vm.h>
 #include<CPU/CPU.h>
@@ -16,16 +17,27 @@
 #include<VM/vm_input.h>
 #include<VM/vm_interrupts.h>
 #include<VM/vm_settings.h>
+#include<Timing/clock.h>
 
 #include<utils/helpers.h>
-#include<utils/hashmap/hmap.h>
+#include<utils/tky_hashmap.h>
 
 CPU* vm_cpu;
 memory vm_memory;
 bool ui_mode;
 uint32_t vm_entry = 0;
+tky_hashmap* vm_settings = NULL;
+interrupt_controller vm_ic;
+pthread_t* timer_thread;
+vm_display* display;
+display_arg display_arguments = {0};
 
 void vm_init(int memsize) {
+    if (display != NULL) {
+        if (window_close(display) != 0) return;
+        display = NULL;
+        display_arguments = (display_arg){0};
+    }
     if (vm_memory.ram != NULL && vm_memory.bios_rom != NULL && vm_memory.fb != NULL) mem_destroy(&vm_memory);
     if (vm_cpu) CPU_reset_state(vm_cpu);
     else {
@@ -34,12 +46,42 @@ void vm_init(int memsize) {
         vm_cpu = CPU_init(regfile, ins_set);
     }
     vm_memory = mem_init(memsize);
-    vm_memory.bios_rom->mem = load_BIOS_img(vm_conf.bios_path);
+    int load = load_BIOS_img(vm_conf.bios_path, vm_memory.bios_rom);
+    if (load == BIOS_ERR_COULDNT_OPEN_FILE) {
+        printf("Couldn't open the BIOS image file '%s'.\n", vm_conf.bios_path);
+    }
+    else if (load == BIOS_ERR_FILE_INCOMPLETE) {
+        printf("warning: The BIOS image file '%s' has not been completley loaded into memory.\n", vm_conf.bios_path);
+    }
+    else if (load == BIOS_ERR_NOINIT) {
+        printf("BIOS ROM is not initialized. Please initialize first using vm_init\n");
+    }
     vm_cpu->clock_delay_ms = vm_calculate_delay_ms(vm_conf.cycle_count);
     vm_entry = vm_conf.entrypoint;
+
+    vm_ic = ic_init();
+
+    display = window_start();
+    if (display == NULL) {
+        fprintf(stderr, "Unable to allocate display state.\n");
+        return;
+    }
+    display_arguments.d = display;
+    display_arguments.fb = vm_memory.fb;
+
+    int result = pthread_create(&display->update_thread, NULL, window_update, &display_arguments);
+    if (result != 0) {
+        fprintf(stderr, "Unable to start display thread (error %d).\n", result);
+        window_close(display);
+        display = NULL;
+        display_arguments = (display_arg){0};
+        return;
+    }
+    display->update_thread_started = true;
 }
 
 uint64_t vm_calculate_delay_ms(uint64_t cycles) {
+    if (cycles == 0) return 0;
     return 1000 / cycles;
 }
 
@@ -51,15 +93,21 @@ void vm_init_nomem() {
 }
 
 void vm_shutdown() {
-    
+    if (display != NULL) {
+        if (window_close(display) != 0) return;
+        display = NULL;
+        display_arguments = (display_arg){0};
+    }
     CPU_destroy(vm_cpu);
     mem_destroy(&vm_memory);
+    vm_free_settings(vm_settings);
+    ic_free(&vm_ic);
 }
 
 int vm_boot_sequence(CPU* cpu, memory* mem) {
     cpu->registers->PC = vm_entry;
     cpu->state->CPU_RUNNING = 1;
-    reg_set_flags(cpu->registers, FLG_I);
+    //reg_set_flags(cpu->registers, FLG_I); The Software should set this flag through 'sli' instruction
     CPU_run(cpu, mem);
 }
 
@@ -77,7 +125,7 @@ int vm_runf(CPU* cpu, memory* mem, const char* filepath) {
     }
 
     cpu->state->CPU_RUNNING = 1;
-    reg_set_flags(cpu->registers, FLG_I);
+    //reg_set_flags(cpu->registers, FLG_I); The Software should set this flag through 'sli' instruction
     CPU_run(cpu, mem);
 
     return VM_SUCCESS;
@@ -158,24 +206,8 @@ int vm_runp(CPU* cpu, memory* mem, uint32_t entry) {
     
     cpu->registers->PC = entry;
     cpu->state->CPU_RUNNING = 1;
-    reg_set_flags(cpu->registers, FLG_I);
+    //reg_set_flags(cpu->registers, FLG_I); The Software should set this flag through 'sli' instruction
 
     CPU_run(cpu, mem);
     return VM_SUCCESS;
-}
-
-int vm_interrupt(CPU* cpu, memory* mem, uint8_t icode) {
-    
-    if (!reg_check_flag(cpu->registers, FLG_I)) {
-        return INTERRUPT_FLAG_DISABLED;
-    }
-    else {
-        if (icode == VM_HARDWARE_INTERRUPT) return vm_hardware_interrupt(cpu, mem);
-        else if (icode == VM_SOFTWARE_INTERRUPT) return vm_software_interrupt(cpu, mem);
-        else if (icode == VM_TRAP_INTERRUPT){
-            reg_set_flags(vm_cpu->registers, FLG_T);
-            vm_debug_shell();
-        }
-        else return VM_UNKNOWN_INTERRUPT;
-    }
 }

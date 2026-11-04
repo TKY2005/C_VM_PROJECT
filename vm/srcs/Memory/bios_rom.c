@@ -25,16 +25,26 @@ uint32_t addr2bios(uint32_t addr) {
     return addr % BIOS_START;
 }
 
-uint8_t* load_BIOS_img(const char* imgpath) {
+int load_BIOS_img(const char* imgpath, BIOS_ROM* bios) {
+    if (bios == NULL || bios->mem == NULL) {
+        return BIOS_ERR_NOINIT;
+    }
+
     FILE* f = fopen(imgpath, "rb");
-    if (f == NULL) return NULL;
+    if (f == NULL) return BIOS_ERR_COULDNT_OPEN_FILE;
 
-    uint8_t* bios_content = (uint8_t*) calloc(BIOS_SIZE, sizeof(uint8_t));
+    fseek(f, 0, SEEK_END);
+    long img_size = ftell(f);
+    rewind(f);
 
-    fread(bios_content, sizeof(uint8_t), BIOS_SIZE, f);
+    size_t read = fread(bios->mem, sizeof(uint8_t), BIOS_SIZE, f);
+    if (read != img_size) {
+        fclose(f);
+        return BIOS_ERR_FILE_INCOMPLETE;
+    }
+
     fclose(f);
-    
-    return bios_content;
+    return BIOS_SIZE;
 }
 
 // BIOS is supposed to be a read-only section of memory and it's not mapped in the mem_dispatch_write function

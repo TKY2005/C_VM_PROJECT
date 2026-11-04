@@ -2,6 +2,8 @@
 #define FRAMEBUFFER_H
 
 #include<stdint.h>
+#include<stddef.h>
+#include<pthread.h>
 
 #define FRAMEBUFFER_START 0xF9D10000
 #define FRAMEBUFFER_END 0xFA20FFFF
@@ -10,6 +12,7 @@
 typedef struct framebuffer {
     size_t size;
     uint8_t* mem;
+    pthread_mutex_t mutex;
 } framebuffer;
 
 framebuffer* framebuffer_init(size_t sizeB);
@@ -28,6 +31,8 @@ int framebuffer_read_byte(framebuffer* m, uint32_t addr, uint8_t* result);
 int framebuffer_read_word(framebuffer* m, uint32_t addr, uint16_t* result);
 int framebuffer_read_dword(framebuffer* m, uint32_t addr, uint32_t* result);
 int framebuffer_read_bytes(framebuffer* m, uint32_t addr, int count, uint8_t* result);
+int framebuffer_lock(framebuffer* m);
+int framebuffer_unlock(framebuffer* m);
 
 int framebuffer_is_valid_addr(framebuffer* m, uint32_t addr);
 char* framebuffer_display(framebuffer* framebuffer, uint32_t start, int count, int chunk_size);

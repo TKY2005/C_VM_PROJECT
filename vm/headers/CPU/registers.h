@@ -12,6 +12,7 @@
 #define REG_CS_IDX 11
 #define REG_SS_IDX 12
 #define REG_DS_IDX 13
+#define REG_IVTR_IDX 14
 
 #define FLG_Z (1 << 0)
 #define FLG_N (1 << 1)
@@ -21,32 +22,34 @@
 #define FLG_T (1 << 5)
 
 
-static char* reglist[] = {"a", "b", "c", "d", "e", "f", "PC", "SI", "DI", "SP", "BP", "CS", "SS", "DS"};
+static char* reglist[] = {"a", "b", "c", "d", "e", "f", "PC", "SI", "DI", "SP", "BP", "CS", "SS", "DS", "IVTR"};
 
 union registerfile {
 	
-	uint8_t b[56]; // total byte size = 24 + 32 = 56
-	uint16_t w[28]; // total word size = 56 / 2 = 28
-	uint32_t dw[14]; // total dword size = 28 / 2 = 14
+	uint8_t b[60]; // total byte size = 24 + 36 = 60
+	uint16_t w[30]; // total word size = 60 / 2 = 30
+	uint32_t dw[15]; // total dword size = 30 / 2 = 15
 
 	struct {
 		// GPRs
-		uint8_t ALL, ALH, AUL, AUH;
-		uint8_t BLL, BLH, BUL, BUH;
-		uint8_t CLL, CLH, CUL, CUH;
-		uint8_t DLL, DLH, DUL, DUH;
-		uint8_t ELL, ELH, EUL, EUH;
-		uint8_t FLL, FLH, FUL, FUH;
-		// Special purpose registers
-		uint8_t PCLL, PCLH, PCUL, PCUH;
-		uint8_t SILL, SILH, SIUL, SIUH;
-		uint8_t DILL, DILH, DIUL, DIUH;
-		uint8_t SPLL, SPLH, SPUL, SPUH;
-		uint8_t BPLL, BPLH, BPUL, BPUH;
+		uint8_t 	ALL, 		ALH, 		AUL, 		AUH;
+		uint8_t 	BLL, 		BLH, 		BUL, 		BUH;
+		uint8_t 	CLL, 		CLH, 		CUL, 		CUH;
+		uint8_t 	DLL, 		DLH, 		DUL, 		DUH;
+		uint8_t 	ELL, 		ELH, 		EUL, 		EUH;
+		uint8_t 	FLL, 		FLH, 		FUL, 		FUH;
+		
+		uint8_t 	PCLL, 		PCLH, 		PCUL, 		PCUH;
+		uint8_t 	SILL, 		SILH, 		SIUL, 		SIUH;
+		uint8_t 	DILL, 		DILH, 		DIUL, 		DIUH;
+		uint8_t 	SPLL, 		SPLH, 		SPUL, 		SPUH;
+		uint8_t 	BPLL, 		BPLH, 		BPUL, 		BPUH;
 		// Segment registers
-		uint8_t CSLL, CSLH, CSUL, CSUH;
-		uint8_t SSLL, SSLH, SSUL, SSUH;
-		uint8_t DSLL, DSLH, DSUL, DSUH;
+		uint8_t 	CSLL, 		CSLH, 		CSUL, 		CSUH;
+		uint8_t 	SSLL, 		SSLH, 		SSUL, 		SSUH;
+		uint8_t 	DSLL, 		DSLH, 		DSUL, 		DSUH;
+		// Special purpose registers
+		uint8_t 	IVTRLL, 	IVTRLH, 	IVTRUL, 	IVTRUH;
 	};
 
 	struct {
@@ -57,7 +60,7 @@ union registerfile {
 		uint16_t DXL, DXH;
 		uint16_t EXL, EXH;
 		uint16_t FXL, FXH;
-		// 8 * 4 = 32 bytes
+		// 9 * 4 = 36 bytes
 		uint16_t PCL, PCH;
 		uint16_t SIL, SIH;
 		uint16_t DIL, DIH;
@@ -67,11 +70,14 @@ union registerfile {
 		uint16_t CSL, CSH;
 		uint16_t SSL, SSH;
 		uint16_t DSL, DSH;
+		// special purpose registers
+		uint16_t IVTRL, IVTRH;
 	};
 
 	struct {
 		uint32_t A, B, C, D, E, F;
 		uint32_t PC, SI, DI, SP, BP, CS, SS, DS;
+		uint32_t IVTR;
 		uint8_t flags;
 	};	
 };

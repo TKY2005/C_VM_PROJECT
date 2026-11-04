@@ -1,594 +1,360 @@
-#include<map>
+#include<Parser/Parser.hpp>
+#include<Visitors/Visitors.hpp>
+#include<LexicalAnalyzer/Tokenizer.hpp>
+#include<ArchInfo.hpp>
+
+#include<memory>
+#include<string>
 #include<vector>
 #include<cstdint>
-#include<string>
+#include<stdexcept>
+#include<utility>
 
-#include<LexicalAnalyzer/Tokenizer.hpp>
-#include<Parser/Parser.hpp>
-#include<LexicalAnalyzer/Lexer.hpp>
-#include<ISA_encoding_info.h>
-#include<ErrorHandler/ErrorHandler.hpp>
-#include<Assembler.hpp>
+std::any Binary::accept(NodeVisitor& v, AsmContext& c) {
+    return v.visit(*this, c);
+}
+std::any Unary::accept(NodeVisitor& v, AsmContext& c) {
+    return v.visit(*this, c);
+}
+std::any Number::accept(NodeVisitor& v, AsmContext& c) {
+    return v.visit(*this, c);
+}
+std::any Grouping::accept(NodeVisitor& v, AsmContext& c) {
+    return v.visit(*this, c);
+}
+std::any Instruction::accept(NodeVisitor& v, AsmContext& c) {
+    return v.visit(*this, c);
+}
+std::any DataNode::accept(NodeVisitor& v, AsmContext& c) {
+    return v.visit(*this, c);
+}
+std::any DirORG::accept(NodeVisitor& v, AsmContext& c) {
+    return v.visit(*this, c);
+}
+std::any DirSection::accept(NodeVisitor& v, AsmContext& c) {
+    return v.visit(*this, c);
+}
+std::any DirTimes::accept(NodeVisitor& v, AsmContext& c) {
+    return v.visit(*this, c);
+}
+std::any MemExpr::accept(NodeVisitor& v, AsmContext& c) {
+    return v.visit(*this, c);
+}
+std::any StringNode::accept(NodeVisitor& v, AsmContext& c) {
+    return v.visit(*this, c);
+}
+std::any Register::accept(NodeVisitor& v, AsmContext& c) {
+    return v.visit(*this, c);
+}
+std::any Symbol::accept(NodeVisitor& v, AsmContext& c) {
+    return v.visit(*this, c);
+}
+std::any ResNode::accept(NodeVisitor& v, AsmContext& c) {
+    return v.visit(*this, c);
+}
+std::any Special::accept(NodeVisitor& v, AsmContext& c) {
+    return v.visit(*this, c);
+}
+std::any Declaration::accept(NodeVisitor& v, AsmContext& c) {
+    return v.visit(*this, c);
+}
+std::any EquNode::accept(NodeVisitor& v, AsmContext& c) {
+    return v.visit(*this, c);
+}
 
-using std::vector;
-using std::map;
-using std::string;
 
+std::unique_ptr<ParseResult> Parser::parse() {
 
-ParseResult* Parser::parseTokens(vector<Token> tokens) {
-    
-    string section = "";
+    setProgramLines(extractLines());
 
-    ParseResult* result = new ParseResult();
-    result->symmap["$"] = program_offset;
-    result->symmap["$$"] = 0;
+    std::unique_ptr<ParseResult> result = std::unique_ptr<ParseResult>(new ParseResult());
 
-    vector<ProgLine> lines = extractLines(tokens);
-    progLines = lines;
-
-    vector<Token> currentLine;
-    for(int i = 0; i < lines.size(); i++) {
-
-        currentLine = lines[i].tokens;
-        if (currentLine.size() == 0) continue;
-
-        if (currentLine[0].maintype == MainType::DECL) {
-            result->symmap[currentLine[0].tokenstr.substr(1, string::npos)] = program_offset;
-        }
-
-        else if (currentLine[0].maintype == MainType::SYM) {
-            if (currentLine[1].subtype == SubType::DIR_EQU) {
-                uint32_t lhs = result->symmap[currentLine[2].tokenstr];
-                SubType oper = currentLine[3].subtype;
-                uint32_t rhs = result->symmap[currentLine[4].tokenstr];
-                uint32_t operresult;
-
-                // temporary.
-                switch(oper) {
-                    case SubType::OPER_ADD:
-                    operresult = lhs + rhs;
-                    break;
-                    case SubType::OPER_SUB:
-                    operresult = lhs - rhs;
-                    break;
-                    case SubType::OPER_MUL:
-                    operresult = lhs * rhs;
-                    break;
-                    case SubType::OPER_DIV:
-                    operresult = lhs / rhs;
-                    break;
-                    default:
-                    operresult = 0;
-                    break;
+    if (numLines() == 0) return result;
+    setStartLine();
+    for(int i = 0; i < numLines(); i++) {
+        try {
+            std::unique_ptr<ParseObject> l = line();
+            if (!l) {
+                Token errorToken = isAtEndOfLine() ? current() : operationLine[numToken];
+                const std::string sourceLine =
+                    errorToken.row >= 0 && static_cast<size_t>(errorToken.row) < sourceLines.size()
+                        ? sourceLines[errorToken.row] : "";
+                if (!ErrorBucket::hasErrorAt(sourceFile, errorToken.row)) {
+                    ErrorBucket::addError(
+                        currentLine(), errorToken, sourceFile,
+                        "could not parse source line", sourceLine
+                    );
                 }
-                ProgData* d = new ProgData(currentLine, 4, program_offset, operresult);
-                result->symmap[currentLine[0].tokenstr] = program_offset;
-                program_offset += d->len;
-                result->program_data.push_back(d);
             }
             else {
-                ProgData* d = parseData(currentLine);
-                result->program_data.push_back(d);
-                result->symmap[currentLine[0].tokenstr] = d->addr;
-            }
-        }
-
-        else if (currentLine[0].maintype == MainType::DIR) {
-
-            if (currentLine[0].subtype == SubType::DIR_ORG) {
-                
-                if (currentLine[1].maintype == MainType::NUM) {
-                    program_offset = (uint32_t) std::stoll(currentLine[1].tokenstr);
+                if (!operationLine.empty()) l->location = operationLine.front();
+                if (l->location.row >= 0 && static_cast<size_t>(l->location.row) < sourceLines.size()) {
+                    l->sourceLine = sourceLines[l->location.row];
                 }
-
-                else if (currentLine[1].maintype == MainType::SYM) {
-                    uint32_t base = result->symmap[currentLine[1].tokenstr];
-                    if (currentLine[2].maintype == MainType::SEMICOLON) {
-                        uint32_t offset = (uint32_t) std::stoll(currentLine[3].tokenstr);
-                        program_offset = base + offset;
-                    }
-                    else program_offset = base;
-                }
-            }
-
-            else if (currentLine[0].subtype == SubType::DIR_SECTION) {
-                section = currentLine[1].tokenstr;
-                result->symmap[section] = program_offset;
-                result->sections[section] = program_offset;
-                result->symmap["$$"] = program_offset;
-            }
-
-            else if (matchSubTypes(currentLine[0].subtype, {SubType::DIR_RESB, SubType::DIR_RESW, SubType::DIR_RESDW}))
-            {
-                int scale = 0;
-                if (currentLine[0].subtype == SubType::DIR_RESB) scale = 1;
-                else if (currentLine[0].subtype == SubType::DIR_RESW) scale = 2;
-                else if (currentLine[0].subtype == SubType::DIR_RESDW) scale = 4;
-
-                uint32_t amount = (uint32_t) std::stoll(currentLine[1].tokenstr);
-                program_offset += amount * scale;
+                result->parsedLines.push_back(std::move(l));
             }
         }
-
-        else if (currentLine[0].maintype == MainType::INS) {
-            if (section != "DATA"){
-                ProgIns* ins = parseInstruction(currentLine);
-                result->program_instructions.push_back(ins);
+        catch (const std::exception& error) {
+            const Token errorToken = isAtEndOfLine() ? current() : operationLine[numToken];
+            const std::string sourceLine =
+                errorToken.row >= 0 && static_cast<size_t>(errorToken.row) < sourceLines.size()
+                    ? sourceLines[errorToken.row] : "";
+            if (!ErrorBucket::hasErrorAt(sourceFile, errorToken.row)) {
+                ErrorBucket::addError(
+                    currentLine(), errorToken, sourceFile, error.what(), sourceLine
+                );
             }
-            else ErrorBucket::addError(currentLine, currentLine[0], 
-                Assembler::filename, "Instruction mnemonics aren't allowed in the DATA section.");
         }
-        result->symmap["$"] = program_offset;
+        if (i < numLines() - 1) nextLine();
     }
-    result->code_section_addr = result->sections["CODE"];
-    result->data_section_addr = result->sections["DATA"];
+
     return result;
 }
 
-ProgIns* Parser::parseInstruction(vector<Token> insparts) {
-    ProgIns* insobj = new ProgIns(insparts);
-    ProgIns& ins = *insobj;
+std::unique_ptr<ParseObject> Parser::line() {
     
-    int length = 0;
-    int& len = length;
-    len += 1; // opcode byte
-    
-    if (insparts[0].maintype != MainType::INS)  {
-        // todo : add error reporting mechanism
-        ErrorBucket::addError(insparts, insparts[0], Assembler::filename,
-        string("Expected an instruction instead found: ").append( Lexer::mainTypeToStr(insparts[0].maintype) ) );
+    if (check(MainType::INS)) return instruction();
+
+    else if (
+        compareSubTypes({SubType::DIR_ORG, SubType::DIR_SECTION, SubType::DIR_TIMES})
+    ) {return directive();}
+
+    else if (check(MainType::DECL)) {
+        std::string symbol = advance().tokenstr;
+        if (checkSubType(SubType::DIR_EQU) ||
+            checkSubType(SubType::DIR_DEFB) ||
+            checkSubType(SubType::DIR_DEFW) ||
+            checkSubType(SubType::DIR_DEFDW) ||
+            checkSubType(SubType::DIR_RESB) ||
+            checkSubType(SubType::DIR_RESW) ||
+            checkSubType(SubType::DIR_RESDW)) {
+            return dataDelcaration(symbol);
+        }
+        return std::unique_ptr<ParseObject>(new Declaration(symbol));
     }
+
+    else return dataDelcaration();
+}
+
+std::unique_ptr<ParseObject> Parser::instruction() {
+
+    uint8_t opcode = ArchInfo::insmap[advance().tokenstr];
+
+    if (isAtEndOfLine()) return std::unique_ptr<ParseObject>(new Instruction(opcode));
+
     else {
-        insobj->encoding_info->opcode = ArchInfo::insmap[insparts[0].tokenstr];
-        vector<vector<Token>> operands = extractOperands(insparts);
-        evaluateOperands(operands, ins, len);
-    }
-    ins.len = len;
-    ins.addr = program_offset;
-    program_offset += len;
-    return insobj;
-}
-
-vector<vector<Token>> Parser::extractOperands(vector<Token> insparts) {
-    vector<vector<Token>> operands;
-    vector<Token> current_operand;
-
-    for(int i = 1; i < insparts.size(); i++) {
-        if (insparts[i].maintype == MainType::COMMA){
-            operands.push_back(current_operand);
-            current_operand.clear();
+        std::vector<std::unique_ptr<ParseObject>> operands;
+        auto parseLocatedOperand = [this]() {
+            const Token location = current();
+            std::unique_ptr<ParseObject> parsed = operand();
+            if (parsed) {
+                parsed->location = location;
+                if (location.row >= 0 && static_cast<size_t>(location.row) < sourceLines.size()) {
+                    parsed->sourceLine = sourceLines[location.row];
+                }
+            }
+            return parsed;
+        };
+        operands.push_back(parseLocatedOperand());
+        while (matchAndAdvance({MainType::COMMA})) {
+            operands.push_back(parseLocatedOperand());
         }
-        else current_operand.push_back(insparts[i]);
+        return std::unique_ptr<ParseObject>(new Instruction(opcode, std::move(operands)));
     }
-    if (!current_operand.empty()) operands.push_back(current_operand);
-    return operands;
 }
 
-vector<Token> extractData(vector<Token> dparts) {
-    vector<Token> data;
+std::unique_ptr<ParseObject> Parser::directive() {
+    Token cur = advance();
+    if (cur.maintype == MainType::SYM) return parseTimes();
+    else{
+        switch(cur.subtype) {
 
-    for(int i = 2; i < dparts.size(); i++) {
-        if (dparts[i].maintype != MainType::COMMA) data.push_back(dparts[i]);
-    }
-    return data;
-}
+            case SubType::DIR_ORG:
+            {
+                return parseOrg();
+            }
 
-ProgData* Parser::parseData(vector<Token> dparts) {
-    
-    ProgData* d = new ProgData(dparts);
-    int scale = 0;
-    int length = 0;
-    if (matchSubTypes(dparts[1].subtype, {SubType::DIR_DEFB, SubType::DIR_RESB})) scale = 1;
-    else if (matchSubTypes(dparts[1].subtype, {SubType::DIR_DEFW, SubType::DIR_RESW})) scale = 2;
-    else if (matchSubTypes(dparts[1].subtype, {SubType::DIR_DEFDW, SubType::DIR_RESDW})) scale = 4;
-    
-    if (matchSubTypes(dparts[1].subtype, {SubType::DIR_RESB, SubType::DIR_RESW, SubType::DIR_RESDW})) {
-        d->isRes = true;
-        if (dparts[2].maintype != MainType::NUM) {
-            ErrorBucket::addError(getLine(dparts[2].row), dparts[2], Assembler::filename, "Next token must be number.");
+            case SubType::DIR_SECTION:
+            {
+                return parseSection();
+            }
+            case SubType::DIR_TIMES:
+            {
+                return parseTimes();
+            }
+            default:
+            return nullptr;
         }
-        else length += std::stoll(dparts[2].tokenstr) * scale;
     }
+}
+
+std::unique_ptr<ParseObject> Parser::parseOrg() {
+    std::unique_ptr<ParseObject> expr = expression();
+    return std::unique_ptr<ParseObject>(new DirORG(std::move(expr)));
+}
+
+std::unique_ptr<ParseObject> Parser::parseSection() {
+    Token name = advance();
+    if (name.maintype != MainType::SYM) return nullptr; // TODO: throw a parse error.
+    return std::unique_ptr<ParseObject>(new DirSection(name.tokenstr));
+}
+
+std::unique_ptr<ParseObject> Parser::parseTimes() {
+    std::string sym;
+    if (matchAndAdvance({MainType::SYM})) sym = previous().tokenstr;
+    std::unique_ptr<ParseObject> expr = expression();
+    std::unique_ptr<ParseObject> l = line();
+
+    return std::unique_ptr<ParseObject>(new DirTimes(sym, std::move(expr), std::move(l)));
+}
+
+std::unique_ptr<ParseObject> Parser::dataDelcaration(std::string symbol) {
+    
+    std::string sym = std::move(symbol);
+    uint8_t size = 0;
+    if (sym.empty() && matchAndAdvance({MainType::SYM})) sym = previous().tokenstr;
+
+    if (!sym.empty() && matchSubTypeAndAdvance({SubType::DIR_EQU})) {
+        return std::unique_ptr<ParseObject>(new EquNode(sym, expression()));
+    }
+
+    if (matchSubTypeAndAdvance({
+        SubType::DIR_DEFB, SubType::DIR_DEFW, SubType::DIR_DEFDW})) {
+
+        size = getDirectiveSize(previous().subtype);
+
+        std::vector<std::unique_ptr<ParseObject>> list = dataList();
+
+        return std::unique_ptr<ParseObject>(new DataNode(sym, std::move(list), size));
+    }
+
+    else if (matchSubTypeAndAdvance({SubType::DIR_RESB, SubType::DIR_RESW, SubType::DIR_RESDW})) {
+        size = getDirectiveSize(previous().subtype);
+        std::unique_ptr<ParseObject> expr = expression();
+
+        return std::unique_ptr<ParseObject>(new ResNode(sym, std::move(expr), size));
+    }
+    else return nullptr;
+}
+
+std::vector<std::unique_ptr<ParseObject>> Parser::dataList() {
+
+    std::vector<std::unique_ptr<ParseObject>> list;
+
+    list.push_back(data());
+
+    while (matchAndAdvance({MainType::COMMA})) list.push_back(data());
+
+    return list;
+}
+
+std::unique_ptr<ParseObject> Parser::data() {
+    
+    if (matchAndAdvance({MainType::STR})) {
+        Token token = previous();
+        std::unique_ptr<ParseObject> string(new StringNode(token.tokenstr));
+        string->location = token;
+        if (token.row >= 0 && static_cast<size_t>(token.row) < sourceLines.size()) {
+            string->sourceLine = sourceLines[token.row];
+        }
+        return string;
+    }
+
+    else return expression();
+}
+
+std::unique_ptr<ParseObject> Parser::operand() {
+    
+    if (compareTypes({MainType::OPEN_BRACE}) || compareSubTypes({SubType::DIR_BYTE, SubType::DIR_WORD, SubType::DIR_DWORD}))
+        return memexpr();
+    else return expression();
+}
+
+std::unique_ptr<ParseObject> Parser::memexpr() {
+
+    uint8_t size = 4;
+    std::unique_ptr<ParseObject> expr = nullptr;
+    if (matchSubTypeAndAdvance({SubType::DIR_BYTE, SubType::DIR_WORD, SubType::DIR_DWORD})) {
+        size = getDirectiveSize(previous().subtype);
+    }
+
+    consume(MainType::OPEN_BRACE, "expected an opening bracket for a memory expression");
+    expr = expression();
+    consume(MainType::CLOSE_BRACE, "expected a closing bracket for a memory expression");
+    return std::unique_ptr<ParseObject>(new MemExpr(std::move(expr), size));
+}
+
+
+std::unique_ptr<ParseObject> Parser::expression() {
+    return addition();
+}
+
+std::unique_ptr<ParseObject> Parser::addition() {
+    std::unique_ptr<ParseObject> expr = multiplication();
+
+    while (matchSubTypeAndAdvance({SubType::OPER_ADD, SubType::OPER_SUB})) {
+        Token oper = previous();
+        std::unique_ptr<ParseObject> right = multiplication();
+        expr = std::unique_ptr<ParseObject>(new Binary(std::move(expr), oper, std::move(right))); 
+    }
+    return expr;
+}
+
+std::unique_ptr<ParseObject> Parser::multiplication() {
+    std::unique_ptr<ParseObject> expr = unary();
+    while (matchSubTypeAndAdvance({SubType::OPER_MUL, SubType::OPER_DIV})) {
+        Token oper = previous();
+        std::unique_ptr<ParseObject> right = unary();
+        expr = std::unique_ptr<ParseObject>(new Binary(std::move(expr), oper, std::move(right)));
+    }
+    return expr;
+}
+
+std::unique_ptr<ParseObject> Parser::unary() {
+    if (matchSubTypeAndAdvance({SubType::OPER_ADD, SubType::OPER_SUB})) {
+        Token oper = previous();
+        std::unique_ptr<ParseObject> right = unary();
+        return std::unique_ptr<ParseObject>(new Unary(oper, std::move(right)));
+    }
+    else return primary();
+}
+
+std::unique_ptr<ParseObject> Parser::primary() {
+    if (matchAndAdvance({MainType::NUM})) return std::unique_ptr<ParseObject>(new Number(std::stoul(previous().tokenstr)));
+    else if (matchAndAdvance( {MainType::SYM} )) return std::unique_ptr<ParseObject>(new Symbol(previous().tokenstr));
+    else if (matchAndAdvance( {MainType::SPECIAL} )) return std::unique_ptr<ParseObject>(new Special(previous().subtype));
+    else if (matchAndAdvance({MainType::REG})) {
+        const Token token = previous();
+        std::unique_ptr<ParseObject> reg(new Register(
+            previous().tokenstr,
+            previous().subtype,
+            ArchInfo::reg_select_map[previous().tokenstr]
+        ));
+        reg->location = token;
+        if (token.row >= 0 && static_cast<size_t>(token.row) < sourceLines.size()) {
+            reg->sourceLine = sourceLines[token.row];
+        }
+        return reg;
+    }
+    
+    else if (matchAndAdvance({MainType::OPEN_PAREN})) {
+        std::unique_ptr<ParseObject> expr = expression();
+        consume(MainType::CLOSE_PAREN, "expected a closing parenthesis");
+
+        return std::unique_ptr<ParseObject>(new Grouping(std::move(expr)));
+    }
+
     else {
-        vector<Token> data = extractData(dparts);
-
-        for(int i = 0; i < data.size(); i++) {
-            if (data[i].maintype == MainType::STR) {
-                for(int j = 0; j < data[i].tokenstr.length(); j++) length += scale;
-            }
-            else if (data[i].maintype == MainType::NUM) length += scale;
-        }
-    }
-    d = new ProgData(dparts, length, scale, program_offset);
-    program_offset += length;
-    return d;
-}
-
-vector<ProgLine> Parser::extractLines(vector<Token> tokens) {
-    vector<ProgLine> lines;
-    vector<Token> lineparts;
-    int index = 0;
-    while (tokens[index].maintype != MainType::ENOF) {
-        if (tokens[index].maintype == MainType::NEWLINE) {
-            lines.push_back(lineparts);
-            lineparts.clear();
-        }
-        else lineparts.push_back(tokens[index]);
-        index++;
-    }
-    return lines;
-}
-
-vector<Token> Parser::extractMemoryExpression(vector<Token> operand){
-    vector<Token> memexpr;
-    bool add = false;
-    for(int i = 0; i < operand.size(); i++) {
-
-        if (operand[i].maintype == MainType::OPEN_BRACE) add = true;
-
-        if (add) memexpr.push_back(operand[i]);
-
-        if (operand[i].maintype == MainType::CLOSE_BRACE) return memexpr;
-    }
-    return memexpr;
-}
-
-void Parser::evaluateOperands(vector<vector<Token>> operands, ProgIns& result, int& length) {
-    
-    if (operands.size() == 0) {
-        result.hasOperands = false;
-        result.operand_count = 0;
-        result.len = length;
-        result.addr = program_offset;
-        return;
-    }
-    else if (operands.size() == 1) {
-        result.hasOperands = true;
-        result.operand_count = 1;
-        length += 1; // operand types byte //
-        evaluateDestinationOperand(operands[0], result, length);
-    }
-    else if (operands.size() == 2) {
-        result.hasOperands = true;
-        result.operand_count = 2;
-        length += 1; // operand types byte //
-        evaluateDestinationOperand(operands[0], result, length);
-        evaluateSourceOperand(operands[1], result, length);
+        parseError("expected an expression");
     }
 }
 
-void Parser::evaluateDestinationOperand(vector<Token> operand, ProgIns& result, int& length) {
-
-    if (!matchTypes(operand[0].maintype, 
-        {MainType::REG, MainType::DIR, MainType::OPEN_BRACE, MainType::NUM, MainType::SYM})) {
-            ErrorBucket::addError(getLine(operand[0].row), operand[0], Assembler::filename,
-        string("Unexpected token type for an operand: ").append(Lexer::mainTypeToStr(operand[0].maintype)));
-        return;
-    }
-
-    if (operand[0].maintype == MainType::SYM)  {
-        if (result.operand_count == 1){
-            result.hasSymbol = true;
-            result.symbol = operand[0].tokenstr;
-            length += 4; // symbols are allowed as destinations for single operand instructions //
-            length--; // operand types byte won't be present //
-            // TODO: lookahead to check if there's any displacement.
-        }
-        else {
-            ErrorBucket::addError(getLine(operand[0].row), operand[0], Assembler::filename, 
-                "Symbols and numbers can't be a destination for 2-operand instructions.");
-        }
-    }
-    else if (operand[0].maintype == MainType::NUM){
-        if (result.operand_count == 1){
-            length += 4; // only allowed for instructions that may take an immediate for operand, no opertype byte needed.
-            result.hasImmediate = true;
-            result.immediateSize = 4;
-            result.encoding_info->imm_val = (uint32_t) std::stoll(operand[0].tokenstr);
-            // in case of jmp and call instructions, the operand types byte won't be present
-            if ( 
-                (result.encoding_info->opcode >= INS_CALL && result.encoding_info->opcode <= INS_JB) || 
-                result.encoding_info->opcode >= INS_JC && result.encoding_info->opcode <= INS_CALNO) 
-                {
-                    length--;
-                }
-            else{
-                result.encoding_info->opertype.dest_type = NUMBER;
-            }
-        }
-        else {
-            ErrorBucket::addError(getLine(operand[0].row), operand[0], Assembler::filename, 
-                "Symbols and numbers can't be a destination for 2-operand instructions.");
-        }
-    }
-    else if (operand[0].maintype == MainType::REG) {
-        length += 1; // register select byte //
-        bool is8bit = false;
-        switch(operand[0].subtype) {
-            case SubType::REG8:
-            result.encoding_info->opertype.dest_type = REG8;
-            is8bit = true;
-            break;
-            case SubType::REG16:
-            result.encoding_info->opertype.dest_type = REG16;
-            break;
-            default:
-            result.encoding_info->opertype.dest_type = REG32;
-            break;
-        }
-        if (is8bit) {
-            uint8_t lhselect = 0;
-            char mode = tolower(operand[0].tokenstr[1]);
-            if (mode == 'l') lhselect = 0;
-            else if (mode == 'h') lhselect = 1;
-            uint8_t code = ArchInfo::index_select_map[Lexer::toLowerCase(operand[0].tokenstr)];
-            setRegister8bit(&result.encoding_info->regselect, DEST, lhselect, code);
-        }
-        else {
-            for(auto const& pair : ArchInfo::reg_select_map) {
-                if (Lexer::toLowerCase(operand[0].tokenstr) == pair.first){
-                    result.encoding_info->regselect.dest = pair.second;
-                    break;
-                }
-            }
-        }
-    }
-    else if (isMemoryOperand(operand)){
-        switch(operand[0].subtype) {
-            case SubType::DIR_BYTE:
-            result.encoding_info->opertype.dest_type = MEM8;
-            break;
-            case SubType::DIR_WORD:
-            result.encoding_info->opertype.dest_type = MEM16;
-            break;
-            case SubType::DIR_DWORD:
-            result.encoding_info->opertype.dest_type = MEM32;
-            default:
-            result.encoding_info->opertype.dest_type = MEM32;
-            break;
-        }
-        length += 1; // displacement info byte (displacement value may come later.)
-        result.encoding_info->opertype.mem_mode = X1SCALE;
-        result.hasMemory = true;
-        vector<Token> memoryexpr = extractMemoryExpression(operand);
-        evaluateMemoryExpression(memoryexpr, result, length);
-    }
-}
-
-void Parser::evaluateSourceOperand(vector<Token> operand, ProgIns& result, int& length) {
-
-    if (!matchTypes(operand[0].maintype, 
-        {MainType::REG, MainType::DIR, MainType::OPEN_BRACE, MainType::NUM, MainType::SYM})) {
-            ErrorBucket::addError(getLine(operand[0].row), operand[0], Assembler::filename,
-        string("Unexpected token type for an operand: ").append(Lexer::mainTypeToStr(operand[0].maintype)));
-        return;
-    }
-
-    if (operand[0].maintype == MainType::SYM) {
-        length += 4;
-        result.hasSymbol = true;
-        result.symbol = operand[0].tokenstr;
-    }
-
-    else if (operand[0].maintype == MainType::REG) {
-        if (!isDestReg(result.encoding_info->opertype.dest_type))
-            length += 1; // we should add the register select byte only if we haven't encountered it yet //
-        
-        bool is8bit = false;
-        switch(operand[0].subtype) {
-            case SubType::REG8:
-            result.encoding_info->opertype.src_type = REG8;
-            is8bit = true;
-            break;
-            case SubType::REG16:
-            result.encoding_info->opertype.src_type = REG16;
-            break;
-            default:
-            result.encoding_info->opertype.src_type = REG32;
-            break;
-        }
-        if (is8bit) {
-            uint8_t lhselect = 0;
-            char mode = tolower(operand[0].tokenstr[1]);
-            if (mode == 'l') lhselect = 0;
-            else if (mode == 'h') lhselect = 1;
-            uint8_t regcode = ArchInfo::index_select_map[Lexer::toLowerCase(operand[0].tokenstr)];
-            setRegister8bit(&result.encoding_info->regselect, SRC, lhselect, regcode);
-        }
-        else {
-            // TODO: Check to see if the source register size > destination register size
-            for(auto const& pair : ArchInfo::reg_select_map) {
-                if (Lexer::toLowerCase(operand[0].tokenstr) == pair.first){
-                    result.encoding_info->regselect.src = pair.second;
-                    break;
-                }
-            }
-        }
-
-        if (isSourceBiggerThanDest(result.encoding_info)) {
-            ErrorBucket::addWarning(getLine(operand[0].row), operand[0], Assembler::filename, 
-                "Source operand size is bigger than destination operand.");
-        }
-    }
-    else if (isMemoryOperand(operand)) {
-
-        switch(operand[0].subtype) {
-            case SubType::DIR_BYTE:
-            result.encoding_info->opertype.src_type = MEM8;
-            break;
-            case SubType::DIR_WORD:
-            result.encoding_info->opertype.src_type = MEM16;
-            break;
-            default:
-            case SubType::DIR_DWORD:
-            result.encoding_info->opertype.src_type = MEM32;
-            break;
-            result.encoding_info->opertype.src_type = MEM32;
-            break;
-        }
-        if (!result.hasMemory){
-            result.hasMemory = true;
-            length += 1; // displacement info byte
-            result.encoding_info->opertype.mem_mode = X1SCALE;
-        }
-        vector<Token> memexpr = extractMemoryExpression(operand);
-        evaluateMemoryExpression(memexpr, result, length);
-    }
-    else if (operand[0].maintype == MainType::NUM) {
-        result.hasImmediate = true;
-        result.encoding_info->opertype.src_type = NUMBER;
-        uint32_t num = (uint32_t) std::stoll(operand[0].tokenstr);
-        
-        switch (result.encoding_info->opertype.dest_type) // immediate size matches the destination type.
-        {
-        case REG8 : case MEM8:
-            length += 1;
-            result.immediateSize = 1;
-            break;
-        case REG16 : case MEM16:
-            length += 2;
-            result.immediateSize = 2;
-            break;
-        case REG32 : case MEM32:
-            length += 4;
-            result.immediateSize = 4;
-            break;
-        
-        default:
-            break;
-        }
-        result.encoding_info->imm_val = num;
-    }
-}
-
-void Parser::evaluateMemoryExpression(vector<Token> expr, ProgIns& result, int& length) {
-
-    for(int i = 0; i < expr.size(); i++) {
-
-        if (expr[i].maintype == MainType::REG) {
-            result.encoding_info->dispinfo.reg_enable = 1;
-            string regname = Lexer::toLowerCase(expr[i].tokenstr);
-            bool found = false;
-            for(auto const& pair : ArchInfo::index_select_map) {
-                if (regname == pair.first) {
-                    result.encoding_info->dispinfo.index = pair.second;
-                    found = true;
-                    break;
-                }
-            }
-            if (!found) {
-                for(auto const& pair : ArchInfo::base_select_map) {
-                    if (regname == pair.first) {
-                        result.encoding_info->dispinfo.base = pair.second;
-                        break;
-                    }
-                }
-            }
-        }
-        else if (expr[i].maintype == MainType::NUM) {
-            if (!result.hasDisplacement) {
-                result.hasDisplacement = true;
-                result.encoding_info->dispinfo.disp_enable = 1;
-                length += 4; // displacement value
-                int val = 0;
-                if (expr[i - 1].subtype == SubType::OPER_SUB) val = (int32_t) std::stoll("-" + expr[i].tokenstr);
-                else val = (int32_t) std::stoll(expr[i].tokenstr);
-
-                result.encoding_info->disp_val = val;
-            }
-        }
-        else if (expr[i].subtype == SubType::OPER_MUL) {
-            switch(std::stoll(expr[i + 1].tokenstr)) {
-                case 1:
-                result.encoding_info->opertype.mem_mode = X1SCALE;
-                break;
-                case 2:
-                result.encoding_info->opertype.mem_mode = X2SCALE;
-                break;
-                case 4:
-                result.encoding_info->opertype.mem_mode = X4SCALE;
-                break;
-                default:
-                // replace this with error reporting //
-                result.encoding_info->opertype.mem_mode = NOMEM;
-                break;
-            }
-        }
-    }
-}
-
-void Parser::setRegister8bit(REG_SELECT* reg, int operselect, uint8_t lhselect, uint8_t regcode) {
-    uint8_t r = 0;
-    if (operselect == DEST) r = reg->dest;
-    else if (operselect == SRC) r = reg->src;
-    r = (r << 4) | lhselect;
-    r = (r << 3) | regcode;
-    if (operselect == DEST) reg->dest = r;
-    else if (operselect == SRC) reg->src = r;
-}
-
-bool Parser::matchTypes(MainType t, std::initializer_list<MainType> a) {
-    for(MainType type : a) {
-        if (t == type) return true;
-    }
-    return false;
-}
-
-bool Parser::matchSubTypes(SubType t, std::initializer_list<SubType> a) {
-
-    for(SubType type : a) {
-        if (t == type) return true;
-    }
-    return false;
-}
-
-bool Parser::isMemoryOperand(vector<Token> operand) {
-    return (operand[0].maintype == MainType::OPEN_BRACE || 
-        ( matchSubTypes(operand[0].subtype, {SubType::DIR_BYTE, SubType::DIR_WORD, SubType::DIR_DWORD}) 
-        && operand[1].maintype == MainType::OPEN_BRACE ));
-}
-
-bool Parser::isSourceBiggerThanDest(ins_encoding* ins) {
-    uint8_t source = getSrcSize(&ins->opertype);
-    uint8_t dest = getDestSize(&ins->opertype);
-
-    return source > dest;
-}
-
-uint8_t Parser::getSrcSize(OPER_TYPE* t) {
-    switch(t->src_type) {
-        case REG8 : case MEM8 :
-        return 8;
-        break;
-        case REG16 : case MEM16 :
-        return 16;
-        break;
-        case REG32 : MEM32 :
-        return 32;
-        break;
-
-        default:
-        return 0;
-        break;
-    }
-    return 0;
-}
-
-uint8_t Parser::getDestSize(OPER_TYPE* t) {
-    switch(t->dest_type) {
-        case REG8 : case MEM8 :
-        return 8;
-        break;
-        case REG16 : case MEM16 :
-        return 16;
-        break;
-        case REG32 : MEM32 :
-        return 32;
-        break;
-
-        default:
-        return 0;
-        break;
-    }
-    return 0;
+[[noreturn]] void Parser::parseError(const std::string& message)
+{
+    const Token errorToken = current();
+    const std::string sourceLine =
+        errorToken.row >= 0 && static_cast<size_t>(errorToken.row) < sourceLines.size()
+            ? sourceLines[errorToken.row] : "";
+    ErrorBucket::addError(currentLine(), errorToken, sourceFile, message, sourceLine);
+    throw std::runtime_error(message);
 }

@@ -1,24 +1,76 @@
 #ifndef VM_INTERRUPTS_H
 #define VM_INTERRUPTS_H
 
+#include<stdio.h>
+
 #include<CPU/CPU.h>
 #include<Memory/memory.h>
+#include<utils/tky_queue.h>
 
-#define VM_UNKNOWN_INTERRUPT -1
+#define IC_COMMAND_PORT 0x20
+#define IC_DATA_PORT 0x21
 
-#define VM_SOFTWARE_INTERRUPT 0x01
-#define VM_HARDWARE_INTERRUPT 0x02
-#define VM_TRAP_INTERRUPT 0x03
+#define IC_COMMAND_NONE                 0
+#define IC_COMMAND_DISABLE              1
+#define IC_COMMAND_ENABLE               2
+#define IC_COMMAND_DROPALL              3
+#define IC_COMMAND_DISCARD_VEC          4
+#define IC_COMMAND_REJECT_VEC           5
+#define IC_COMMAND_ALLOW_VEC            6
+#define IC_COMMAND_REJECTALL            7
+#define IC_COMMAND_ALLOWALL             8
+#define IC_COMMAND_DISABLEWAKEUP_ALL    9
+#define IC_COMMAND_DISABLEWAKEUP_VEC    10
+#define IC_COMMAND_ENABLEWAKEUP_ALL     11
+#define IC_COMMAND_ENABLEWAKEUP_VEC     12
 
-#define VM_HINTR_KEY_HIT 0x01
+#define IC_ENABLED 1
+#define IC_DISABLED 0
 
-#define VM_SINTR_WRITE_FD 0x01
-#define VM_SINTR_READ_TO_BUFF 0x02
-#define VM_SINTR_READ_CHR 0x03
-#define VM_SINTR_READ_NUM 0x04
-#define VM_SINTR_TRAP 0x05
+#define INT_ALLOW 0
+#define INT_REJECT 1
 
-int vm_hardware_interrupt(CPU* cpu, memory* mem);
-int vm_software_interrupt(CPU* cpu, memory* mem);
+#define INT_CANWAKEUP 1
+#define INT_NOWAKEUP 0
+
+typedef struct interrupt_controller {
+    uint8_t data;
+    uint8_t enabled;
+    tky_queue* interrupt_queue;
+    uint8_t rejection_list[256];
+    uint8_t wakeup_list[256];
+} interrupt_controller;
+
+interrupt_controller ic_init();
+
+int ic_interrupt_enqueue(interrupt_controller* ic, uint8_t icode);
+int ic_interrupt_acknowledge(interrupt_controller* ic);
+int ic_interrupt_line_status(interrupt_controller* ic);
+
+int ic_run_command(interrupt_controller* ic, uint8_t command);
+
+int ic_cmd_disable(interrupt_controller* ic);
+int ic_cmd_enable(interrupt_controller* ic);
+int ic_cmd_dropall(interrupt_controller* ic);
+int ic_cmd_discard_vector(interrupt_controller* ic);
+int ic_cmd_reject_vector(interrupt_controller* ic);
+int ic_cmd_allow_vector(interrupt_controller* ic);
+int ic_cmd_rejectall(interrupt_controller* ic);
+int ic_cmd_allowall(interrupt_controller* ic);
+int ic_cmd_disablewakeup_all(interrupt_controller* ic);
+int ic_cmd_diablewakeup_vec(interrupt_controller* ic);
+int ic_cmd_enablewakeup_all(interrupt_controller* ic);
+int ic_cmd_enablewakeup_vec(interrupt_controller* ic);
+
+int ic_read_data(interrupt_controller* ic, uint8_t* result);
+
+int ic_write_data(interrupt_controller* ic, uint8_t data);
+
+int ic_isrejected(interrupt_controller* ic, uint8_t port);
+int ic_canwakeup(interrupt_controller* ic, uint8_t port);
+
+void ic_reset(interrupt_controller* ic);
+
+void ic_free(interrupt_controller* ic);
 
 #endif

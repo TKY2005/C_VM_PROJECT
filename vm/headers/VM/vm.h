@@ -3,12 +3,15 @@
 
 #include<CPU/CPU.h>
 #include<Memory/memory.h>
-#include<utils/hashmap/hmap.h>
+#include<utils/tky_hashmap.h>
+#include<VM/vm_interrupts.h>
+#include<VM/vm_display.h>
 
 #include<stdint.h>
 #include<stdbool.h>
+#include<pthread.h>
 
-#define VM_VER "1.4.1b"
+#define VM_VER "2.2.0b"
 
 // ERRORS: < 0
 #define FILE_NOT_OPEN -1
@@ -28,12 +31,17 @@ extern CPU* vm_cpu;
 extern memory vm_memory;
 extern bool ui_mode;
 extern uint32_t vm_entry;
+extern tky_hashmap* vm_settings;
+extern interrupt_controller vm_ic;
+extern pthread_t* timer_thread;
+extern vm_display* display;
+extern display_arg display_arguments;
 
 void vm_init(int memsize);
 void vm_init_nomem();
 int vm_load_code_file(RAM* target, const char* filepath, uint32_t* entry_dest);
 int vm_load_binary_file(RAM* target, const char* filepath, uint32_t load_addr);
-int vm_interrupt(CPU* cpu, memory* mem, uint8_t icode);
+
 int vm_runp(CPU* cpu, memory* mem, uint32_t entry);
 int vm_runf(CPU* cpu, memory* mem, const char* filepath);
 int vm_boot_sequence(CPU* cpu, memory* mem);

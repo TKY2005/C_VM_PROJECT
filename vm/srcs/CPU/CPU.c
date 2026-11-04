@@ -5,6 +5,7 @@
 #include<ISA_encoding_info.h>
 #include<debuglogger.h>
 #include<VM/vm.h>
+#include<VM/vm_settings.h>
 #include<VM/vm_interrupts.h>
 #include<Timing/clock.h>
 
@@ -23,6 +24,7 @@ CPU* CPU_init(union registerfile* regfile, instruction* ins_set) {
     cpu->state = calloc(1, sizeof(CPU_STATE));
 
     cpu->instruction_set = ins_set;
+    atomic_init(&cpu->cycles_count, 0);
 
     return cpu;
 }
@@ -44,8 +46,15 @@ void CPU_destroy(CPU* cpu) {
 }
 
 int CPU_run(CPU* cpu, memory* mem) {
-    
-    while (cpu->state->CPU_RUNNING) {
+
+    atomic_store(&cpu->cycles_count, 0);
+    atomic_store(&cpu->saved_cycles, 0);
+    timer_thread = clock_timer_start(vm_conf.timer_interval);
+    if (timer_thread == NULL) return CPU_EXEC_FAILURE;
+
+
+    while (cpu->state->CPU_RUNNING && !cpu->state->CPU_HALTED) {
+
         uint8_t opcode = 0;
         int read = mem_read_byte(mem, cpu->registers->PC, &opcode);
 
@@ -57,7 +66,53 @@ int CPU_run(CPU* cpu, memory* mem) {
             if (reg_check_flag(cpu->registers, FLG_T)) vm_debug_shell();
             CPU_exec_ins(cpu, mem, opcode);
         }
+
+        interrupt_handler:
+
+        int interrupt_pending = ic_interrupt_line_status(&vm_ic);
+        if (interrupt_pending < 0) {
+            CPU_fail(cpu, "Unable to check interrupt line.\n");
+        }
+        else if (interrupt_pending && reg_check_flag(cpu->registers, FLG_I)) {
+            int icode = ic_interrupt_acknowledge(&vm_ic);
+            if (icode < 0) CPU_fail(cpu, "Unable to acknowledge interrupt.\n");
+            else {
+                /* 
+                We have to decreemnt the PC, then increment twice
+                becasue the CPU receives a hardware interrupt when the PC is at the start of the next instruction
+                The PC is pushed to the stack and the CPU jumps to the interrupt handler.
+                when the CPU returns using iret the return address is popped and placed in the PC.
+                The PC then auto increments at the end of the instruction
+                which causes the CPU to land one byte ahead of where it should be
+                in the case of a software interrupt or a regular branch the CPU is at the last byte of the previous instruction
+                so when the CPU returns using ret or iret it auto increments and places itelf at the start of the next instruction
+                We have to increment twice
+                the first increment is to cancel the previous decrement
+                the second increment is because the PC doesn't auto increment in this branch
+                cpu_exec_ins auto increments the PC
+                so we have to manually increment here.
+                */
+                cpu->registers->PC--;
+                CPU_interrupt(cpu, mem, (uint8_t) icode);
+                CPU_step(cpu);
+                CPU_step(cpu);
+            }
+        }
     }
+
+    // since the timer is based on CPU cycles. we have to simulate CPU cycles to prevent the timer from freezing
+    if (cpu->state->CPU_HALTED) {
+        cpu->saved_cycles = atomic_load(&cpu->cycles_count);
+        while (cpu->state->CPU_HALTED) {
+            clock_simulate_delay(cpu->clock_delay_ms);
+            atomic_fetch_add(&cpu->cycles_count, 1);
+        }
+        cpu->cycles_count = atomic_load(&cpu->saved_cycles);
+        goto interrupt_handler;
+    }
+    
+    clock_timer_stop(timer_thread);
+    ic_reset(&vm_ic);
     return CPU_EXEC_SUCCESS;
 }
 
@@ -66,26 +121,32 @@ void CPU_exec_ins(CPU* cpu, memory* mem, uint8_t opcode) {
     instruction ins = cpu->instruction_set[opcode];
 
     if (ins == NULL) {
+        CPU_interrupt(cpu, mem, CPU_EXCEPTION_INVOP);
+        CPU_step(cpu);
         char buff[2048] = {0};
         sprintf(buff, "The CPU requested instruction with opcode: 0x%02X but it isn't defined.\n", opcode);
-        CPU_fail(cpu, buff);
+        printd(buff);
+        //CPU_fail(cpu, buff);
     }
     else {
         ins(cpu, mem);
         CPU_step(cpu);
+        atomic_fetch_add(&cpu->cycles_count, 1);
     }
 }
 
 uint32_t CPU_step(CPU* cpu) {
     cpu->registers->PC++;
-    clock_simulate_delay(cpu->clock_delay_ms);
+    if (vm_conf.cycle_count != 0) 
+        clock_simulate_delay(cpu->clock_delay_ms);
     return cpu->registers->PC;
 }
 void CPU_step_e(void** arg) {
     CPU* cpu = (CPU*) arg[0];
 
     cpu->registers->PC++;
-    clock_simulate_delay(cpu->clock_delay_ms);
+    if (vm_conf.cycle_count != 0) 
+        clock_simulate_delay(cpu->clock_delay_ms);
     return;
 }
 
@@ -109,28 +170,33 @@ int CPU_read_operand_bytes(CPU* cpu, memory* mem, ins_encoding* ins) {
             else {
                 if (ins->dispinfo.disp_enable) {
                     CPU_step(cpu);
-                    CPU_read_displacement_value(cpu, mem, ins);
+                    int read = CPU_read_displacement_value(cpu, mem, ins);
                     cpu->registers->PC--; // we have to sub 1 because PC gets automatically incremented after each instruction
+                    if (read == MEM_READ_FAILURE) return read;
                 }
             }
         }
         if ( CPU_dest_is_num(dest) || CPU_src_is_num(src) ) {
             CPU_step(cpu);
-            if (CPU_dest_is_num(dest) || CPU_destsize_32(dest)) CPU_read_imm32(cpu, mem, ins);
-            else if (CPU_destsize_16(dest)) CPU_read_imm16(cpu, mem, ins);
-            else if (CPU_destsize_8(dest)) CPU_read_imm8(cpu, mem, ins);
-            else CPU_read_imm32(cpu, mem, ins);
+            int read;
+            if (CPU_dest_is_num(dest) || CPU_destsize_32(dest)) read = CPU_read_imm32(cpu, mem, ins);
+            else if (CPU_destsize_16(dest)) read = CPU_read_imm16(cpu, mem, ins);
+            else if (CPU_destsize_8(dest)) read = CPU_read_imm8(cpu, mem, ins);
+            else read = CPU_read_imm32(cpu, mem, ins);
             cpu->registers->PC--;
+            if (read == MEM_READ_FAILURE) return read;
         }
 
         // our last assumption is there is an symbol and read the next 4 bytes
         if ((dest == UNKNOWN && ins->single_oper) || (src == UNKNOWN && dest != UNKNOWN && !ins->single_oper)) { 
             ins->symflg = 1;
             CPU_step(cpu);
-            CPU_read_sym(cpu, mem, ins);
+            int read = CPU_read_sym(cpu, mem, ins);
             cpu->registers->PC--;
+            if (read == MEM_READ_FAILURE) return read;
         }
     }
+    return MEM_READ_SUCCESS;
 }
 
 int CPU_read_opertype(CPU* cpu, memory* mem, ins_encoding* ins) {
@@ -149,6 +215,13 @@ int CPU_read_dispinfo(CPU* cpu, memory* mem, ins_encoding* ins) {
     return read;
 }
 
+int CPU_advance_next(CPU* cpu, memory* mem, ins_encoding* ins) {
+    CPU_read_operand_bytes(cpu, mem, ins);
+    if (ins->opertype.src_type != UNKNOWN) {
+        CPU_decode_src(cpu, mem, ins);
+    }
+}
+
 int CPU_read_imm8(CPU* cpu, memory* mem, ins_encoding* ins) {
     return mem_read_byte_e(mem, cpu->registers->PC, (uint8_t*) &ins->imm_val, CPU_step_e, (void*) &cpu);
 }
@@ -159,6 +232,30 @@ int CPU_read_imm32(CPU* cpu, memory* mem, ins_encoding* ins) {
     return mem_read_dword_e(mem, cpu->registers->PC, &ins->imm_val, CPU_step_e, (void*) &cpu);
 }
 
+int CPU_interrupt(CPU* cpu, memory* mem, uint8_t icode) {
+    uint32_t interrupt_addr = 0;
+    CPU_stack_push(cpu, mem, cpu->registers->PC);
+    CPU_stack_push(cpu, mem, cpu->registers->CS);
+    CPU_push_flags(cpu, mem);
+
+    uint32_t ivtr_base = cpu->registers->IVTR;
+
+    uint32_t interrupt_index = ivtr_base + (icode * 4);
+    mem_read_dword(mem, interrupt_index, &interrupt_addr);
+
+    CPU_jump_addr(cpu, interrupt_addr);
+}
+
+int CPU_push_flags(CPU* cpu, memory* mem) {
+    CPU_stack_push(cpu, mem, cpu->state->state);
+}
+
+int CPU_pop_flags(CPU* cpu, memory* mem) {
+    uint32_t x = 0;
+    CPU_stack_pop(cpu, mem, &x);
+
+    cpu->state->state = (uint8_t) x;
+}
 
 int CPU_check_lh_8bit(REG_SELECT* reg, uint8_t operselect) {
     if (operselect == SRC) return reg->src & LH_CHECK;
@@ -183,54 +280,146 @@ int CPU_stack_push(CPU* cpu, memory* mem, uint32_t val) {
     int wr = mem_write_dword(mem, cpu->registers->SP, val);
     return wr;
 }
+
 int CPU_stack_pop(CPU* cpu, memory* mem, uint32_t* result) {
     int rd = mem_read_dword(mem, cpu->registers->SP, result);
     cpu->registers->SP += 4;
     return rd;
 }
+
 void CPU_jump_addr(CPU* cpu, uint32_t jmpaddr) {
-    cpu->registers->PC = jmpaddr;
-    cpu->registers->PC--; // because the CPU auto increments PC after each instruction cycle.
+    cpu->registers->PC = jmpaddr - 1; // sub 1 because the PC is auto incremented after each instruction
 }
+
 void CPU_call_addr(CPU* cpu, memory* mem, uint32_t calladdr) {
 
-    CPU_stack_push(cpu, mem, cpu->registers->PC - 1);
+    CPU_stack_push(cpu, mem, cpu->registers->PC);
     CPU_jump_addr(cpu, calladdr);
 }
 
-void CPU_update_flags8(CPU* cpu, uint8_t dest, uint8_t src, uint8_t val) {
-    int8_t flag_setter = (int8_t) val;
-    if (flag_setter == 0) reg_set_flags(cpu->registers, FLG_Z);
-    if (flag_setter < 0) reg_set_flags(cpu->registers, FLG_N);
+static uint32_t CPU_flag_sign_mask(uint8_t width_bits) {
+    switch (width_bits) {
+        case 8: return 0x80u;
+        case 16: return 0x8000u;
+        case 32: return 0x80000000u;
+        default: return 0u;
+    }
+}
 
-    if ((uint16_t) dest + (uint16_t) src > 0xff) reg_set_flags(cpu->registers, FLG_C);
-    if ( (dest ^ val) & ((src ^ val) & 0x80) != 0 ) reg_set_flags(cpu->registers, FLG_O);
+static uint32_t CPU_flag_width_mask(uint8_t width_bits) {
+    switch (width_bits) {
+        case 8: return 0xffu;
+        case 16: return 0xffffu;
+        case 32: return 0xffffffffu;
+        default: return 0u;
+    }
+}
+
+static void CPU_update_common_flags(CPU* cpu, uint32_t val, uint8_t width_bits) {
+    uint32_t width_mask = CPU_flag_width_mask(width_bits);
+    uint32_t sign_mask = CPU_flag_sign_mask(width_bits);
+    val &= width_mask;
+    if (val == 0) reg_set_flags(cpu->registers, FLG_Z);
+    if ((val & sign_mask) != 0) reg_set_flags(cpu->registers, FLG_N);
+}
+
+static void CPU_update_add_flags(CPU* cpu, uint32_t dest, uint32_t src, uint32_t val, uint8_t width_bits);
+
+void CPU_update_flags8(CPU* cpu, uint8_t dest, uint8_t src, uint8_t val) {
+    reg_reset_arithmetic_flags(cpu->registers);
+    CPU_update_common_flags(cpu, (uint32_t) val, 8);
+    CPU_update_add_flags(cpu, dest, src, val, 8);
 }
 void CPU_update_flags16(CPU* cpu, uint16_t dest, uint16_t src, uint16_t val) {
-    
-    if ( (int16_t) val == 0 ) reg_set_flags(cpu->registers, FLG_Z);
-    if ( (int16_t) val < 0) reg_set_flags(cpu->registers, FLG_N);
-
-    if ( (uint32_t) dest + (uint32_t) src > 0xffff ) reg_set_flags(cpu->registers, FLG_C);
-    if ( (dest ^ val) & ( (src ^ val) & 0x8000 ) != 0 ) reg_set_flags(cpu->registers, FLG_O);
+    reg_reset_arithmetic_flags(cpu->registers);
+    CPU_update_common_flags(cpu, (uint32_t) val, 16);
+    CPU_update_add_flags(cpu, dest, src, val, 16);
 }
 void CPU_update_flags32(CPU* cpu, uint32_t dest, uint32_t src, uint32_t val) {
-
-    if ((int32_t) val == 0) reg_set_flags(cpu->registers, FLG_Z);
-    if ((int32_t) val < 0) reg_set_flags(cpu->registers, FLG_N);
-
-    if ( (uint64_t) dest + (uint64_t) src > 0xffffffff ) reg_set_flags(cpu->registers, FLG_C);
-    if ( (dest ^ val) & ( (src ^ val) & 0x80000000 ) != 0 ) reg_set_flags(cpu->registers, FLG_O);
+    reg_reset_arithmetic_flags(cpu->registers);
+    CPU_update_common_flags(cpu, val, 32);
+    CPU_update_add_flags(cpu, dest, src, val, 32);
 }
 
-void CPU_update_flags(CPU* cpu, ins_encoding* ins, uint32_t dest, uint32_t src, uint32_t val) {
+static void CPU_update_add_flags(CPU* cpu, uint32_t dest, uint32_t src, uint32_t val, uint8_t width_bits) {
+    uint32_t max_value = width_bits == 8 ? 0xffu : width_bits == 16 ? 0xffffu : 0xffffffffu;
+    uint32_t sign_mask = CPU_flag_sign_mask(width_bits);
+
+    if ((uint64_t) dest + (uint64_t) src > max_value) reg_set_flags(cpu->registers, FLG_C);
+    if (((dest ^ val) & ((src ^ val) & sign_mask)) != 0u) reg_set_flags(cpu->registers, FLG_O);
+}
+
+static void CPU_update_sub_flags(CPU* cpu, uint32_t dest, uint32_t src, uint32_t val, uint8_t width_bits) {
+    uint32_t sign_mask = CPU_flag_sign_mask(width_bits);
+
+    if (width_bits == 8) {
+        if ((uint8_t) dest < (uint8_t) src) reg_set_flags(cpu->registers, FLG_C);
+    }
+    else if (width_bits == 16) {
+        if ((uint16_t) dest < (uint16_t) src) reg_set_flags(cpu->registers, FLG_C);
+    }
+    else {
+        if (dest < src) reg_set_flags(cpu->registers, FLG_C);
+    }
+
+    if (((dest ^ src) & ((dest ^ val) & sign_mask)) != 0u) reg_set_flags(cpu->registers, FLG_O);
+}
+
+static void CPU_update_shift_flags(CPU* cpu, uint32_t dest, uint32_t count, uint32_t val, uint8_t width_bits, int shift_left) {
+    if (count == 0 || count > width_bits) return;
+
+    uint32_t carry_bit = shift_left ? width_bits - count : count - 1;
+    int carry = ((dest >> carry_bit) & 1u) != 0u;
+    if (carry) reg_set_flags(cpu->registers, FLG_C);
+
+    if (count == 1) {
+        uint32_t sign_mask = CPU_flag_sign_mask(width_bits);
+        int overflow = shift_left
+            ? (((val & sign_mask) != 0u) != carry)
+            : ((dest & sign_mask) != 0u);
+        if (overflow) reg_set_flags(cpu->registers, FLG_O);
+    }
+}
+
+void CPU_update_flags(CPU* cpu, ins_encoding* ins, uint32_t dest, uint32_t src, uint32_t val, CPU_FLAG_OP operation) {
 
     if (ins->flg_mod) {
         reg_reset_arithmetic_flags(cpu->registers);
-        if (CPU_destsize_8(ins->opertype.dest_type)) CPU_update_flags8(cpu, dest, src, val);
-        else if (CPU_destsize_16(ins->opertype.dest_type)) CPU_update_flags16(cpu, dest, src, val);
-        else if (CPU_destsize_32(ins->opertype.dest_type)) CPU_update_flags32(cpu, dest, src, val);
+
+        uint8_t width_bits = 32;
+        if (CPU_destsize_8(ins->opertype.dest_type)) width_bits = 8;
+        else if (CPU_destsize_16(ins->opertype.dest_type)) width_bits = 16;
+
+        uint32_t width_mask = CPU_flag_width_mask(width_bits);
+        dest &= width_mask;
+        if (operation != CPU_FLAG_OP_SHIFT_LEFT && operation != CPU_FLAG_OP_SHIFT_RIGHT)
+            src &= width_mask;
+        val &= width_mask;
+
+        CPU_update_common_flags(cpu, val, width_bits);
+
+        switch (operation) {
+            case CPU_FLAG_OP_ADD:
+                CPU_update_add_flags(cpu, dest, src, val, width_bits);
+                break;
+            case CPU_FLAG_OP_SUB:
+                CPU_update_sub_flags(cpu, dest, src, val, width_bits);
+                break;
+            case CPU_FLAG_OP_SHIFT_LEFT:
+                CPU_update_shift_flags(cpu, dest, src, val, width_bits, 1);
+                break;
+            case CPU_FLAG_OP_SHIFT_RIGHT:
+                CPU_update_shift_flags(cpu, dest, src, val, width_bits, 0);
+                break;
+            case CPU_FLAG_OP_BITWISE:
+            default:
+                break;
+        }
     }
+}
+
+uint64_t CPU_get_cycles(CPU* cpu){
+    return atomic_load(&cpu->cycles_count);
 }
 
 int CPU_read_displacement_value(CPU* cpu, memory* mem, ins_encoding* ins) {
@@ -352,7 +541,7 @@ uint32_t CPU_decode_src(CPU* cpu, memory* mem, ins_encoding* ins) {
 
 int CPU_write_dest(CPU* cpu, memory* mem, ins_encoding* ins, uint32_t val) {
 
-    if (CPU_dest_is_reg(ins->opertype.dest_type)){
+    if (CPU_dest_is_reg(ins->opertype.dest_type)) {
         int is8bit = ins->opertype.dest_type == REG8;
 
         int idx = 0;
@@ -547,7 +736,7 @@ void CPU_write_out(CPU* cpu, memory* mem, const char* txt, ...) {
     
     va_end(args);
 
-    vm_interrupt(cpu, mem, VM_SINTR_WRITE_FD);
+    //vm_interrupt(cpu, mem, VM_SINTR_WRITE_FD);
 }
 
 void CPU_fail(CPU* cpu, const char* msg, ...) {

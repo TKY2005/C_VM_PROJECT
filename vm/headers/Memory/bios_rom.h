@@ -10,6 +10,10 @@
 #define BIOS_END 0xF9C0FFFF
 #define BIOS_SIZE 0xffff
 
+#define BIOS_ERR_COULDNT_OPEN_FILE -1
+#define BIOS_ERR_FILE_INCOMPLETE -2
+#define BIOS_ERR_NOINIT -3
+
 typedef struct BIOS_ROM {
     size_t size;
     uint8_t* mem;
@@ -22,7 +26,7 @@ int bios_rom_size(const BIOS_ROM* m);
 
 uint32_t addr2bios(uint32_t addr);
 
-uint8_t* load_BIOS_img(const char* imgpath);
+int load_BIOS_img(const char* imgpath, BIOS_ROM* bios);
 
 int bios_rom_write_byte(BIOS_ROM* m, uint32_t addr, uint8_t val);
 int bios_rom_write_word(BIOS_ROM* m, uint32_t addr, uint16_t val);

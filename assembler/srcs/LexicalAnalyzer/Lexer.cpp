@@ -7,7 +7,7 @@
 
 using std::string;
 
-string Lexer::delimeters = ",[]_\n ";
+string Lexer::delimeters = ",[]()_\n ";
 
 MainType Lexer::decideMainType(string tok) {
 
@@ -44,16 +44,21 @@ SubType Lexer::decideSubType(string tok, MainType t) {
 
     tok = toLowerCase(tok);
     if (t == MainType::REG) {
-
-        if (tok[0] >= 'a' && tok[0] <= 'f') {
-            if (tok[1] == 'l' || tok[1] == 'h') return SubType::REG8;
-            else if (tok[1] == 'x') return SubType::REG16;
-            else return SubType::NONE;
-
-        } else {
-            for(int i = ArchInfo::dwrstart; i < ArchInfo::reglist.size(); i++) if (tok == ArchInfo::reglist[i]) return SubType::REG32;
-            return SubType::NONE;
+        if (tok.size() == 2 && (tok[1] == 'l' || tok[1] == 'h')) {
+            return SubType::REG8;
         }
+        if (tok.size() == 2 && tok[0] >= 'a' && tok[0] <= 'f' && tok[1] == 'x') {
+            return SubType::REG16;
+        }
+        for (const std::string& reg : ArchInfo::reglist) {
+            if (tok == reg) {
+                if (tok.size() == 3 || reg == "pc" || reg == "sp" || reg == "bp" ||
+                    reg == "di" || reg == "si" || reg == "cs" || reg == "ds" || reg == "ss") {
+                    return SubType::REG32;
+                }
+            }
+        }
+        return SubType::NONE;
     }
     else if (t == MainType::DIR) {
         
@@ -191,8 +196,21 @@ string Lexer::mainTypeToStr(MainType t) {
         return "CLOSE BRACE";
         break;
 
+        case MainType::OPEN_PAREN:
+        return "OPEN PARENTHISES";
+        break;
+
+        
+        case MainType::CLOSE_PAREN:
+        return "CLOSE PARENTHISES";
+        break;
+
         case MainType::SEMICOLON:
         return "SEMI COLON";
+        break;
+
+        case MainType::SPECIAL:
+        return "SPECIAL TOKEN";
         break;
         
         case MainType::UNDEFINED:
@@ -277,6 +295,14 @@ string Lexer::subTypeToStr(SubType t) {
 
         case SubType::OPER_DIV:
         return "DIV OPERATOR";
+        break;
+        
+        case SubType::SPECIAL_PROG_OFFSET:
+        return "PROGRAM OFFSET";
+        break;
+
+        case SubType::SPECIAL_SECT_OFFSET:
+        return "SECTION OFFSET";
         break;
 
         case SubType::NONE:

@@ -3,10 +3,11 @@
 
 #include<string>
 #include<vector>
+#include<cstdint>
+#include<limits>
+#include<map>
 
 #include<LexicalAnalyzer/Tokenizer.hpp>
-#include<Parser/Parser.hpp>
-#include<Codegen/CodeGenerator.hpp>
 
 #define ERR_FILE_NOT_OPEN -1
 #define ERR_ASM_FAIL -2
@@ -17,15 +18,20 @@
 class Assembler {
     private:
     Tokenizer tokenizer;
-    Parser parser;
-    CodeGenerator codegen;
 
     public:
     static std::string filename;
 
     Assembler() = default;
 
-    int assembleSource(std::string sourcefile, std::string destinationfile);
+    int assembleSource(
+        std::string sourcefile,
+        std::string destinationfile,
+        bool printListing = false,
+        uint64_t maximumImageSize = std::numeric_limits<uint64_t>::max(),
+        std::map<std::string, uint32_t> symbols = {},
+        bool printSymbols = false
+    );
 };
 
 #endif
