@@ -4,6 +4,8 @@ tkyc
 *.exe
 *.tky
 *.asm
+!bios.asm
+!bios.tky
 *.vconf
 *.txt
 /logs

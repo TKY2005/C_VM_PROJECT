@@ -32,13 +32,19 @@ tkyc --list s source.asm [output.tky]
 tkyc --max 64k source.asm [output.tky]
 tkyc -D "{sym1: 0xXXXX, sym2: 0bXXXX}" source.asm [output.tky]
 tkyc --define "{sym1: 0xXXXX, sym2: 0bXXXX}" source.asm [output.tky]
+tkyc --define "{symbols.txt}" source.asm [output.tky]
+tkyc --define "{symbols.txt, symX: 0xXXXXXXXX}" source.asm [output.tky]
 tkyc -d [--base address] input.tky output.txt
 ```
 
 `-D` (or `--define`) adds comma-separated symbols to the assembler's symbol
-table. Values are absolute unsigned 32-bit addresses used as-is, not offsets,
-and may be decimal or use `0x` (hexadecimal), `0b` (binary), `0o` (octal), or
-a leading zero (octal).
+table. An entry without a colon is treated as a symbol file path; each
+non-empty line in the file must contain one `name: value` definition. File
+extensions are unrestricted, and paths are resolved relative to the current
+working directory. Inline definitions can be mixed with file paths. Values are
+absolute unsigned 32-bit addresses used as-is, not offsets, and may be decimal
+or use `0x` (hexadecimal), `0b` (binary), `0o` (octal), or a leading zero
+(octal). Duplicate or malformed definitions are rejected.
 
 Symbol listing entries are printed as `name => 0xXXXXXXXX`, with addresses
 shown as eight uppercase hexadecimal digits.

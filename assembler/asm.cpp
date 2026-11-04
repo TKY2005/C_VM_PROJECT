@@ -1,4 +1,5 @@
 #include<iostream>
+#include<fstream>
 #include<string>
 #include<vector>
 #include<map>
@@ -108,49 +109,110 @@ bool parseUnsigned32(const std::string& argument, uint32_t& value)
     }
 }
 
+bool parseSymbolEntry(const std::string& entry, std::map<std::string, uint32_t>& symbols)
+{
+    const size_t colon = entry.find(':');
+    if (entry.empty() || colon == std::string::npos ||
+        entry.find(':', colon + 1) != std::string::npos) {
+        return false;
+    }
+
+    const std::string name = trim(entry.substr(0, colon));
+    if (name.empty() ||
+        !(std::isalpha(static_cast<unsigned char>(name[0])) || name[0] == '_')) {
+        return false;
+    }
+    for (char character : name) {
+        if (!(std::isalnum(static_cast<unsigned char>(character)) ||
+              character == '_')) {
+            return false;
+        }
+    }
+
+    uint32_t value = 0;
+    return parseUnsigned32(trim(entry.substr(colon + 1)), value) &&
+        symbols.emplace(name, value).second;
+}
+
+bool parseSymbolFile(
+    const std::string& path,
+    std::map<std::string, uint32_t>& symbols,
+    std::string& error
+)
+{
+    std::ifstream file(path);
+    if (!file.is_open()) {
+        error = "Unable to open symbol file: " + path;
+        return false;
+    }
+
+    std::string line;
+    size_t lineNumber = 0;
+    while (std::getline(file, line)) {
+        ++lineNumber;
+        const std::string entry = trim(line);
+        if (entry.empty()) continue;
+        if (!parseSymbolEntry(entry, symbols)) {
+            error = "Invalid or duplicate symbol definition in " + path + ":" +
+                std::to_string(lineNumber);
+            return false;
+        }
+    }
+    if (file.bad()) {
+        error = "Failed while reading symbol file: " + path;
+        return false;
+    }
+    return true;
+}
+
 bool parseSymbols(
     const std::string& argument,
-    std::map<std::string, uint32_t>& symbols
+    std::map<std::string, uint32_t>& symbols,
+    std::string& error
 )
 {
     const std::string input = trim(argument);
-    if (input.size() < 2 || input.front() != '{' || input.back() != '}') return false;
+    if (input.size() < 2 || input.front() != '{' || input.back() != '}') {
+        error = "Expected symbol definitions enclosed in braces.";
+        return false;
+    }
+
     const std::string entries = input.substr(1, input.size() - 2);
     size_t position = 0;
+    bool hasEntry = false;
     while (position < entries.size()) {
         const size_t comma = entries.find(',', position);
         const std::string entry = trim(entries.substr(
             position, comma == std::string::npos ? std::string::npos : comma - position
         ));
-        const size_t colon = entry.find(':');
-        if (entry.empty() || colon == std::string::npos ||
-            entry.find(':', colon + 1) != std::string::npos) {
+        if (entry.empty()) {
+            error = "Empty entry in symbol definitions.";
             return false;
         }
 
-        const std::string name = trim(entry.substr(0, colon));
-        if (name.empty() ||
-            !(std::isalpha(static_cast<unsigned char>(name[0])) || name[0] == '_')) {
-            return false;
-        }
-        for (char character : name) {
-            if (!(std::isalnum(static_cast<unsigned char>(character)) ||
-                  character == '_')) {
+        hasEntry = true;
+        if (entry.find(':') != std::string::npos) {
+            if (!parseSymbolEntry(entry, symbols)) {
+                error = "Invalid or duplicate symbol definition: " + entry;
                 return false;
             }
         }
-
-        uint32_t value = 0;
-        if (!parseUnsigned32(trim(entry.substr(colon + 1)), value) ||
-            !symbols.emplace(name, value).second) {
+        else if (!parseSymbolFile(entry, symbols, error)) {
             return false;
         }
 
         if (comma == std::string::npos) break;
         position = comma + 1;
-        if (position == entries.size()) return false;
+        if (position == entries.size()) {
+            error = "Empty entry in symbol definitions.";
+            return false;
+        }
     }
-    return !symbols.empty();
+    if (!hasEntry) {
+        error = "At least one symbol or symbol file is required.";
+        return false;
+    }
+    return true;
 }
 }
 
@@ -222,9 +284,11 @@ int main(int argc, char** argv)
                     symbolArgument += argv[++i];
                 }
             }
-            if (!parseSymbols(symbolArgument, symbols)) {
-                std::cerr << "Invalid symbol definitions. Use -D or --define "
-                             "\"{symbol: value, symbol2: value2}\" with unsigned "
+            std::string error;
+            if (!parseSymbols(symbolArgument, symbols, error)) {
+                std::cerr << error << '\n'
+                          << "Use -D or --define "
+                             "\"{symbols-file, symbol: value}\" with unsigned "
                              "32-bit values.\n";
                 return ERR_ASM_FAIL;
             }
