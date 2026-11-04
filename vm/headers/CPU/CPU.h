@@ -20,6 +20,15 @@
 
 #define CPU_UNDEFINED_OPCODE -1
 
+typedef enum {
+    CPU_FLAG_OP_NONE = 0,
+    CPU_FLAG_OP_ADD,
+    CPU_FLAG_OP_SUB,
+    CPU_FLAG_OP_BITWISE,
+    CPU_FLAG_OP_SHIFT_LEFT,
+    CPU_FLAG_OP_SHIFT_RIGHT
+} CPU_FLAG_OP;
+
 typedef union {
     struct {
         uint8_t CPU_RUNNING : 1;
@@ -112,8 +121,8 @@ void CPU_update_flags8(CPU* cpu, uint8_t dest, uint8_t src, uint8_t val);
 void CPU_update_flags16(CPU* cpu, uint16_t dest, uint16_t src, uint16_t val);
 // Updates the flags for 32-bit operations
 void CPU_update_flags32(CPU* cpu, uint32_t dest, uint32_t src, uint32_t val);
-// Resets the flags and updates its value according to the destination operand
-void CPU_update_flags(CPU* cpu, ins_encoding* ins, uint32_t dest, uint32_t src, uint32_t val);
+// Resets the flags and updates its value according to the destination operand and operation type
+void CPU_update_flags(CPU* cpu, ins_encoding* ins, uint32_t dest, uint32_t src, uint32_t val, CPU_FLAG_OP operation);
 // returns the number of cycles elapsed since the last run
 uint64_t CPU_get_cycles(CPU* cpu);
 

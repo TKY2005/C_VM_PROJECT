@@ -170,28 +170,33 @@ int CPU_read_operand_bytes(CPU* cpu, memory* mem, ins_encoding* ins) {
             else {
                 if (ins->dispinfo.disp_enable) {
                     CPU_step(cpu);
-                    CPU_read_displacement_value(cpu, mem, ins);
+                    int read = CPU_read_displacement_value(cpu, mem, ins);
                     cpu->registers->PC--; // we have to sub 1 because PC gets automatically incremented after each instruction
+                    if (read == MEM_READ_FAILURE) return read;
                 }
             }
         }
         if ( CPU_dest_is_num(dest) || CPU_src_is_num(src) ) {
             CPU_step(cpu);
-            if (CPU_dest_is_num(dest) || CPU_destsize_32(dest)) CPU_read_imm32(cpu, mem, ins);
-            else if (CPU_destsize_16(dest)) CPU_read_imm16(cpu, mem, ins);
-            else if (CPU_destsize_8(dest)) CPU_read_imm8(cpu, mem, ins);
-            else CPU_read_imm32(cpu, mem, ins);
+            int read;
+            if (CPU_dest_is_num(dest) || CPU_destsize_32(dest)) read = CPU_read_imm32(cpu, mem, ins);
+            else if (CPU_destsize_16(dest)) read = CPU_read_imm16(cpu, mem, ins);
+            else if (CPU_destsize_8(dest)) read = CPU_read_imm8(cpu, mem, ins);
+            else read = CPU_read_imm32(cpu, mem, ins);
             cpu->registers->PC--;
+            if (read == MEM_READ_FAILURE) return read;
         }
 
         // our last assumption is there is an symbol and read the next 4 bytes
         if ((dest == UNKNOWN && ins->single_oper) || (src == UNKNOWN && dest != UNKNOWN && !ins->single_oper)) { 
             ins->symflg = 1;
             CPU_step(cpu);
-            CPU_read_sym(cpu, mem, ins);
+            int read = CPU_read_sym(cpu, mem, ins);
             cpu->registers->PC--;
+            if (read == MEM_READ_FAILURE) return read;
         }
     }
+    return MEM_READ_SUCCESS;
 }
 
 int CPU_read_opertype(CPU* cpu, memory* mem, ins_encoding* ins) {
@@ -292,38 +297,124 @@ void CPU_call_addr(CPU* cpu, memory* mem, uint32_t calladdr) {
     CPU_jump_addr(cpu, calladdr);
 }
 
-void CPU_update_flags8(CPU* cpu, uint8_t dest, uint8_t src, uint8_t val) {
-    int8_t flag_setter = (int8_t) val;
-    if (flag_setter == 0) reg_set_flags(cpu->registers, FLG_Z);
-    if (flag_setter < 0) reg_set_flags(cpu->registers, FLG_N);
+static uint32_t CPU_flag_sign_mask(uint8_t width_bits) {
+    switch (width_bits) {
+        case 8: return 0x80u;
+        case 16: return 0x8000u;
+        case 32: return 0x80000000u;
+        default: return 0u;
+    }
+}
 
-    if ((uint16_t) dest + (uint16_t) src > 0xff) reg_set_flags(cpu->registers, FLG_C);
-    if ( (dest ^ val) & ((src ^ val) & 0x80) != 0 ) reg_set_flags(cpu->registers, FLG_O);
+static uint32_t CPU_flag_width_mask(uint8_t width_bits) {
+    switch (width_bits) {
+        case 8: return 0xffu;
+        case 16: return 0xffffu;
+        case 32: return 0xffffffffu;
+        default: return 0u;
+    }
+}
+
+static void CPU_update_common_flags(CPU* cpu, uint32_t val, uint8_t width_bits) {
+    uint32_t width_mask = CPU_flag_width_mask(width_bits);
+    uint32_t sign_mask = CPU_flag_sign_mask(width_bits);
+    val &= width_mask;
+    if (val == 0) reg_set_flags(cpu->registers, FLG_Z);
+    if ((val & sign_mask) != 0) reg_set_flags(cpu->registers, FLG_N);
+}
+
+static void CPU_update_add_flags(CPU* cpu, uint32_t dest, uint32_t src, uint32_t val, uint8_t width_bits);
+
+void CPU_update_flags8(CPU* cpu, uint8_t dest, uint8_t src, uint8_t val) {
+    reg_reset_arithmetic_flags(cpu->registers);
+    CPU_update_common_flags(cpu, (uint32_t) val, 8);
+    CPU_update_add_flags(cpu, dest, src, val, 8);
 }
 void CPU_update_flags16(CPU* cpu, uint16_t dest, uint16_t src, uint16_t val) {
-    
-    if ( (int16_t) val == 0 ) reg_set_flags(cpu->registers, FLG_Z);
-    if ( (int16_t) val < 0) reg_set_flags(cpu->registers, FLG_N);
-
-    if ( (uint32_t) dest + (uint32_t) src > 0xffff ) reg_set_flags(cpu->registers, FLG_C);
-    if ( (dest ^ val) & ( (src ^ val) & 0x8000 ) != 0 ) reg_set_flags(cpu->registers, FLG_O);
+    reg_reset_arithmetic_flags(cpu->registers);
+    CPU_update_common_flags(cpu, (uint32_t) val, 16);
+    CPU_update_add_flags(cpu, dest, src, val, 16);
 }
 void CPU_update_flags32(CPU* cpu, uint32_t dest, uint32_t src, uint32_t val) {
-
-    if ((int32_t) val == 0) reg_set_flags(cpu->registers, FLG_Z);
-    if ((int32_t) val < 0) reg_set_flags(cpu->registers, FLG_N);
-
-    if ( (uint64_t) dest + (uint64_t) src > 0xffffffff ) reg_set_flags(cpu->registers, FLG_C);
-    if ( (dest ^ val) & ( (src ^ val) & 0x80000000 ) != 0 ) reg_set_flags(cpu->registers, FLG_O);
+    reg_reset_arithmetic_flags(cpu->registers);
+    CPU_update_common_flags(cpu, val, 32);
+    CPU_update_add_flags(cpu, dest, src, val, 32);
 }
 
-void CPU_update_flags(CPU* cpu, ins_encoding* ins, uint32_t dest, uint32_t src, uint32_t val) {
+static void CPU_update_add_flags(CPU* cpu, uint32_t dest, uint32_t src, uint32_t val, uint8_t width_bits) {
+    uint32_t max_value = width_bits == 8 ? 0xffu : width_bits == 16 ? 0xffffu : 0xffffffffu;
+    uint32_t sign_mask = CPU_flag_sign_mask(width_bits);
+
+    if ((uint64_t) dest + (uint64_t) src > max_value) reg_set_flags(cpu->registers, FLG_C);
+    if (((dest ^ val) & ((src ^ val) & sign_mask)) != 0u) reg_set_flags(cpu->registers, FLG_O);
+}
+
+static void CPU_update_sub_flags(CPU* cpu, uint32_t dest, uint32_t src, uint32_t val, uint8_t width_bits) {
+    uint32_t sign_mask = CPU_flag_sign_mask(width_bits);
+
+    if (width_bits == 8) {
+        if ((uint8_t) dest < (uint8_t) src) reg_set_flags(cpu->registers, FLG_C);
+    }
+    else if (width_bits == 16) {
+        if ((uint16_t) dest < (uint16_t) src) reg_set_flags(cpu->registers, FLG_C);
+    }
+    else {
+        if (dest < src) reg_set_flags(cpu->registers, FLG_C);
+    }
+
+    if (((dest ^ src) & ((dest ^ val) & sign_mask)) != 0u) reg_set_flags(cpu->registers, FLG_O);
+}
+
+static void CPU_update_shift_flags(CPU* cpu, uint32_t dest, uint32_t count, uint32_t val, uint8_t width_bits, int shift_left) {
+    if (count == 0 || count > width_bits) return;
+
+    uint32_t carry_bit = shift_left ? width_bits - count : count - 1;
+    int carry = ((dest >> carry_bit) & 1u) != 0u;
+    if (carry) reg_set_flags(cpu->registers, FLG_C);
+
+    if (count == 1) {
+        uint32_t sign_mask = CPU_flag_sign_mask(width_bits);
+        int overflow = shift_left
+            ? (((val & sign_mask) != 0u) != carry)
+            : ((dest & sign_mask) != 0u);
+        if (overflow) reg_set_flags(cpu->registers, FLG_O);
+    }
+}
+
+void CPU_update_flags(CPU* cpu, ins_encoding* ins, uint32_t dest, uint32_t src, uint32_t val, CPU_FLAG_OP operation) {
 
     if (ins->flg_mod) {
         reg_reset_arithmetic_flags(cpu->registers);
-        if (CPU_destsize_8(ins->opertype.dest_type)) CPU_update_flags8(cpu, dest, src, val);
-        else if (CPU_destsize_16(ins->opertype.dest_type)) CPU_update_flags16(cpu, dest, src, val);
-        else if (CPU_destsize_32(ins->opertype.dest_type)) CPU_update_flags32(cpu, dest, src, val);
+
+        uint8_t width_bits = 32;
+        if (CPU_destsize_8(ins->opertype.dest_type)) width_bits = 8;
+        else if (CPU_destsize_16(ins->opertype.dest_type)) width_bits = 16;
+
+        uint32_t width_mask = CPU_flag_width_mask(width_bits);
+        dest &= width_mask;
+        if (operation != CPU_FLAG_OP_SHIFT_LEFT && operation != CPU_FLAG_OP_SHIFT_RIGHT)
+            src &= width_mask;
+        val &= width_mask;
+
+        CPU_update_common_flags(cpu, val, width_bits);
+
+        switch (operation) {
+            case CPU_FLAG_OP_ADD:
+                CPU_update_add_flags(cpu, dest, src, val, width_bits);
+                break;
+            case CPU_FLAG_OP_SUB:
+                CPU_update_sub_flags(cpu, dest, src, val, width_bits);
+                break;
+            case CPU_FLAG_OP_SHIFT_LEFT:
+                CPU_update_shift_flags(cpu, dest, src, val, width_bits, 1);
+                break;
+            case CPU_FLAG_OP_SHIFT_RIGHT:
+                CPU_update_shift_flags(cpu, dest, src, val, width_bits, 0);
+                break;
+            case CPU_FLAG_OP_BITWISE:
+            default:
+                break;
+        }
     }
 }
 

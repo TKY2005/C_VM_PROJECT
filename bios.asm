@@ -720,7 +720,7 @@ section BIOS_INTERRUPTS
 			push	si
 			push	edx
 			la	si, timer_test
-			mov	edx, COLOR_GREEN
+			mov	edx, COLOR_RED
 			call	bios_println
 
 			pop	edx
@@ -731,7 +731,7 @@ section BIOS_INTERRUPTS
 
 		.timer_table defdw tick_handler
 		.timer_table_len defb ($ - timer_table) / 4
-		.timer_test defb "Timer interrupt", 0xa, 0
+		.timer_test defb "Timer interrupt", 0
 
 	
 	
