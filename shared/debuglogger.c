@@ -3,10 +3,14 @@
 #include<stdio.h>
 #include<time.h>
 #include<stdarg.h>
+#include<stdbool.h>
 
 FILE* log_file;
+int dolog = false;
 
 void log_init() {
+    if (!dolog) return;
+
     time_t now = time(NULL);
     struct tm* t = localtime(&now);
     char buff[100];
@@ -24,10 +28,12 @@ void log_init() {
 }
 
 void log_close() {
+    if (!dolog) return;
     if (log_file) fclose(log_file);
 }
 
 void printd(char* log, ...) {
+    if (!dolog) return;
     time_t time_now = time(NULL);
     struct tm* t = localtime(&time_now);
     char time[100];

@@ -6,6 +6,7 @@
 #include<time.h>
 
 #define LOGS_PATH "./logs"
+extern int dolog;
 
 extern FILE* log_file;
 

@@ -95,7 +95,6 @@ int CPU_run(CPU* cpu, memory* mem) {
                 cpu->registers->PC--;
                 CPU_interrupt(cpu, mem, (uint8_t) icode);
                 CPU_step(cpu);
-                CPU_step(cpu);
             }
         }
     }
@@ -238,6 +237,8 @@ int CPU_interrupt(CPU* cpu, memory* mem, uint8_t icode) {
     CPU_stack_push(cpu, mem, cpu->registers->CS);
     CPU_push_flags(cpu, mem);
 
+    reg_clear_flags(cpu->registers, FLG_I);
+
     uint32_t ivtr_base = cpu->registers->IVTR;
 
     uint32_t interrupt_index = ivtr_base + (icode * 4);
@@ -247,14 +248,14 @@ int CPU_interrupt(CPU* cpu, memory* mem, uint8_t icode) {
 }
 
 int CPU_push_flags(CPU* cpu, memory* mem) {
-    CPU_stack_push(cpu, mem, cpu->state->state);
+    CPU_stack_push(cpu, mem, cpu->registers->flags);
 }
 
 int CPU_pop_flags(CPU* cpu, memory* mem) {
     uint32_t x = 0;
     CPU_stack_pop(cpu, mem, &x);
 
-    cpu->state->state = (uint8_t) x;
+    cpu->registers->flags = (uint8_t) x;
 }
 
 int CPU_check_lh_8bit(REG_SELECT* reg, uint8_t operselect) {

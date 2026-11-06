@@ -769,3 +769,8 @@ void _outp(CPU* cpu, memory* mem) {
 void _hlt(CPU* cpu, memory* mem) {
     cpu->state->CPU_HALTED = 1;
 }
+
+void _dbg(CPU* cpu, memory* mem) {
+    reg_set_flags(cpu->registers, FLG_T);
+    vm_debug_shell();
+}

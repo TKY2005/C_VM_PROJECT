@@ -9,8 +9,8 @@ define TEXT_BUFF_ADDR 0x19000
 
 define FB_ADDR 0xf9d10000
 
-define WIDTH 640
-define HEIGHT 480
+define WIDTH 800
+define HEIGHT 485
 
 
 define FONT_WIDTH 8
@@ -56,6 +56,10 @@ section BIOS_CODE
 		call	print_str
 		add	sp, 4 * 4
 
+		la	si, load_status
+		mov	edx, COLOR_WHITE
+		call	bios_println
+
 		mov dword[0x300], 0
 		mov dword[0x300 - 4], FONT_HEIGHT
 		
@@ -68,12 +72,12 @@ section BIOS_CODE
 			inc	eax
 			loop	bios_install_handlers
 		
-		mov	ah, 2
-		mov	edx, COLOR_WHITE
+		mov	edx, COLOR_GREEN
 		la	si, load_finish
-		int	0x2
+		call	bios_println
+
 		la	si, bios_hello
-		int	0x2
+		call	bios_println
 
 
 		; clear all pending interrupts
@@ -84,16 +88,15 @@ section BIOS_CODE
 
 		la	si, halt
 		mov	edx, COLOR_WHITE
-		mov	ah, 2
-		int	0x2
+		call	bios_println
 		hlt
 
 		call	BOOTLOADER_ADDR
 
 		la	si, finish_txt
-		mov	ah, 2
 		mov	edx, COLOR_WHITE
-		int	0x2
+		call	bios_println
+		dbg
 		ext
 
 
@@ -224,10 +227,6 @@ section BIOS_HELPERS
 		mov	eax, [bp + 4 * 4]
 		mov	si, [bp + 5 * 4]
 		
-		; no need to draw an empty char
-		cmp	si, ' '
-		je	enddraw
-
 		; row loop counter
 		mov	dword[bp - 1 * 4], 0
 		.loop_row
@@ -472,9 +471,7 @@ section BIOS_HELPERS
 		je	conversion_loop
 		cmp	dl, 2
 		je	conversion_loop
-		jne	bstoi_invalid
-
-		
+		jne	bstoi_invalid	
 
 		.conversion_loop
 			; result = result * base + char_to_int(s[i])
@@ -497,6 +494,114 @@ section BIOS_HELPERS
 			mov	sp, bp
 			pop	bp
 			ret
+
+		;;;;;;;;;; BITOA FUNCTION ;;;;;;;;;;;;;;;;
+		; converts the given number into an ascii string and places the result in the given string pointer
+		; function signature: bitoa(uint32 num, uint32 base, char* result)
+		.bitoa
+		    push bp
+		    mov bp, sp
+
+		    ; Preserve caller registers
+		    push eax
+		    push ebx
+		    push ecx
+		    push edx
+		    push si
+		    push di
+
+		    ; Load arguments
+		    mov si,  [bp + 8]     ; result pointer
+		    mov ebx, [bp + 12]    ; base
+		    mov eax, [bp + 16]    ; number
+
+		    ; Validate base: 2 <= base <= 36
+		    cmp ebx, 2
+		    jb bitoa_invalid
+
+		    cmp ebx, 36
+		    ja bitoa_invalid
+
+		    ; Generate digits in reverse order
+		    .bitoa_convert
+
+			; Save the current number
+			mov ecx, eax
+
+			; quotient = number / base
+			div eax, ebx
+
+			; remainder = number - quotient * base
+			mov edx, eax
+			mul edx, ebx
+			sub ecx, edx
+
+			; Convert remainder to ASCII
+			cmp ecx, 10
+			jb bitoa_decimal_digit
+
+			; Digits 10-35 => 'A'-'Z'
+			add ecx, 'A' - 10
+			jmp bitoa_store_digit
+
+		    .bitoa_decimal_digit
+			; Digits 0-9 => '0'-'9'
+			add ecx, '0'
+
+		    .bitoa_store_digit
+
+			; Store ASCII character
+			mov byte[si], cl
+			inc si
+
+			; Continue until quotient becomes zero
+			cmp eax, 0
+			jne bitoa_convert
+
+		    ; Append null terminator
+		    mov byte[si], 0
+
+		    ; Prepare to reverse the string
+		    mov di, [bp + 8]    ; Start of string
+		    dec si              ; Last character before NULL
+
+		    .bitoa_reverse
+
+			; Stop when pointers meet or cross
+			cmp di, si
+			jae bitoa_end
+
+			; Swap characters
+			mov dl, byte[di]
+			mov cl, byte[si]
+
+			mov byte[di], cl
+			mov byte[si], dl
+
+			; Move pointers toward the center
+			inc di
+			dec si
+
+			jmp bitoa_reverse
+
+		    .bitoa_invalid
+			; Invalid base => empty string
+			mov byte[si], 0
+
+		    .bitoa_end
+
+			; Restore caller registers
+			pop di
+			pop si
+			pop edx
+			pop ecx
+			pop ebx
+			pop eax
+
+			mov sp, bp
+			pop bp
+			ret
+
 		.helpers_end
 
 
@@ -530,8 +635,8 @@ section BIOS_INTERRUPTS
 		.invop defb "Invalid Opcode", 0xa, 0
 	
 	section BIOS_IO
-		;cmp	ah, byte[io_table_len]
-		;jae	invalid_interrupt_routine
+		cmp	ah, byte[io_table_len]
+		jae	invalid_interrupt_routine
 		push	efx
 		mov	efx, ah
 		call	[io_table + efx * 4]
@@ -542,7 +647,7 @@ section BIOS_INTERRUPTS
 		.chrin
 			ret
 
-		.bios_println
+		.bios_print
 
 		    push bp
 		    mov bp, sp
@@ -557,7 +662,7 @@ section BIOS_INTERRUPTS
 		    ; Save string pointer
 		    mov [bp - 4], si
 
-		    .bios_println_loop
+		    .bios_print_loop
 
 			; Read current character
 			mov si, [bp - 4]
@@ -565,11 +670,11 @@ section BIOS_INTERRUPTS
 
 			; End of string
 			cmp eax, 0
-			je bios_println_end
+			je bios_print_end
 
 			; Handle newline character
 			cmp eax, 0x0a
-			je bios_println_linefeed
+			je bios_print_linefeed
 
 			; Read current X cursor from RAM
 			mov eax, dword[x_cursor_ptr]
@@ -577,12 +682,12 @@ section BIOS_INTERRUPTS
 
 			; Check horizontal boundary
 			cmp eax, WIDTH - FONT_WIDTH
-			jle bios_println_draw
+			jle bios_print_draw
 
 			; Wrap to next line
 			call bios_cursor_newline
 
-		    .bios_println_draw
+		    .bios_print_draw
 
 			; Load character into SI
 			mov si, [bp - 4]
@@ -610,19 +715,16 @@ section BIOS_INTERRUPTS
 			mov eax, dword[x_cursor_ptr]
 			add dword[eax], FONT_WIDTH
 
-			jmp bios_println_next
+			jmp bios_print_next
 
-		    .bios_println_linefeed
+		    .bios_print_linefeed
 			call bios_cursor_newline
 
-		    .bios_println_next
+		    .bios_print_next
 			inc dword[bp - 4]
-			jmp bios_println_loop
+			jmp bios_print_loop
 
-		    .bios_println_end
-
-			; println ends with a newline
-			call bios_cursor_newline
+		    .bios_print_end
 
 			; Restore registers
 			pop si
@@ -636,7 +738,12 @@ section BIOS_INTERRUPTS
 
 			ret
 
-		.io_table defdw chrout, chrin, bios_println
+		.bios_println
+			call	bios_print
+			call	bios_cursor_newline
+			ret
+
+		.io_table defdw chrout, chrin, bios_print, bios_println
 		.io_table_len defb ($ - io_table) / 4
 
 		.bios_cursor_newline
@@ -714,26 +821,18 @@ section BIOS_INTERRUPTS
 		.test_msg defb "Interrupt initiated", 0xa, 0
 
 	section BIOS_TIMER
+
 		.tick_handler
-			cli
+			
+			push	eax
+			mov	eax, dword[timer_ticks]
+			add	[eax], 1
 
-			push	si
-			push	edx
-			la	si, timer_test
-			mov	edx, COLOR_RED
-			call	bios_println
-
-			pop	edx
-			pop	si
-
-			sli
+			pop	eax
 			iret
 
 		.timer_table defdw tick_handler
-		.timer_table_len defb ($ - timer_table) / 4
-		.timer_test defb "Timer interrupt", 0
-
-	
+		.timer_table_len defb ($ - timer_table) / 4	
 	
 	.invalid_interrupt_routine
 		push	si
@@ -1003,9 +1102,16 @@ section BIOS_INTERRUPTS
 		.interruptv_table_len defdw ($ - interruptv_table) / 4
 		.invalid_interrupt_msg defb "Invalid interrupt", 0xa, 0
 
+
+section BIOS_MUTABLE_DATA
+	.x_cursor_ptr defdw 0x300
+	.y_cursor_ptr defdw 0x300 - 4
+	.keybrd_buff defdw KB_BUFF_ADDR
+	.timer_ticks defdw 0x00
+
 section BIOS_DATA
 
-	.bios_hello defb "TKY BIOS v2.0a", 0
+	.bios_hello defb "=========TKY BIOS v2.0a=========", 0
 	.finish_txt defb "BIOS FINISH POINT!", 0
 	.load_status defb "Loading IVT entries...", 0
 	.load_finish defb "Done!", 0
@@ -1021,10 +1127,6 @@ section BIOS_DATA
 
 	.text_buff_ptr defdw TEXT_BUFF_ADDR
 	.text_buff_len defdw 500 * 500 * 2
-
-section BIOS_MUTABLE_DATA
-	.x_cursor_ptr defdw 0x300
-	.y_cursor_ptr defdw 0x300 - 4
 
 	section BIOS_CHAR_LOOKUP
 		

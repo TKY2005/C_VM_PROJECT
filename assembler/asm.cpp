@@ -7,6 +7,8 @@
 #include<cstdint>
 #include<limits>
 #include<optional>
+#include<sstream>
+#include<iterator>
 
 #include<Assembler.hpp>
 #include<Disassembler.hpp>
@@ -134,21 +136,69 @@ bool parseSymbolEntry(const std::string& entry, std::map<std::string, uint32_t>&
         symbols.emplace(name, value).second;
 }
 
+bool decodeSymbolFile(const std::string& bytes, std::string& text)
+{
+    // Symbol files are often edited in Windows tools that save UTF-16 by
+    // default. Decode the BOM-marked encodings here so the normal line parser
+    // sees the same ASCII definitions regardless of the host platform.
+    if (bytes.size() >= 2 &&
+        ((static_cast<unsigned char>(bytes[0]) == 0xFF &&
+          static_cast<unsigned char>(bytes[1]) == 0xFE) ||
+         (static_cast<unsigned char>(bytes[0]) == 0xFE &&
+          static_cast<unsigned char>(bytes[1]) == 0xFF))) {
+        const bool littleEndian = static_cast<unsigned char>(bytes[0]) == 0xFF;
+        if ((bytes.size() - 2) % 2 != 0) return false;
+
+        for (size_t i = 2; i < bytes.size(); i += 2) {
+            const unsigned char first = static_cast<unsigned char>(bytes[i]);
+            const unsigned char second = static_cast<unsigned char>(bytes[i + 1]);
+            const uint16_t codeUnit = littleEndian
+                ? static_cast<uint16_t>(first | (second << 8))
+                : static_cast<uint16_t>((first << 8) | second);
+            if (codeUnit > 0x7F) return false;
+            text.push_back(static_cast<char>(codeUnit));
+        }
+        return true;
+    }
+
+    const size_t utf8BomLength = bytes.size() >= 3 &&
+        static_cast<unsigned char>(bytes[0]) == 0xEF &&
+        static_cast<unsigned char>(bytes[1]) == 0xBB &&
+        static_cast<unsigned char>(bytes[2]) == 0xBF ? 3 : 0;
+    text.assign(bytes.begin() + utf8BomLength, bytes.end());
+    return true;
+}
+
 bool parseSymbolFile(
     const std::string& path,
     std::map<std::string, uint32_t>& symbols,
     std::string& error
 )
 {
-    std::ifstream file(path);
+    std::ifstream file(path, std::ios::binary);
     if (!file.is_open()) {
         error = "Unable to open symbol file: " + path;
         return false;
     }
 
+    const std::string bytes(
+        (std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>()
+    );
+    if (file.bad()) {
+        error = "Failed while reading symbol file: " + path;
+        return false;
+    }
+
+    std::string contents;
+    if (!decodeSymbolFile(bytes, contents)) {
+        error = "Unsupported text encoding in symbol file: " + path;
+        return false;
+    }
+
+    std::istringstream lines(contents);
     std::string line;
     size_t lineNumber = 0;
-    while (std::getline(file, line)) {
+    while (std::getline(lines, line)) {
         ++lineNumber;
         const std::string entry = trim(line);
         if (entry.empty()) continue;
@@ -157,10 +207,6 @@ bool parseSymbolFile(
                 std::to_string(lineNumber);
             return false;
         }
-    }
-    if (file.bad()) {
-        error = "Failed while reading symbol file: " + path;
-        return false;
     }
     return true;
 }

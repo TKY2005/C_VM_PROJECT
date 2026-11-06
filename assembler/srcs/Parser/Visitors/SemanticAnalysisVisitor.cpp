@@ -31,6 +31,7 @@ int expectedOperandCount(uint8_t opcode)
         case 0x47:
         case 0x4E:
         case 0x51:
+        case 0x52:
             return 0;
 
         case 0x03:
