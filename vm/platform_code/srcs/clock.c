@@ -3,11 +3,11 @@
 #include<stdatomic.h>
 #include<stdio.h>
 #include<stdlib.h>
+
 #include<VM/vm_interrupts.h>
 #include<VM/vm.h>
 #include<VM/vm_settings.h>
 #include<CPU/CPU.h>
-
 #include<Timing/clock_internal.h>
 #include<Timing/clock.h>
 

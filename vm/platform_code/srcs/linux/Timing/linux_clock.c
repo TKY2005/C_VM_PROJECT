@@ -1,5 +1,3 @@
-#define _POSIX_C_SOURCE 199309L
-
 #include<Timing/clock.h>
 
 #include<stdint.h>

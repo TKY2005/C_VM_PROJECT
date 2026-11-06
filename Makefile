@@ -45,7 +45,7 @@ else
     RAYLIB_DIR = ./vm/raylib6_linux
     RAYLIB_ORIGIN = ../../../vm/raylib6_linux/lib
     RAYLIB_FLAGS = -I $(RAYLIB_DIR)/include -L $(RAYLIB_DIR)/lib -lraylib -lm -lpthread -ldl -lrt -lX11 -Wl,-rpath,'$$ORIGIN/$(RAYLIB_ORIGIN)'
-    SRCS += -DPLT_LINUX $(RAYLIB_FLAGS)
+    SRCS += -DPLT_LINUX -D_POSIX_C_SOURCE=199309L $(RAYLIB_FLAGS)
     # ----------------------------------
 
     dbg_flags += -fsanitize=address
