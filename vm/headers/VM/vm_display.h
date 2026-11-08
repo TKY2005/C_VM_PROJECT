@@ -11,6 +11,10 @@
 #define DISPLAY_INIT_SUCCESS 0
 #define DISPLAY_INIT_FAIL -1
 
+#define DISP_CMD_PORT 0x22
+#define DISP_WIDTH_PORT 0x23
+#define DISP_HEIGHT_PORT 0x24
+
 typedef struct vm_display {
     int width, height, refresh;
     Image display_image;
@@ -30,5 +34,8 @@ vm_display* window_start();
 void* window_update(void* arg);
 
 int window_close(vm_display* d);
+
+int disp_getw(vm_display* disp, uint16_t* result);
+int disp_geth(vm_display* disp, uint16_t* result);
 
 #endif

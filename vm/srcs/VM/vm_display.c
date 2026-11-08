@@ -88,3 +88,15 @@ int window_close(vm_display* d) {
     free(d);
     return 0;
 }
+
+int disp_getw(vm_display* disp, uint16_t* result) {
+    if (disp == NULL) return -1;
+    *result = disp->width;
+    return 0;
+}
+
+int disp_geth(vm_display* disp, uint16_t* result) {
+    if (disp == NULL) return -1;
+    *result = disp->height;
+    return 0;
+}

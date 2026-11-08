@@ -96,6 +96,7 @@
     X(OUTP, 0x50, _outp) \
     X(HLT, 0x51, _hlt) \
     X(DBG, 0x52, _dbg) \
+    X(REM, 0x53, _rem) \
 
 
 #define X(mnemonic, opcode, funcname) INS_##mnemonic = opcode,

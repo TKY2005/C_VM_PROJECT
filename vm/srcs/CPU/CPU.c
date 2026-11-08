@@ -77,21 +77,7 @@ int CPU_run(CPU* cpu, memory* mem) {
             int icode = ic_interrupt_acknowledge(&vm_ic);
             if (icode < 0) CPU_fail(cpu, "Unable to acknowledge interrupt.\n");
             else {
-                /* 
-                We have to decreemnt the PC, then increment twice
-                becasue the CPU receives a hardware interrupt when the PC is at the start of the next instruction
-                The PC is pushed to the stack and the CPU jumps to the interrupt handler.
-                when the CPU returns using iret the return address is popped and placed in the PC.
-                The PC then auto increments at the end of the instruction
-                which causes the CPU to land one byte ahead of where it should be
-                in the case of a software interrupt or a regular branch the CPU is at the last byte of the previous instruction
-                so when the CPU returns using ret or iret it auto increments and places itelf at the start of the next instruction
-                We have to increment twice
-                the first increment is to cancel the previous decrement
-                the second increment is because the PC doesn't auto increment in this branch
-                cpu_exec_ins auto increments the PC
-                so we have to manually increment here.
-                */
+                
                 cpu->registers->PC--;
                 CPU_interrupt(cpu, mem, (uint8_t) icode);
                 CPU_step(cpu);

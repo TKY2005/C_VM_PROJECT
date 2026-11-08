@@ -774,3 +774,26 @@ void _dbg(CPU* cpu, memory* mem) {
     reg_set_flags(cpu->registers, FLG_T);
     vm_debug_shell();
 }
+
+void _rem(CPU* cpu, memory* mem) {
+    ins_encoding encoding = {0};
+    ins_encoding* ins = &encoding;
+    ins->resolve_sym = 1;
+    ins->flg_mod = 1;
+
+    int read = CPU_read_operand_bytes(cpu, mem, ins);
+    if (read == MEM_READ_FAILURE) {
+        CPU_fail(cpu, "Invalid read operation @ 0x%08X.", cpu->registers->PC);
+    }
+    else {
+        uint32_t dest = CPU_decode_dest(cpu, mem, ins);
+        uint32_t src = CPU_decode_src(cpu, mem, ins);
+
+        if (src == 0) CPU_interrupt(cpu, mem, CPU_EXCEPTION_DIVZERO);
+        else {
+            uint32_t val = dest % src;
+            CPU_write_dest(cpu, mem, ins, val);
+            CPU_update_flags(cpu, ins, dest, src, val, CPU_FLAG_OP_BITWISE);
+        }
+    }
+}

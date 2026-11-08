@@ -255,10 +255,21 @@ std::string Tokenizer::preProcessCode(const std::string& input) {
                 defStream >> keyword >> symbol;
                 std::getline(defStream, value);
 
-                // Trim leading spaces
+                // Remove inline comments before storing the macro value.
+                size_t commentPos = value.find(';');
+                if (commentPos != std::string::npos) {
+                    value = value.substr(0, commentPos);
+                }
+
+                // Trim surrounding whitespace
                 value.erase(value.begin(),
                             std::find_if(value.begin(), value.end(),
                                          [](unsigned char c){ return !std::isspace(c); }));
+                value.erase(
+                    std::find_if(value.rbegin(), value.rend(),
+                                 [](unsigned char c){ return !std::isspace(c); }).base(),
+                    value.end()
+                );
 
                 // Preprocess the macro value BEFORE storing it
                 value = regexReplaceWith(value, charRegex,

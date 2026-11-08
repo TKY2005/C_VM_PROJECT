@@ -9,10 +9,6 @@ define TEXT_BUFF_ADDR 0x19000
 
 define FB_ADDR 0xf9d10000
 
-define WIDTH 800
-define HEIGHT 485
-
-
 define FONT_WIDTH 8
 define FONT_HEIGHT 16
 
@@ -24,8 +20,13 @@ define COLOR_BLUE	0x0000ffff
 define IC_CMD_PORT 0x20
 define IC_DATA_PORT 0x21
 
+define DISP_WIDTH_PORT 0x23
+define DISP_HEIGHT_PORT 0x24
+
 ; BIOS MEMORY MAP
 ; BIOS code: 0xf9c00000 => 0xf9c0ffff (64 KB)
+; BIOS display cache: height 0x2f4, width 0x2f8 (4 bytes each)
+; BIOS text cursor: Y 0x2fc, X 0x300 (4 bytes each)
 ; BIOS global stack: 0x400 => 0x7ff (1 KB)
 ; BIOS keyboard buffer: 0x800 => 0x9ff (512 Bytes)
 ; BIOS IVT setup: 0x1000 => 0x1400 (1 KB)
@@ -43,6 +44,17 @@ section BIOS_CODE
 		mov	bp, stack_base_addr
 		mov	sp, bp
 		add	sp, stack_len
+
+		; Query the display once, before any framebuffer or text operations.
+		; scrdim returns width in AX and height in BX (16-bit values).
+		; Call the function directly because the IVT is not yet installed.
+		call	scrdim
+
+		; BIOS ROM stores pointers; the actual mutable values live in RAM.
+		mov	ecx, dword[screen_width_ptr]
+		mov	dword[ecx], ax
+		mov	ecx, dword[screen_height_ptr]
+		mov	dword[ecx], bx
 
 		la	si, load_status
 		mov	eax, 0
@@ -85,11 +97,6 @@ section BIOS_CODE
 		outp	al, 3
 
 		sli
-
-		la	si, halt
-		mov	edx, COLOR_WHITE
-		call	bios_println
-		hlt
 
 		call	BOOTLOADER_ADDR
 
@@ -190,19 +197,38 @@ section BIOS_HELPERS
 		push	bp
 		mov	bp, sp
 
+		; Preserve registers modified by the pixel calculations.
 		push	eax
 		push	ebx
 		push	edx
+		push	ecx
+		push	efx
 
+		; Load cached 32-bit screen dimensions from reserved RAM.
+		mov	ecx, dword[screen_width_ptr]
+		mov	ecx, dword[ecx]
+		mov	efx, dword[screen_height_ptr]
+		mov	efx, dword[efx]
+
+		; Retrieve the pixel arguments.
 		mov	edx, [bp + 2 * 4]
 		mov	ebx, [bp + 3 * 4]
 		mov	eax, [bp + 4 * 4]
-		
-		mul	ebx, WIDTH
-		add	ebx, eax
 
+		; Clip out-of-bounds pixels before addressing the framebuffer.
+		cmp	eax, ecx
+		jae	setpix_done
+		cmp	ebx, efx
+		jae	setpix_done
+
+		; FB_ADDR + ((y * screen_width) + x) * 4
+		mul	ebx, ecx
+		add	ebx, eax
 		mov	dword[FB_ADDR + ebx * 4], edx
 
+		.setpix_done
+		pop	efx
+		pop	ecx
 		pop	edx
 		pop	ebx
 		pop	eax
@@ -524,17 +550,11 @@ section BIOS_HELPERS
 
 		    ; Generate digits in reverse order
 		    .bitoa_convert
-
-			; Save the current number
+			; Calculate remainder
 			mov ecx, eax
-
-			; quotient = number / base
+			rem ecx, ebx
+			; Calculate quotient
 			div eax, ebx
-
-			; remainder = number - quotient * base
-			mov edx, eax
-			mul edx, ebx
-			sub ecx, edx
 
 			; Convert remainder to ASCII
 			cmp ecx, 10
@@ -618,21 +638,20 @@ section BIOS_INTERRUPTS
 			pop	edx
 			ext
 		.exp_invop
-			la	bp, stack_base_addr
+			mov	bp, stack_base_addr
 			mov	sp, bp
 			add	sp, stack_len
-			
-			push	edx
-			push	si
+
 			la	si, invop
 			outs
-			call	bios_println
-			pop	si
-			pop	eax
+			mov	edx, COLOR_RED
+			mov	ah, 3
+			int	0x2
+			dbg
 			ext
 
 		.divzero defb "Division by Zero", 0xa, 0
-		.invop defb "Invalid Opcode", 0xa, 0
+		.invop defb "Invalid Opcode, Stopping the program.", 0xa, 0
 	
 	section BIOS_IO
 		cmp	ah, byte[io_table_len]
@@ -646,6 +665,7 @@ section BIOS_INTERRUPTS
 			ret
 		.chrin
 			ret
+
 
 		.bios_print
 
@@ -676,12 +696,20 @@ section BIOS_INTERRUPTS
 			cmp eax, 0x0a
 			je bios_print_linefeed
 
+			; Read cached width and find the last X for a complete glyph.
+			mov ebx, dword[screen_width_ptr]
+			mov ebx, dword[ebx]
+			; Avoid underflow if the display is narrower than one glyph.
+			cmp ebx, FONT_WIDTH
+			jb bios_print_linefeed
+			sub ebx, FONT_WIDTH
+
 			; Read current X cursor from RAM
 			mov eax, dword[x_cursor_ptr]
 			mov eax, dword[eax]
 
-			; Check horizontal boundary
-			cmp eax, WIDTH - FONT_WIDTH
+			; Wrap if the next character will not fit.
+			cmp eax, ebx
 			jle bios_print_draw
 
 			; Wrap to next line
@@ -743,11 +771,21 @@ section BIOS_INTERRUPTS
 			call	bios_cursor_newline
 			ret
 
-		.io_table defdw chrout, chrin, bios_print, bios_println
+		.scrdim
+			inp	ax, DISP_WIDTH_PORT
+			inp	bx, DISP_HEIGHT_PORT
+			ret
+
+		.io_table defdw chrout, chrin, bios_print, bios_println, scrdim
 		.io_table_len defb ($ - io_table) / 4
 
 		.bios_cursor_newline
 		    push eax
+		    push ebx
+
+		    ; Read cached screen height from reserved RAM.
+		    mov ebx, dword[screen_height_ptr]
+		    mov ebx, dword[ebx]
 
 		    ; Reset X cursor
 		    mov eax, dword[x_cursor_ptr]
@@ -757,14 +795,15 @@ section BIOS_INTERRUPTS
 		    mov eax, dword[y_cursor_ptr]
 		    add dword[eax], FONT_HEIGHT
 
-		    ; Check bottom boundary
-		    cmp dword[eax], HEIGHT
+		    ; Check bottom boundary using the current height.
+		    cmp dword[eax], ebx
 		    jl bios_cursor_newline_done
 
 		    ; Wrap vertically
 		    mov dword[eax], 0
 
 		    .bios_cursor_newline_done
+			pop ebx
 			pop eax
 			ret
 
@@ -1104,6 +1143,9 @@ section BIOS_INTERRUPTS
 
 
 section BIOS_MUTABLE_DATA
+	; These ROM symbols hold pointers to writable, reserved RAM slots.
+	.screen_height_ptr defdw 0x2f4
+	.screen_width_ptr defdw 0x2f8
 	.x_cursor_ptr defdw 0x300
 	.y_cursor_ptr defdw 0x300 - 4
 	.keybrd_buff defdw KB_BUFF_ADDR
