@@ -6,7 +6,10 @@
 
 #define TIMER_INTERRUPT_VECTOR 0x20
 
-void clock_simulate_delay(uint64_t ms);
+void clock_configure(uint64_t frequency_hz);
+void clock_reset(void);
+void clock_tick(void);
+void clock_shutdown(void);
 void timer_sleep(uint64_t ms);
 
 void* timer_tick_task(void* arg);

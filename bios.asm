@@ -16,6 +16,7 @@ define COLOR_WHITE	0xffffffff
 define COLOR_GREEN 	0x00ff00ff
 define COLOR_RED 	0xff0000ff
 define COLOR_BLUE	0x0000ffff
+define COLOR_BLACK	0x00000000
 
 define IC_CMD_PORT 0x20
 define IC_DATA_PORT 0x21
@@ -56,25 +57,17 @@ section BIOS_CODE
 		mov	ecx, dword[screen_height_ptr]
 		mov	dword[ecx], bx
 
-		la	si, load_status
-		mov	eax, 0
-		mov	ebx, 0
-		mov	edx, COLOR_WHITE
 
-		push	si
-		push	eax
-		push	ebx
-		push	edx
-		call	print_str
-		add	sp, 4 * 4
+		mov dword[0x300], 0
+		mov dword[0x300 - 4], 0
+
+		; String drawing uses EEX as the background color.
+		mov	eex, COLOR_BLACK
 
 		la	si, load_status
 		mov	edx, COLOR_WHITE
 		call	bios_println
 
-		mov dword[0x300], 0
-		mov dword[0x300 - 4], FONT_HEIGHT
-		
 		livt	IVT_ADDR
 		mov	ecx, [interruptv_table_len]
 		xor	eax, eax
@@ -91,7 +84,6 @@ section BIOS_CODE
 		la	si, bios_hello
 		call	bios_println
 
-
 		; clear all pending interrupts
 		mov	al, IC_CMD_PORT
 		outp	al, 3
@@ -100,6 +92,8 @@ section BIOS_CODE
 
 		call	BOOTLOADER_ADDR
 
+		; The bootloader may have changed EEX.
+		mov	eex, COLOR_BLACK
 		la	si, finish_txt
 		mov	edx, COLOR_WHITE
 		call	bios_println
@@ -116,11 +110,19 @@ section BIOS_HELPERS
 
 	;;;;;;;;;;;;;;; PRINT_STR FUNCTION ;;;;;;;;;;;;;;;;;;;;;;;;;;
 	; renders a string to the given x, y coordinates
-	; parameters
-	; si => pointer to string (zero terminated)
-	; eax => x coordinate
-	; ebx => y coordinate
-	; edx => color
+	; Parameters (caller pushes in this order):
+	;   push si   ; pointer to zero-terminated string
+	;   push eax  ; x coordinate
+	;   push ebx  ; y coordinate
+	;   push edx  ; foreground color
+	;   push eex  ; background color
+	; Stack at entry (32-bit entries):
+	;   [bp + 8]  = background color
+	;   [bp + 12] = foreground color
+	;   [bp + 16] = y coordinate
+	;   [bp + 20] = x coordinate
+	;   [bp + 24] = string pointer
+	; Caller removes 5 * 4 bytes after return.
 	.print_str
 	    push bp
 	    mov bp, sp
@@ -131,12 +133,13 @@ section BIOS_HELPERS
 	    push eax
 	    push ebx
 	    push edx
+	    push eex
 
 	    ; Initialize local variables
-	    mov eax, [bp + 20]
+	    mov eax, [bp + 24]
 	    mov [bp - 4], eax
 
-	    mov eax, [bp + 16]
+	    mov eax, [bp + 20]
 	    mov [bp - 8], eax
 
 	    .print_str_loop
@@ -152,17 +155,19 @@ section BIOS_HELPERS
 		; Prepare drawchar arguments
 		mov si, eax
 		mov eax, [bp - 8]
-		mov ebx, [bp + 12]
-		mov edx, [bp + 8]
+		mov ebx, [bp + 16]
+		mov edx, [bp + 12]
+		mov eex, [bp + 8]
 
 		; Draw current character
 		push si
 		push eax
 		push ebx
 		push edx
+		push eex
 
 		call drawchar
-		add sp, 4 * 4
+		add sp, 5 * 4
 
 		; Advance string pointer
 		inc dword[bp - 4]
@@ -177,6 +182,7 @@ section BIOS_HELPERS
 	    .print_str_end
 
 		; Restore caller registers
+		pop eex
 		pop edx
 		pop ebx
 		pop eax
@@ -243,15 +249,17 @@ section BIOS_HELPERS
 	; eax => x
 	; ebx => y
 	; edx => color
+	; eex => bg color
 	.drawchar
 		push	bp
 		mov	bp, sp
 		sub	sp, 10 * 4
 
-		mov	edx, [bp + 2 * 4]
-		mov	ebx, [bp + 3 * 4]
-		mov	eax, [bp + 4 * 4]
-		mov	si, [bp + 5 * 4]
+		mov	eex, [bp + 2 * 4]
+		mov	edx, [bp + 3 * 4]
+		mov	ebx, [bp + 4 * 4]
+		mov	eax, [bp + 5 * 4]
+		mov	si, [bp + 6 * 4]
 		
 		; row loop counter
 		mov	dword[bp - 1 * 4], 0
@@ -294,7 +302,7 @@ section BIOS_HELPERS
 				pop	eax
 
 				cmp	[bp - 4 * 4], 1
-				jne	clearpixel
+				jne	bgpixel
 
 
 				; temp x, y
@@ -315,7 +323,7 @@ section BIOS_HELPERS
 				mov	ebx, [bp - 6 * 4]
 				jmp	next_col
 
-				.clearpixel
+				.bgpixel
 					; temp x, y
 					mov	[bp - 5 * 4], eax
 					mov	[bp - 6 * 4], ebx
@@ -325,7 +333,7 @@ section BIOS_HELPERS
 
 					push	eax
 					push	ebx
-					push	0
+					push	eex
 					call	setpix
 					add	sp, 12
 
@@ -630,11 +638,14 @@ section BIOS_INTERRUPTS
 	section BIOS_EXCEPTIONS
 		.exp_divzero
 			push	edx
+			push	eex
 			push	si
 			la	si, divzero
 			mov	edx, COLOR_RED
+			mov	eex, COLOR_BLACK
 			call	bios_println
 			pop	si
+			pop	eex
 			pop	edx
 			ext
 		.exp_invop
@@ -645,6 +656,7 @@ section BIOS_INTERRUPTS
 			la	si, invop
 			outs
 			mov	edx, COLOR_RED
+			mov	eex, COLOR_BLACK
 			mov	ah, 3
 			int	0x2
 			dbg
@@ -667,16 +679,21 @@ section BIOS_INTERRUPTS
 			ret
 
 
+		; IO services AH=2 (bios_print) and AH=3 (bios_println):
+		;   SI  = zero-terminated string pointer
+		;   EDX = foreground color
+		;   EEX = background color
 		.bios_print
 
 		    push bp
 		    mov bp, sp
 		    sub sp, 4
 
-		    ; Preserve registers
+		    ; Preserve registers (including background color in EEX).
 		    push eax
 		    push ebx
 		    push edx
+		    push eex
 		    push si
 
 		    ; Save string pointer
@@ -735,9 +752,10 @@ section BIOS_INTERRUPTS
 			push eax
 			push ebx
 			push edx
+			push eex
 
 			call drawchar
-			add sp, 16
+			add sp, 20
 
 			; Advance X cursor
 			mov eax, dword[x_cursor_ptr]
@@ -756,6 +774,7 @@ section BIOS_INTERRUPTS
 
 			; Restore registers
 			pop si
+			pop eex
 			pop edx
 			pop ebx
 			pop eax
@@ -812,10 +831,10 @@ section BIOS_INTERRUPTS
 		cmp	ah, byte[disk_table_len]
 		jae	invalid_interrupt_routine
 
-		push	di
-		mov	di, ah
-		call	[disk_table + di * 4]
-		pop	di
+		push	efx
+		mov	efx, ah
+		call	[disk_table + efx * 4]
+		pop	efx
 		iret
 
 		.dskstat

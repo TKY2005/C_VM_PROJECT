@@ -49,6 +49,7 @@ int CPU_run(CPU* cpu, memory* mem) {
 
     atomic_store(&cpu->cycles_count, 0);
     atomic_store(&cpu->saved_cycles, 0);
+    clock_reset();
     timer_thread = clock_timer_start(vm_conf.timer_interval);
     if (timer_thread == NULL) return CPU_EXEC_FAILURE;
 
@@ -89,7 +90,7 @@ int CPU_run(CPU* cpu, memory* mem) {
     if (cpu->state->CPU_HALTED) {
         cpu->saved_cycles = atomic_load(&cpu->cycles_count);
         while (cpu->state->CPU_HALTED) {
-            clock_simulate_delay(cpu->clock_delay_ms);
+            clock_tick();
             atomic_fetch_add(&cpu->cycles_count, 1);
         }
         cpu->cycles_count = atomic_load(&cpu->saved_cycles);
@@ -116,22 +117,23 @@ void CPU_exec_ins(CPU* cpu, memory* mem, uint8_t opcode) {
     else {
         ins(cpu, mem);
         CPU_step(cpu);
-        atomic_fetch_add(&cpu->cycles_count, 1);
     }
 }
 
 uint32_t CPU_step(CPU* cpu) {
     cpu->registers->PC++;
+    atomic_fetch_add(&cpu->cycles_count, 1);
     if (vm_conf.cycle_count != 0) 
-        clock_simulate_delay(cpu->clock_delay_ms);
+        clock_tick();
     return cpu->registers->PC;
 }
 void CPU_step_e(void** arg) {
     CPU* cpu = (CPU*) arg[0];
 
     cpu->registers->PC++;
+    atomic_fetch_add(&cpu->cycles_count, 1);
     if (vm_conf.cycle_count != 0) 
-        clock_simulate_delay(cpu->clock_delay_ms);
+        clock_tick();
     return;
 }
 

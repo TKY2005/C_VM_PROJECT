@@ -55,7 +55,7 @@ void vm_run_shell_command(char* command) {
         else size = strtoul(parts[1], NULL, 0);
         vm_init(size);
         printf("Initialized the VM with %lu bytes of available virtual memory.\n", ram_size(vm_memory.ram));
-        printf("CPU speed set to %lu cycles/second with a delay of %lums\n", vm_conf.cycle_count, vm_cpu->clock_delay_ms);
+        printf("CPU speed set to %lu clock events/second\n", vm_conf.cycle_count);
     }
     else if (strcmp(parts[0], "boot") == 0) {
         vm_boot_sequence(vm_cpu, &vm_memory);

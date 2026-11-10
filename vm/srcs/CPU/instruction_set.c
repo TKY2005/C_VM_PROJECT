@@ -264,7 +264,7 @@ void _outs(CPU* cpu, memory* mem) {
     while ( (read = mem_read_byte(mem, straddr + offset, &chr)) != MEM_READ_FAILURE ) {
         if (chr == '\0') break;
         printf("%c", chr);
-        clock_simulate_delay(cpu->clock_delay_ms);
+        clock_tick();
         offset++;
     }
 }
@@ -654,7 +654,7 @@ void _outsw(CPU* cpu, memory* mem) {
     while ( (read = mem_read_word(mem, straddr + offset, &chr)) != MEM_READ_FAILURE ) {
         if (chr == '\0') break;
         printf("%c", chr);
-        clock_simulate_delay(cpu->clock_delay_ms);
+        clock_tick();
         offset += 2;
     }
 }

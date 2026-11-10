@@ -56,7 +56,7 @@ void vm_init(int memsize) {
     else if (load == BIOS_ERR_NOINIT) {
         printf("BIOS ROM is not initialized. Please initialize first using vm_init\n");
     }
-    vm_cpu->clock_delay_ms = vm_calculate_delay_ms(vm_conf.cycle_count);
+    clock_configure(vm_conf.cycle_count);
     vm_entry = vm_conf.entrypoint;
 
     vm_ic = ic_init();
@@ -80,19 +80,16 @@ void vm_init(int memsize) {
     display->update_thread_started = true;
 }
 
-uint64_t vm_calculate_delay_ms(uint64_t cycles) {
-    if (cycles == 0) return 0;
-    return 1000 / cycles;
-}
-
 void vm_init_nomem() {
     union registerfile* regfile = calloc(1, sizeof(union registerfile));
     
     instruction* ins_set = setup_instruction_set();
     vm_cpu = CPU_init(regfile, ins_set);
+    clock_configure(vm_conf.cycle_count);
 }
 
 void vm_shutdown() {
+    clock_shutdown();
     if (display != NULL) {
         if (window_close(display) != 0) return;
         display = NULL;
