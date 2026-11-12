@@ -54,6 +54,7 @@ int reg_get_index(const char* reg) {
 	else if (strcmp("ss", regname) == 0) return REG_SS_IDX * 4;
 	else if (strcmp("ds", regname) == 0) return REG_DS_IDX * 4;
 	else if (strcmp("ivtr", regname) == 0) return REG_IVTR_IDX * 4;
+	else if (strcmp("expr", regname) == 0) return REG_EXPR_IDX * 4;
 
 	else {
 		if (strlen(regname) == 3) {
@@ -87,7 +88,8 @@ char* display_registers(union registerfile* regfile) {
 		if ( i % row_count == 0) strbuilder_append(regs, "\n");
 		
 		if (i >= REG_PC_IDX){
-			strbuilder_appendf(regs, "%s: 0x%08X  ", reglist[i], regfile->dw[i]);
+			if (i == REG_EXPR_IDX) strbuilder_appendf(regs, "%s: 0x%02X  ", reglist[i], regfile->b[i * 4]);
+			else strbuilder_appendf(regs, "%s: 0x%08X  ", reglist[i], regfile->dw[i]);
 		}
 		else strbuilder_appendf(regs, "E%cX: 0x%08X  ", toupper(reglist[i][0]) ,regfile->dw[i]);
 	}

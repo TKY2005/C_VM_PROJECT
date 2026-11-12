@@ -147,7 +147,7 @@ void _div(CPU* cpu, memory* mem) {
         uint32_t dest = CPU_decode_dest(cpu, mem, ins);
         uint32_t src = CPU_decode_src(cpu, mem, ins);
 
-        if (src == 0) CPU_interrupt(cpu, mem, CPU_EXCEPTION_DIVZERO);
+        if (src == 0) CPU_exception(cpu, mem, CPU_EXCEPTION_DIVZERO);
         else {
             uint32_t val = dest / src;
             CPU_write_dest(cpu, mem, ins, val);
@@ -789,11 +789,21 @@ void _rem(CPU* cpu, memory* mem) {
         uint32_t dest = CPU_decode_dest(cpu, mem, ins);
         uint32_t src = CPU_decode_src(cpu, mem, ins);
 
-        if (src == 0) CPU_interrupt(cpu, mem, CPU_EXCEPTION_DIVZERO);
+        if (src == 0) CPU_exception(cpu, mem, CPU_EXCEPTION_DIVZERO);
         else {
             uint32_t val = dest % src;
             CPU_write_dest(cpu, mem, ins, val);
             CPU_update_flags(cpu, ins, dest, src, val, CPU_FLAG_OP_BITWISE);
         }
     }
+}
+
+void _excep(CPU* cpu, memory* mem) {
+    ins_encoding encoding = {0};
+
+    encoding.single_oper = 1;
+
+    int read = CPU_read_operand_bytes(cpu, mem, &encoding);
+
+    CPU_write_dest(cpu, mem, &encoding, (uint32_t) cpu->registers->EXPREG);
 }

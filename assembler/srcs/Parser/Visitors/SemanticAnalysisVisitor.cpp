@@ -80,6 +80,7 @@ int expectedOperandCount(uint8_t opcode)
         case 0x4C:
         case 0x4D:
         case 0x4F:
+        case 0x54:
             return 1;
 
         case 0x02:

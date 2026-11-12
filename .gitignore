@@ -9,3 +9,4 @@ tkyc
 *.vconf
 *.txt
 /logs
+/documentation

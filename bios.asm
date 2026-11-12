@@ -24,6 +24,8 @@ define IC_DATA_PORT 0x21
 define DISP_WIDTH_PORT 0x23
 define DISP_HEIGHT_PORT 0x24
 
+define MUTABLE_DATA_BASE 0x00
+
 ; BIOS MEMORY MAP
 ; BIOS code: 0xf9c00000 => 0xf9c0ffff (64 KB)
 ; BIOS display cache: height 0x2f4, width 0x2f8 (4 bytes each)
@@ -33,6 +35,14 @@ define DISP_HEIGHT_PORT 0x24
 ; BIOS IVT setup: 0x1000 => 0x1400 (1 KB)
 ; Bootloader code: 0x2800 => 0x127ff (64 KB)
 ; BIOS text buffer: 0x19000 => 0x9311f (500 KB)
+
+; BIOS MUTABLE DATA MAP (base at 0x00):
+; timer ticks: base + 0x00 (4 bytes)
+; Cursor X: timer ticks + 0x04 (4 bytes)
+; Cursor Y: Cursor X + 0x04 (4 bytes)
+; Display width: Cursor Y + 0x04 (4 bytes)
+; Display height: Display width + 0x04 (4 bytes)
+; Keyboard buffer: Display height + 0x04 (512 bytes)
 
 ; Other memory regions
 ; MMIO space: 0xf9c10000 => 0xf9d0ffff (1 MB)
@@ -91,14 +101,15 @@ section BIOS_CODE
 		sli
 
 		call	BOOTLOADER_ADDR
-
-		; The bootloader may have changed EEX.
-		mov	eex, COLOR_BLACK
-		la	si, finish_txt
-		mov	edx, COLOR_WHITE
-		call	bios_println
-		dbg
-		ext
+		
+		.bios_finish_routine
+			; The bootloader may have changed EEX.
+			mov	eex, COLOR_BLACK
+			la	si, finish_txt
+			mov	edx, COLOR_WHITE
+			call	bios_println
+			dbg
+			ext
 
 
 section BIOS_HELPERS
@@ -636,6 +647,20 @@ section BIOS_HELPERS
 section BIOS_INTERRUPTS
 	
 	section BIOS_EXCEPTIONS
+		push	eax
+		excep	ah
+
+		cmp	ah, byte[excep_table_len]
+		jae	invalid_interrupt_routine
+
+		push	efx
+		mov	efx, ah
+		call	[excep_table + efx * 4]
+
+		pop	efx
+		pop	eax
+		iret
+		
 		.exp_divzero
 			push	edx
 			push	eex
@@ -647,6 +672,7 @@ section BIOS_INTERRUPTS
 			pop	si
 			pop	eex
 			pop	edx
+			dbg
 			ext
 		.exp_invop
 			mov	bp, stack_base_addr
@@ -658,9 +684,12 @@ section BIOS_INTERRUPTS
 			mov	edx, COLOR_RED
 			mov	eex, COLOR_BLACK
 			mov	ah, 3
-			int	0x2
+			int	0x1
 			dbg
-			ext
+			jmp	bios_finish_routine
+
+		.excep_table defdw exp_divzero, exp_invop
+		.excep_table_len defb ($ - excep_table) / 4
 
 		.divzero defb "Division by Zero", 0xa, 0
 		.invop defb "Invalid Opcode, Stopping the program.", 0xa, 0
@@ -900,11 +929,11 @@ section BIOS_INTERRUPTS
 		iret
 
 	.interruptv_table defdw
-		exp_divzero, 	; 0x00 => Division by zero exception
-		exp_invop, 	; 0x01 => Invalid opcode exception
-		BIOS_IO, 	; 0x02 => BIOS IO services
-		BIOS_DISK,	   ; 0x03 => BIOS disk services
-		BIOS_TEST,	   ; 0x04 => Testing interrupt
+		BIOS_EXCEPTIONS, 	; 0x00 => BIOS CPU exception handlers
+		BIOS_IO, 		; 0x01 => BIOS IO services
+		BIOS_DISK, 		; 0x02 => BIOS DISK services
+		BIOS_TEST,	   	; 0x03 => Testing interrupt
+		0,	   ; 0x04		
 		0,	   ; 0x05
 		0,	   ; 0x06
 		0,	   ; 0x07
@@ -1163,12 +1192,12 @@ section BIOS_INTERRUPTS
 
 section BIOS_MUTABLE_DATA
 	; These ROM symbols hold pointers to writable, reserved RAM slots.
-	.screen_height_ptr defdw 0x2f4
-	.screen_width_ptr defdw 0x2f8
-	.x_cursor_ptr defdw 0x300
-	.y_cursor_ptr defdw 0x300 - 4
-	.keybrd_buff defdw KB_BUFF_ADDR
-	.timer_ticks defdw 0x00
+	.timer_ticks defdw MUTABLE_DATA_BASE
+	.x_cursor_ptr defdw 1 * 4
+	.y_cursor_ptr defdw 2 * 4
+	.screen_width_ptr defdw 3 * 4
+	.screen_height_ptr defdw 4 * 4
+	.keybrd_buff defdw 5 * 4
 
 section BIOS_DATA
 

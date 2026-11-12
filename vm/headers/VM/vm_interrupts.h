@@ -1,8 +1,6 @@
 #ifndef VM_INTERRUPTS_H
 #define VM_INTERRUPTS_H
 
-#include<stdio.h>
-
 #include<CPU/CPU.h>
 #include<Memory/memory.h>
 #include<utils/tky_queue.h>

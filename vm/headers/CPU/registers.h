@@ -13,6 +13,7 @@
 #define REG_SS_IDX 12
 #define REG_DS_IDX 13
 #define REG_IVTR_IDX 14
+#define REG_EXPR_IDX 15
 
 #define FLG_Z (1 << 0)
 #define FLG_N (1 << 1)
@@ -22,13 +23,13 @@
 #define FLG_T (1 << 5)
 
 
-static char* reglist[] = {"a", "b", "c", "d", "e", "f", "PC", "SI", "DI", "SP", "BP", "CS", "SS", "DS", "IVTR"};
+static char* reglist[] = {"a", "b", "c", "d", "e", "f", "PC", "SI", "DI", "SP", "BP", "CS", "SS", "DS", "IVTR", "EXPR"};
 
 union registerfile {
 	
-	uint8_t b[60]; // total byte size = 24 + 36 = 60
-	uint16_t w[30]; // total word size = 60 / 2 = 30
-	uint32_t dw[15]; // total dword size = 30 / 2 = 15
+	uint8_t b[61]; // total byte size: 24 + 36 + 1 = 61
+	uint16_t w[30]; // total word size = 61 // 2 = 30
+	uint32_t dw[15]; // total dword size = 30 // 2 = 15
 
 	struct {
 		// GPRs
@@ -75,9 +76,16 @@ union registerfile {
 	};
 
 	struct {
+		// size: 6 * 4 = 24 bytes
 		uint32_t A, B, C, D, E, F;
+		// size: 8 * 4 = 32 bytes
 		uint32_t PC, SI, DI, SP, BP, CS, SS, DS;
+		// size: 4 bytes
 		uint32_t IVTR;
+		// size: 1 byte
+		uint8_t EXPREG;
+
+		// TOTAL: 24 + 32 + 4 + 1 = 61
 		uint8_t flags;
 	};	
 };

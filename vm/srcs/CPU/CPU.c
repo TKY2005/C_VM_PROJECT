@@ -46,7 +46,6 @@ void CPU_destroy(CPU* cpu) {
 }
 
 int CPU_run(CPU* cpu, memory* mem) {
-
     atomic_store(&cpu->cycles_count, 0);
     atomic_store(&cpu->saved_cycles, 0);
     clock_reset();
@@ -107,7 +106,7 @@ void CPU_exec_ins(CPU* cpu, memory* mem, uint8_t opcode) {
     instruction ins = cpu->instruction_set[opcode];
 
     if (ins == NULL) {
-        CPU_interrupt(cpu, mem, CPU_EXCEPTION_INVOP);
+        CPU_exception(cpu, mem, CPU_EXCEPTION_INVOP);
         CPU_step(cpu);
         char buff[2048] = {0};
         sprintf(buff, "The CPU requested instruction with opcode: 0x%02X but it isn't defined.\n", opcode);
@@ -233,6 +232,11 @@ int CPU_interrupt(CPU* cpu, memory* mem, uint8_t icode) {
     mem_read_dword(mem, interrupt_index, &interrupt_addr);
 
     CPU_jump_addr(cpu, interrupt_addr);
+}
+
+int CPU_exception(CPU* cpu, memory* mem, uint8_t expcode) {
+    cpu->registers->EXPREG = expcode;
+    CPU_interrupt(cpu, mem, CPU_EXCEPTION_HANDLER_IDX);
 }
 
 int CPU_push_flags(CPU* cpu, memory* mem) {

@@ -91,10 +91,10 @@ uint32_t vm_parse_conf_field(const char* fieldval) {
     else if (strcmp(mode, "mb") == 0) return val * 1024 * 1024;
     else if (strcmp(mode, "gb") == 0) return val * 1024 * 1024 * 1024;
     else if (strcmp(mode, "hz") == 0) return val;
+    else if (strcmp(mode, "khz") == 0) return val * 1000u;
     else if (strcmp(mode, "mhz") == 0) return val * 1000000u;
     else if (strcmp(mode, "ghz") == 0) return val * 1000000000u;
     else return val;
-    return val;
 }
 
 void vm_set_display_settings(const char* fieldval, struct vm_config* target) {

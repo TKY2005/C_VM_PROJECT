@@ -15,6 +15,8 @@
 #define CPU_EXEC_SUCCESS 0
 #define CPU_EXEC_FAILURE -1
 
+#define CPU_EXCEPTION_HANDLER_IDX 0x00
+
 #define CPU_EXCEPTION_DIVZERO 0x00
 #define CPU_EXCEPTION_INVOP 0x01
 
@@ -87,6 +89,8 @@ int CPU_read_imm32(CPU* cpu, memory* mem, ins_encoding* ins);
 
 // Pushes the cpu flags, CS & PC registers to the stack, calculates the ISR address using 'icode' and jumps to that address
 int CPU_interrupt(CPU* cpu, memory* mem, uint8_t icode);
+// puts expcode in the EXPR register and triggers an interrupt with code 0x00
+int CPU_exception(CPU* cpu, memory* mem, uint8_t expcode);
 // Pushes CPU->state->state to the stack
 int CPU_push_flags(CPU* cpu, memory* mem);
 // Pops the element on top of the stack and places its value in CPU->state->state
